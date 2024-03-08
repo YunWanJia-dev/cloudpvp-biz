@@ -2,7 +2,8 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/cloudpvp.iml" filepath="$PROJECT_DIR$/cloudpvp.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/cloudpvp.iml" filepath="$PROJECT_DIR$/.idea/cloudpvp.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/matchmaking.main.iml" filepath="$PROJECT_DIR$/.idea/modules/matchmaking.main.iml" />
     </modules>
   </component>
 </project>

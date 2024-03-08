@@ -2,7 +2,7 @@ package me.ywj.cloudpvp.auth.service;
 
 /**
  * ISteamAuthService
- *
+ * 用于用户使用steam登录相关的功能
  * @author sheip9
  * @since 2024/1/19 11:47
  */
