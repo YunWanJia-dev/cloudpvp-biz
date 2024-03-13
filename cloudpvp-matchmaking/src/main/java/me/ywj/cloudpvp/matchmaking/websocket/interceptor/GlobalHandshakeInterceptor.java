@@ -16,6 +16,8 @@ import java.util.Map;
 public class GlobalHandshakeInterceptor extends HttpSessionHandshakeInterceptor {
     @Override
     public boolean beforeHandshake(ServerHttpRequest request, ServerHttpResponse response, WebSocketHandler wsHandler, Map<String, Object> attributes) throws Exception {
+        System.out.println(request.getHeaders().get("playerId"));
+        attributes.put("playerId", request.getHeaders().get("playerId").get(0));
         return super.beforeHandshake(request, response, wsHandler, attributes);
     }
 }

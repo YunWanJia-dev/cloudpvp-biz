@@ -3,5 +3,12 @@ spring:
     redis:
       host: 192.168.1.192
       port: 6379
-      password:
-#      database:
+      lettuce:
+        pool:
+          enabled: true
+
+
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://192.168.1.192:8761/eureka/

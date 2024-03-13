@@ -8,7 +8,7 @@ import org.springframework.stereotype.Service;
  * @author sheip9
  * @since 2024/2/28 19:10
  */
-@Service
+
 public interface IPartyService {
     /**
      * JoinParty
