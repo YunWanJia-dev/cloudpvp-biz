@@ -1,7 +1,5 @@
 package me.ywj.cloudpvp.matchmaking.service;
 
-import org.springframework.stereotype.Service;
-
 /**
  * IPartyService
  *
@@ -11,17 +9,23 @@ import org.springframework.stereotype.Service;
 
 public interface IPartyService {
     /**
-     * JoinParty
+     * create
+     * 玩家创建队伍
+     * @param playerId
+     */
+    void create(String playerId);
+    /**
+     * join
      * 玩家加入队伍
      * @param playerId 玩家id
      * @param partyId 队伍id
      */
-    void joinParty(String playerId, String partyId);
+    void join(String playerId, String partyId);
 
     /**
-     * playerDisconnect
+     * disconnect
      * 玩家断开连接
      * @param playerId 玩家id
      */
-    void playerDisconnect(String playerId);
+    void disconnect(String playerId);
 }

@@ -29,6 +29,7 @@ dependencies {
 	implementation 'org.projectlombok:lombok:1.18.28'
 	// https://mvnrepository.com/artifact/io.lettuce/lettuce-core
 	implementation 'io.lettuce:lettuce-core:6.3.1.RELEASE'
+	implementation 'com.alibaba:fastjson:2.0.28'
 	annotationProcessor 'org.projectlombok:lombok'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testImplementation 'org.springframework.kafka:spring-kafka-test'

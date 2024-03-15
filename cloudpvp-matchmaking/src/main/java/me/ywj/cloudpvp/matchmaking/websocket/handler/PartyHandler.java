@@ -1,11 +1,12 @@
 package me.ywj.cloudpvp.matchmaking.websocket.handler;
 
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONException;
+import me.ywj.cloudpvp.matchmaking.model.PartyPayload;
 import me.ywj.cloudpvp.matchmaking.service.IPartyService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.socket.*;
-import org.springframework.web.socket.handler.AbstractWebSocketHandler;
 
 import java.util.concurrent.ConcurrentLinkedDeque;
 
@@ -20,6 +21,7 @@ public class PartyHandler implements WebSocketHandler {
     private static final ConcurrentLinkedDeque<WebSocketSession> SESSION_DEQUE = new ConcurrentLinkedDeque<>();
 
     IPartyService partyService;
+
     @Autowired
     public PartyHandler(IPartyService partyService) {
         this.partyService = partyService;
@@ -34,12 +36,27 @@ public class PartyHandler implements WebSocketHandler {
 
         SESSION_DEQUE.add(session);
         System.out.println(playerId);
-        partyService.joinParty(playerId, playerId);
+        partyService.join(playerId, playerId);
     }
 
     @Override
     public void handleMessage(WebSocketSession session, WebSocketMessage<?> message) throws Exception {
+        String playerId = (String) session.getAttributes().get("playerId");
 
+        PartyPayload payload;
+        try {
+            payload= JSON.parseObject(message.getPayload().toString(), PartyPayload.class);
+        }catch (JSONException e){
+            return;
+        }
+        System.out.println(payload);
+        switch (payload.getAction()){
+            case JOIN_PARTY -> partyService.join(playerId, payload.getContent());
+            case QUIT -> partyService.create(playerId);
+            default -> {
+
+            }
+        }
     }
 
     @Override
@@ -50,6 +67,8 @@ public class PartyHandler implements WebSocketHandler {
 
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
+        String playerId = (String) session.getAttributes().get("playerId");
+        partyService.disconnect(playerId);
         SESSION_DEQUE.remove(session);
     }
 
