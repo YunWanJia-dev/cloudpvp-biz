@@ -4,6 +4,7 @@ spring:
       host: 192.168.1.192
       repositories:
         enabled: true
+      client-type: lettuce
 #      cluster:
 #        nodes:
 #          - 192.168.1.192:6379
