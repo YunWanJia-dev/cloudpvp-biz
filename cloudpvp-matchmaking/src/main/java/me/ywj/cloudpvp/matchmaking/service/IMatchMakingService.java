@@ -17,7 +17,7 @@ public interface IMatchMakingService {
     /**
      * stopMatchMaking
      * 将某一队伍移除匹配队列
-     * @param partyId
+     * @param partyId 队伍id
      */
     void stopMatchMaking(String partyId);
 }

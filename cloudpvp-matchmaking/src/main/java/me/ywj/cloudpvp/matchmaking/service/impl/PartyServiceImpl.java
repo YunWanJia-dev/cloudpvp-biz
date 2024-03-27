@@ -4,6 +4,7 @@ import jakarta.annotation.Resource;
 import me.ywj.cloudpvp.matchmaking.entity.Player;
 import me.ywj.cloudpvp.matchmaking.model.PartyMessage;
 import me.ywj.cloudpvp.matchmaking.service.IPartyService;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.data.redis.core.HashOperations;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.listener.PatternTopic;
@@ -15,7 +16,7 @@ import java.util.HashSet;
 import java.util.Objects;
 
 /**
- * PartyServiceImple
+ * PartyServiceImpl
  *
  * @author sheip9
  * @since 2024/2/28 19:11
@@ -67,7 +68,7 @@ public class PartyServiceImpl implements IPartyService {
      * @param playerId 玩家id
      * @param partyId 队伍id
      */
-    private void redisUpdate(String playerId, String partyId) {
+    private void redisUpdate(@NotNull String playerId, String partyId) {
         //如果队伍id等于玩家id，则为创建新队伍的操作
         HashSet<String> set = playerId.equals(partyId) ? new HashSet<>() : partyHashOperations.get(PARTY_HASH, partyId);
         if (Objects.isNull(set)) {
@@ -80,14 +81,14 @@ public class PartyServiceImpl implements IPartyService {
         partyHashOperations.put(PARTY_HASH, partyId, set);
     }
     @Override
-    public void initStatus(Player player){
+    public void initStatus(@NotNull Player player){
         player.setCurrentPartyId(player.getId());
         redisUpdate(player.getId(), player.getCurrentPartyId());
         container.addMessageListener(player.getListener(), new PatternTopic(player.getCurrentPartyId()));
 //        redisTemplate.convertAndSend(player.getCurrentPartyId(), "Hi!");
     }
     @Override
-    public void join(Player player, String partyId) {
+    public void join(@NotNull Player player, String partyId) {
         redisTemplate.convertAndSend(player.getCurrentPartyId(), PartyMessage.playerQuit(player.getId()));
         container.removeMessageListener(player.getListener(), new PatternTopic(player.getCurrentPartyId()));
         player.setCurrentPartyId(partyId);
@@ -97,7 +98,7 @@ public class PartyServiceImpl implements IPartyService {
     }
 
     @Override
-    public void disconnect(Player player) {
+    public void disconnect(@NotNull Player player) {
         redisRemoveFromParty(player.getId());
         redisTemplate.convertAndSend(player.getCurrentPartyId(), PartyMessage.playerJoin(player.getId()));
         playerHashOperations.delete(PLAYER_HASH, player.getId());

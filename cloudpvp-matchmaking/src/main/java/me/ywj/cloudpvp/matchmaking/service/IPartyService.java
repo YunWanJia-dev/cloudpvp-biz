@@ -11,8 +11,8 @@ import me.ywj.cloudpvp.matchmaking.entity.Player;
 
 public interface IPartyService {
     /**
-     * create
-     * 玩家创建队伍
+     * initStatus
+     * 玩家连接，初始化状态
      * @param player 玩家实体
      */
     void initStatus(Player player);

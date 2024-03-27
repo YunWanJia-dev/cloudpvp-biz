@@ -2,6 +2,7 @@ package me.ywj.cloudpvp.matchmaking.websocket.configurer;
 
 import me.ywj.cloudpvp.matchmaking.websocket.handler.PartyHandler;
 import me.ywj.cloudpvp.matchmaking.websocket.interceptor.GlobalHandshakeInterceptor;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.socket.config.annotation.EnableWebSocket;
@@ -25,7 +26,7 @@ public class PartyConfig implements WebSocketConfigurer {
     }
 
     @Override
-    public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
+    public void registerWebSocketHandlers(@NotNull WebSocketHandlerRegistry registry) {
         registry.addHandler(partyHandler, "/party")
                 .addInterceptors(new HttpSessionHandshakeInterceptor())
                 .addInterceptors(new GlobalHandshakeInterceptor())

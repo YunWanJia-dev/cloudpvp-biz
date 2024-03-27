@@ -5,6 +5,7 @@ import com.alibaba.fastjson.JSONException;
 import me.ywj.cloudpvp.matchmaking.entity.Player;
 import me.ywj.cloudpvp.matchmaking.model.PartyPayload;
 import me.ywj.cloudpvp.matchmaking.service.IPartyService;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.socket.*;
@@ -30,7 +31,7 @@ public class PartyHandler implements WebSocketHandler {
     }
 
     @Override
-    public void afterConnectionEstablished(WebSocketSession session) throws Exception {
+    public void afterConnectionEstablished(@NotNull WebSocketSession session) throws Exception {
         System.out.println(session.getAttributes());
         String playerId = (String) session.getAttributes().get("playerId");
 
@@ -43,7 +44,7 @@ public class PartyHandler implements WebSocketHandler {
     }
 
     @Override
-    public void handleMessage(WebSocketSession session, WebSocketMessage<?> message) throws Exception {
+    public void handleMessage(@NotNull WebSocketSession session, @NotNull WebSocketMessage<?> message) throws Exception {
         String playerId = (String) session.getAttributes().get("playerId");
 
         PartyPayload payload;
@@ -63,13 +64,13 @@ public class PartyHandler implements WebSocketHandler {
     }
 
     @Override
-    public void handleTransportError(WebSocketSession session, Throwable exception) throws Exception {
+    public void handleTransportError(@NotNull WebSocketSession session, @NotNull Throwable exception) throws Exception {
 
     }
 
 
     @Override
-    public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
+    public void afterConnectionClosed(@NotNull WebSocketSession session, @NotNull CloseStatus status) throws Exception {
         String playerId = (String) session.getAttributes().get("playerId");
         partyService.disconnect(PLAYER_MAP.get(playerId));
         PLAYER_MAP.remove(playerId);
