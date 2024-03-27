@@ -1,8 +1,16 @@
 package me.ywj.cloudpvp.matchmaking.service.impl;
 
+import com.alibaba.fastjson.JSON;
 import jakarta.annotation.Resource;
+import me.ywj.cloudpvp.matchmaking.entity.Player;
 import me.ywj.cloudpvp.matchmaking.service.IPartyService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.HashOperations;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.listener.PatternTopic;
+import org.springframework.data.redis.listener.RedisMessageListenerContainer;
+import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.HashSet;
@@ -16,6 +24,10 @@ import java.util.Objects;
  */
 @Service
 public class PartyServiceImpl implements IPartyService {
+    @Resource
+    RedisMessageListenerContainer container;
+    @Resource
+    RedisTemplate<String, String> redisTemplate;
     @Resource(name="redisTemplate")
     private HashOperations<String, String, String> playerHashOperations;
 
@@ -32,6 +44,8 @@ public class PartyServiceImpl implements IPartyService {
      * 定义 存储 队伍id->此队伍的玩家 的映射关系的 hash键名
      */
     private static final String PARTY_HASH = "party";
+    @Resource
+    private KafkaTemplate<String, String> kafkaTemplate;
     private void quitCurrentParty(String playerId) {
         String playerCurrentPartyId = playerHashOperations.get(PLAYER_HASH, playerId);
         if (Objects.isNull(playerCurrentPartyId)){
@@ -68,17 +82,26 @@ public class PartyServiceImpl implements IPartyService {
         partyHashOperations.put(PARTY_HASH, partyId, set);
     }
     @Override
-    public void create(String playerId){
-        playerUpdate(playerId, playerId);
+    public void create(Player player){
+        player.setCurrentPartyId(player.getId());
+        playerUpdate(player.getId(), player.getCurrentPartyId());
+        container.addMessageListener(player.getListener(), new PatternTopic(player.getCurrentPartyId()));
+        redisTemplate.convertAndSend(player.getCurrentPartyId(), "Hi!");
     }
     @Override
-    public void join(String playerId, String partyId) {
-        playerUpdate(playerId, partyId);
+    public void join(Player player, String partyId) {
+        redisTemplate.convertAndSend(player.getCurrentPartyId(), "player" + player.getId() + "is quited.");
+        container.removeMessageListener(player.getListener(), new PatternTopic(player.getCurrentPartyId()));
+        player.setCurrentPartyId(partyId);
+        playerUpdate(player.getId(), partyId);
+        container.addMessageListener(player.getListener(), new PatternTopic(player.getCurrentPartyId()));
+        redisTemplate.convertAndSend(partyId, "player" + player.getId() + "is joined.");
     }
 
     @Override
-    public void disconnect(String playerId) {
-        quitCurrentParty(playerId);
-        playerHashOperations.delete(PLAYER_HASH, playerId);
+    public void disconnect(Player player) {
+        quitCurrentParty(player.getId());
+        redisTemplate.convertAndSend(player.getCurrentPartyId(), "player" + player.getId() + "is quited.");
+        playerHashOperations.delete(PLAYER_HASH, player.getId());
     }
 }

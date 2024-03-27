@@ -1,5 +1,7 @@
 package me.ywj.cloudpvp.matchmaking.service;
 
+import me.ywj.cloudpvp.matchmaking.entity.Player;
+
 /**
  * IPartyService
  *
@@ -11,21 +13,21 @@ public interface IPartyService {
     /**
      * create
      * 玩家创建队伍
-     * @param playerId
+     * @param player 玩家实体
      */
-    void create(String playerId);
+    void create(Player player);
     /**
      * join
      * 玩家加入队伍
-     * @param playerId 玩家id
+     * @param player 玩家实体
      * @param partyId 队伍id
      */
-    void join(String playerId, String partyId);
+    void join(Player player, String partyId);
 
     /**
      * disconnect
      * 玩家断开连接
-     * @param playerId 玩家id
+     * @param player 玩家id
      */
-    void disconnect(String playerId);
+    void disconnect(Player player);
 }

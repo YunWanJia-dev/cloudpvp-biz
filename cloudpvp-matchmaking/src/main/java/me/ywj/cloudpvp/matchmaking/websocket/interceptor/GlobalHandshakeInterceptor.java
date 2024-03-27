@@ -6,6 +6,7 @@ import org.springframework.web.socket.WebSocketHandler;
 import org.springframework.web.socket.server.support.HttpSessionHandshakeInterceptor;
 
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * GlobalHandshakeInterceptor
@@ -17,7 +18,7 @@ public class GlobalHandshakeInterceptor extends HttpSessionHandshakeInterceptor 
     @Override
     public boolean beforeHandshake(ServerHttpRequest request, ServerHttpResponse response, WebSocketHandler wsHandler, Map<String, Object> attributes) throws Exception {
         System.out.println(request.getHeaders().get("playerId"));
-        attributes.put("playerId", request.getHeaders().get("playerId").get(0));
+        attributes.put("playerId", Objects.requireNonNull(request.getHeaders().get("playerId")).get(0));
         return super.beforeHandshake(request, response, wsHandler, attributes);
     }
 }

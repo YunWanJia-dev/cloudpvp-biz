@@ -1,9 +1,11 @@
 package me.ywj.cloudpvp.matchmaking;
 
+import jakarta.annotation.Resource;
 import me.ywj.cloudpvp.matchmaking.constants.PartyActionEnum;
 import me.ywj.cloudpvp.matchmaking.model.PartyPayload;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.kafka.core.KafkaTemplate;
 
 @SpringBootTest
 class CloudpvpMatchmakingApplicationTests {
@@ -11,10 +13,10 @@ class CloudpvpMatchmakingApplicationTests {
 	@Test
 	void contextLoads() {
 	}
+	@Resource
+	private KafkaTemplate<String, String> kafkaTemplate;
 	@Test
-	void testGson () {
-		PartyPayload payload = new PartyPayload();
-		payload.setAction(PartyActionEnum.JOIN_PARTY);
-		payload.setContent("1");
+	void test () {
+		kafkaTemplate.receive("party", 0, 0);
 	}
 }
