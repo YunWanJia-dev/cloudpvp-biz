@@ -89,6 +89,7 @@ public class PartyServiceImpl implements IPartyService {
     }
     @Override
     public void join(@NotNull Player player, String partyId) {
+        //TODO: 队伍房主退出加入其他房间时的操作
         redisTemplate.convertAndSend(player.getCurrentPartyId(), PartyMessage.playerQuit(player.getId()));
         container.removeMessageListener(player.getListener(), new PatternTopic(player.getCurrentPartyId()));
         player.setCurrentPartyId(partyId);
