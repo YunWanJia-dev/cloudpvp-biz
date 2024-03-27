@@ -15,7 +15,7 @@ public interface IPartyService {
      * 玩家创建队伍
      * @param player 玩家实体
      */
-    void create(Player player);
+    void initStatus(Player player);
     /**
      * join
      * 玩家加入队伍

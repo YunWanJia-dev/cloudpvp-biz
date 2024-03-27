@@ -39,7 +39,7 @@ public class PartyHandler implements WebSocketHandler {
         Player player = new Player(session, playerId);
         PLAYER_MAP.put(playerId, player);
 
-        partyService.create(player);
+        partyService.initStatus(player);
     }
 
     @Override
@@ -55,7 +55,7 @@ public class PartyHandler implements WebSocketHandler {
         System.out.println(payload);
         switch (payload.getAction()){
             case JOIN_PARTY -> partyService.join(PLAYER_MAP.get(playerId), payload.getContent());
-            case QUIT -> partyService.create(PLAYER_MAP.get(playerId));
+            case QUIT -> partyService.join(PLAYER_MAP.get(playerId), playerId);
             default -> {
 
             }
@@ -72,8 +72,8 @@ public class PartyHandler implements WebSocketHandler {
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
         String playerId = (String) session.getAttributes().get("playerId");
         partyService.disconnect(PLAYER_MAP.get(playerId));
-        SESSION_DEQUE.remove(session);
         PLAYER_MAP.remove(playerId);
+        SESSION_DEQUE.remove(session);
     }
 
     @Override

@@ -24,7 +24,7 @@ public class Player {
     private String currentPartyId;
 
     @JsonIgnore
-    private MsgListener listener;
+    private final MsgListener listener;
     public Player(WebSocketSession session, String id) {
         listener = new MsgListener(session);
         this.id = id;
