@@ -43,8 +43,7 @@ public class PartyServiceImpl implements IPartyService {
      * 定义 存储 队伍id->此队伍的玩家 的映射关系的 hash键名
      */
     private static final String PARTY_HASH = "party";
-    @Resource
-    private KafkaTemplate<String, String> kafkaTemplate;
+
     private void redisRemoveFromParty(String playerId) {
         String playerCurrentPartyId = playerHashOperations.get(PLAYER_HASH, playerId);
         if (Objects.isNull(playerCurrentPartyId)){
@@ -103,5 +102,9 @@ public class PartyServiceImpl implements IPartyService {
         redisRemoveFromParty(player.getId());
         redisTemplate.convertAndSend(player.getCurrentPartyId(), PartyMessage.playerJoin(player.getId()));
         playerHashOperations.delete(PLAYER_HASH, player.getId());
+    }
+    @Override
+    public void sendMessage(Player player, String content) {
+        redisTemplate.convertAndSend(player.getCurrentPartyId(), PartyMessage.chatMessage(player.getId(), content));
     }
 }

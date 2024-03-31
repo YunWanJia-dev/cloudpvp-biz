@@ -49,16 +49,17 @@ public class PartyHandler implements WebSocketHandler {
 
         PartyPayload payload;
         try {
-            payload= JSON.parseObject(message.getPayload().toString(), PartyPayload.class);
-        }catch (JSONException e){
+            payload = JSON.parseObject(message.getPayload().toString(), PartyPayload.class);
+        } catch (JSONException e) {
             return;
         }
-        System.out.println(payload);
-        switch (payload.getAction()){
-            case JOIN_PARTY -> partyService.join(PLAYER_MAP.get(playerId), payload.getContent());
-            case QUIT -> partyService.join(PLAYER_MAP.get(playerId), playerId);
+        Player player = PLAYER_MAP.get(playerId);
+        switch (payload.getAction()) {
+            case JOIN_PARTY -> partyService.join(player, payload.getContent());
+            case QUIT_PARTY -> partyService.join(player, playerId);
+            case MESSAGE -> partyService.sendMessage(player, payload.getContent());
             default -> {
-
+                
             }
         }
     }

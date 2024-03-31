@@ -29,4 +29,7 @@ public class PartyMessage {
     public static PartyMessage playerQuit(String playerId) {
         return new PartyMessage(PartyEventEnum.PLAYER_QUIT, playerId, null);
     }
+    public static PartyMessage chatMessage(String playerId, String content) {
+        return new PartyMessage(PartyEventEnum.MESSAGE, playerId, content);
+    }
 }

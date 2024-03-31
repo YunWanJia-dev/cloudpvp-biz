@@ -30,4 +30,11 @@ public interface IPartyService {
      * @param player 玩家id
      */
     void disconnect(Player player);
+
+    /**
+     * sendMessage
+     * 玩家聊天发送消息
+     * @param player 玩家id
+     */
+    void sendMessage(Player player, String content);
 }

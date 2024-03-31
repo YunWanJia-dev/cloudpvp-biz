@@ -14,6 +14,7 @@ public enum PartyActionEnum {
     /**
      * 退出当前队伍
      */
-    QUIT,
+    QUIT_PARTY,
+    MESSAGE,
     ;
 }
