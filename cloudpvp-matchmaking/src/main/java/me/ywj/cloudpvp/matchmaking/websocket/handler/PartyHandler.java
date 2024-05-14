@@ -20,7 +20,7 @@ import java.util.concurrent.ConcurrentLinkedDeque;
  * @since 2024/2/28 18:44
  */
 @Controller
-public class PartyHandler extends BaseMatchMakingHandler {
+public class PartyHandler extends BaseHandler {
     private static final ConcurrentLinkedDeque<WebSocketSession> SESSION_DEQUE = new ConcurrentLinkedDeque<>();
     private static final HashMap<String, Player> PLAYER_MAP = new HashMap<>();
     IPartyService partyService;
