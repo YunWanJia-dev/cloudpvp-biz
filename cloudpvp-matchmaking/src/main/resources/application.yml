@@ -1,7 +1,10 @@
 server:
   port: 8082
-
+  servlet:
+    context-path: /${spring.application.name}
 spring:
+  application:
+    name: matchmaking
   data:
     redis:
       host: 192.168.1.192
