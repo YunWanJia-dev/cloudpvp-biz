@@ -1,8 +1,8 @@
 package me.ywj.cloudpvp.matchmaking.service.impl;
 
-import me.ywj.cloudpvp.matchmaking.service.IMatchMakingService;
+import me.ywj.cloudpvp.matchmaking.service.IMatchingService;
 
-public class MatchMakingServiceImpl implements IMatchMakingService {
+public class MatchingServiceImpl implements IMatchingService {
     @Override
     public void startMatchMaking(String partyId) {
 

@@ -13,7 +13,7 @@ import java.util.concurrent.ConcurrentLinkedDeque;
  * @since 2024/2/7 16:55
  */
 @Controller
-public class MatchMakingHandler extends BaseMatchMakingHandler {
+public class MatchingHandler extends BaseHandler {
     private static final ConcurrentLinkedDeque<WebSocketSession> SESSION_DEQUE = new ConcurrentLinkedDeque<>();
 
     @Override

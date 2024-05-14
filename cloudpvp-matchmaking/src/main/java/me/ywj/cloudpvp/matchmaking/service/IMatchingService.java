@@ -6,7 +6,7 @@ package me.ywj.cloudpvp.matchmaking.service;
  * @author sheip9
  * @since 2024/3/8 15:04
  */
-public interface IMatchMakingService {
+public interface IMatchingService {
     /**
      * startMatchMaking
      * 将某一队伍放入匹配队列
