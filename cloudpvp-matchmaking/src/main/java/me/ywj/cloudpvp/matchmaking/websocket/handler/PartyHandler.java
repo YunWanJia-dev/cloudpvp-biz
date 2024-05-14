@@ -20,7 +20,7 @@ import java.util.concurrent.ConcurrentLinkedDeque;
  * @since 2024/2/28 18:44
  */
 @Controller
-public class PartyHandler implements WebSocketHandler {
+public class PartyHandler extends BaseMatchMakingHandler {
     private static final ConcurrentLinkedDeque<WebSocketSession> SESSION_DEQUE = new ConcurrentLinkedDeque<>();
     private static final HashMap<String, Player> PLAYER_MAP = new HashMap<>();
     IPartyService partyService;
@@ -65,12 +65,6 @@ public class PartyHandler implements WebSocketHandler {
     }
 
     @Override
-    public void handleTransportError(@NotNull WebSocketSession session, @NotNull Throwable exception) throws Exception {
-
-    }
-
-
-    @Override
     public void afterConnectionClosed(@NotNull WebSocketSession session, @NotNull CloseStatus status) throws Exception {
         String playerId = (String) session.getAttributes().get("playerId");
         partyService.disconnect(PLAYER_MAP.get(playerId));
@@ -78,8 +72,4 @@ public class PartyHandler implements WebSocketHandler {
         SESSION_DEQUE.remove(session);
     }
 
-    @Override
-    public boolean supportsPartialMessages() {
-        return false;
-    }
 }

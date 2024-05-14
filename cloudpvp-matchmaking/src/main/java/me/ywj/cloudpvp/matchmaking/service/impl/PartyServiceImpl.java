@@ -9,7 +9,6 @@ import org.springframework.data.redis.core.HashOperations;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.listener.PatternTopic;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
-import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.HashSet;
@@ -45,6 +44,7 @@ public class PartyServiceImpl implements IPartyService {
     private static final String PARTY_HASH = "party";
 
     private void redisRemoveFromParty(String playerId) {
+
         String playerCurrentPartyId = playerHashOperations.get(PLAYER_HASH, playerId);
         if (Objects.isNull(playerCurrentPartyId)){
             return;
@@ -84,7 +84,7 @@ public class PartyServiceImpl implements IPartyService {
         player.setCurrentPartyId(player.getId());
         redisUpdate(player.getId(), player.getCurrentPartyId());
         container.addMessageListener(player.getListener(), new PatternTopic(player.getCurrentPartyId()));
-//        redisTemplate.convertAndSend(player.getCurrentPartyId(), "Hi!");
+
     }
     @Override
     public void join(@NotNull Player player, String partyId) {

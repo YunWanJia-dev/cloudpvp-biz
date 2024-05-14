@@ -11,8 +11,6 @@ spring:
         prefix: /config
 
 eureka:
-  instance:
-    hostname: localhost
   client:
     registerWithEureka: false
     fetchRegistry: false

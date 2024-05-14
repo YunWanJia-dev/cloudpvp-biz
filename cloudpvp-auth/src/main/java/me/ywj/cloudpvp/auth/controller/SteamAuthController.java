@@ -14,7 +14,7 @@ import java.io.IOException;
  * @since 2024/1/18 23:51
  */
 @RestController
-@RequestMapping("/auth")
+@RequestMapping("/steam")
 public class SteamAuthController {
     ISteamAuthService steamAuthService;
 
@@ -37,7 +37,7 @@ public class SteamAuthController {
      * @param openidResponseNonce
      * @return
      */
-    @GetMapping("/login_with_steam")
+    @GetMapping("/login")
     public boolean receiveReturnFromSteam(
             @RequestParam("openid.assoc_handle")   String openidAccocHandler,
             @RequestParam("openid.signed")         String openidSigned,
@@ -82,7 +82,7 @@ public class SteamAuthController {
      */
     @GetMapping("/redirect_to_steam")
     public void redirectToSteam(@RequestHeader(value = "Host") String host,HttpServletResponse response) throws IOException {
-        String redirectUrl = steamAuthService.generateSteamLoginUrl(host, "/auth/login_with_steam");
+        String redirectUrl = steamAuthService.generateSteamLoginUrl(host, "/auth/steam/login");
         response.sendRedirect(redirectUrl);
     }
 }

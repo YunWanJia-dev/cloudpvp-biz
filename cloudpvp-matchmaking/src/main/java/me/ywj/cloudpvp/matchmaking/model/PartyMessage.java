@@ -2,7 +2,7 @@ package me.ywj.cloudpvp.matchmaking.model;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
-import me.ywj.cloudpvp.matchmaking.constants.PartyEventEnum;
+import me.ywj.cloudpvp.matchmaking.constants.PartyActionEnum;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 
@@ -15,21 +15,22 @@ import org.jetbrains.annotations.NotNull;
 @Data
 @AllArgsConstructor
 public class PartyMessage {
-    PartyEventEnum event;
+    PartyActionEnum event;
     String playerId;
     String content;
 
     @NotNull
     @Contract("_ -> new")
     public static PartyMessage playerJoin(String playerId) {
-        return new PartyMessage(PartyEventEnum.PLAYER_JOIN, playerId, null);
+        return new PartyMessage(PartyActionEnum.JOIN_PARTY, playerId, null);
     }
+
     @NotNull
     @Contract("_ -> new")
     public static PartyMessage playerQuit(String playerId) {
-        return new PartyMessage(PartyEventEnum.PLAYER_QUIT, playerId, null);
+        return new PartyMessage(PartyActionEnum.QUIT_PARTY, playerId, null);
     }
     public static PartyMessage chatMessage(String playerId, String content) {
-        return new PartyMessage(PartyEventEnum.MESSAGE, playerId, content);
+        return new PartyMessage(PartyActionEnum.MESSAGE, playerId, content);
     }
 }

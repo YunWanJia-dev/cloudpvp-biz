@@ -17,7 +17,7 @@ import java.io.IOException;
  * @since 2024/2/6 17:21
  */
 @Data
-public class Player {
+final public class Player {
     private String id;
     private String currentPartyId;
 
@@ -28,7 +28,7 @@ public class Player {
         this.id = id;
     }
 }
-class MsgListener implements MessageListener {
+final class MsgListener implements MessageListener {
     WebSocketSession session;
 
     public MsgListener(WebSocketSession session) {
