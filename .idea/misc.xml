@@ -7,6 +7,7 @@
     <file type="web" url="file://$PROJECT_DIR$/cloudpvp-gateway" />
     <file type="web" url="file://$PROJECT_DIR$/cloudpvp-matchmaking" />
     <file type="web" url="file://$PROJECT_DIR$/cloudpvp-play" />
+    <file type="web" url="file://$PROJECT_DIR$/cloudpvp-player" />
   </component>
   <component name="ProjectRootManager" version="2" languageLevel="JDK_17" project-jdk-name="17" project-jdk-type="JavaSDK">
     <output url="file://$PROJECT_DIR$/out" />

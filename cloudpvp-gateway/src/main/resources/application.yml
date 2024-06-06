@@ -15,6 +15,11 @@ spring:
               lb://matchmaking
             predicates:
               - Path=/matchmaking/**
+          - id: play
+            uri:
+              lb://play
+            predicates:
+              - Path=/play/**
 
 eureka:
   instance:
