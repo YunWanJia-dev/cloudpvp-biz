@@ -20,6 +20,7 @@ ext {
 }
 
 dependencies {
+	project(":cloudpvp-core")
 	implementation 'org.springframework.boot:spring-boot-starter-web'
 	implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
 	runtimeOnly 'org.postgresql:postgresql'

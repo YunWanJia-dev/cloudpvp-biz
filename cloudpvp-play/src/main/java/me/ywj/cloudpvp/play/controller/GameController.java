@@ -1,15 +1,16 @@
 package me.ywj.cloudpvp.play.controller;
 
-import me.ywj.cloudpvp.play.entity.GameMode;
+import me.ywj.cloudpvp.core.entity.play.Game;
+import me.ywj.cloudpvp.play.constant.GamePool;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/modes")
-public class ModeController {
+@RequestMapping("/games")
+public class GameController {
     @GetMapping
-    public GameMode getMode() {
-        return new GameMode();
+    public Game[] getGames() {
+        return GamePool.GameList;
     }
 }

@@ -1,4 +1,4 @@
-package me.ywj.cloudpvp.play.entity;
+package me.ywj.cloudpvp.core.entity.play;
 
 public class GameType {
     Integer id;
