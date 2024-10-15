@@ -1,0 +1,24 @@
+plugins {
+    id 'java'
+    alias(libs.plugins.kotlinJvm)
+}
+
+group = "me.ywj.cloudpvp"
+version = "1.0-SNAPSHOT"
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation "com.fasterxml.jackson.module:jackson-module-kotlin:2.18.+"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+}
+
+tasks.named('test') {
+}
+java {
+}
+kotlin {
+    jvmToolchain(17)
+}

@@ -4,6 +4,21 @@
   <component name="GradleSettings">
     <option name="linkedExternalProjectsSettings">
       <GradleProjectSettings>
+        <option name="externalProjectPath" value="$PROJECT_DIR$" />
+        <option name="modules">
+          <set>
+            <option value="$PROJECT_DIR$" />
+            <option value="$PROJECT_DIR$/cloudpvp-auth" />
+            <option value="$PROJECT_DIR$/cloudpvp-center" />
+            <option value="$PROJECT_DIR$/cloudpvp-core" />
+            <option value="$PROJECT_DIR$/cloudpvp-gateway" />
+            <option value="$PROJECT_DIR$/cloudpvp-matchmaking" />
+            <option value="$PROJECT_DIR$/cloudpvp-play" />
+            <option value="$PROJECT_DIR$/cloudpvp-player" />
+          </set>
+        </option>
+      </GradleProjectSettings>
+      <GradleProjectSettings>
         <option name="externalProjectPath" value="$PROJECT_DIR$/cloudpvp-auth" />
         <option name="modules">
           <set>
@@ -16,6 +31,15 @@
         <option name="modules">
           <set>
             <option value="$PROJECT_DIR$/cloudpvp-center" />
+          </set>
+        </option>
+      </GradleProjectSettings>
+      <GradleProjectSettings>
+        <option name="externalProjectPath" value="$PROJECT_DIR$/cloudpvp-core" />
+        <option name="gradleHome" value="" />
+        <option name="modules">
+          <set>
+            <option value="$PROJECT_DIR$/cloudpvp-core" />
           </set>
         </option>
       </GradleProjectSettings>

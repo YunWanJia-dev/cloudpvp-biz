@@ -9,14 +9,4 @@ import org.springframework.kafka.core.KafkaTemplate;
 
 @SpringBootTest
 class CloudpvpMatchmakingApplicationTests {
-
-	@Test
-	void contextLoads() {
-	}
-	@Resource
-	private KafkaTemplate<String, String> kafkaTemplate;
-	@Test
-	void test () {
-		kafkaTemplate.receive("party", 0, 0);
-	}
 }
