@@ -7,6 +7,8 @@ package me.ywj.cloudpvp.core.entity
  * @since 2024/10/16 11:49
  */
 class PlayerProfile (
-    val steamId: ULong,
+    val steamId: String,
+    val name: String,
+    val avatarLink: String,
 ) {
 }
