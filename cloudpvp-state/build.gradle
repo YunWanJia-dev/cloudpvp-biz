@@ -2,6 +2,7 @@ plugins {
 	id 'java'
 	alias(libs.plugins.springBoot)
 	alias(libs.plugins.springDependecyManager)
+	alias(libs.plugins.kotlinJvm)
 }
 
 group = 'me.ywj.cloudpvp'
@@ -21,6 +22,7 @@ repositories {
 }
 
 dependencies {
+	project(":cloudpvp-core")
 	implementation 'org.springframework.boot:spring-boot-starter-web'
 	implementation 'org.springframework.boot:spring-boot-starter-websocket'
 	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
