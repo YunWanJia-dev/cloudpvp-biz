@@ -1,6 +1,7 @@
 package me.ywj.cloudpvp.usersummary.service;
 
 import me.ywj.cloudpvp.core.entity.PlayerProfile;
+import me.ywj.cloudpvp.core.type.SteamIdKt;
 import org.springframework.stereotype.Service;
 
 /**
@@ -11,10 +12,10 @@ import org.springframework.stereotype.Service;
  */
 @Service
 public class ProfileService {
-    public PlayerProfile getProfile(String id) {
+    public PlayerProfile getProfile(SteamIdKt id) {
         return null;
     } 
-    public void requestUpdateProfile(String id) {
+    public void requestUpdateProfile(SteamIdKt id) {
         //TODO: requesting via MQ
     }
 }
