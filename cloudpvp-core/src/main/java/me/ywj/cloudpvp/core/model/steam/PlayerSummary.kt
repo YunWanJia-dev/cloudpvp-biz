@@ -33,7 +33,7 @@ data class PlayerSummary (
     @JsonProperty("realname")
     val realName: String,
     @JsonProperty("steamid")
-    val steamId: String,
+    val steamId: ULong,
     @JsonProperty("timecreated")
     val timeCreated: Long,
 ) 

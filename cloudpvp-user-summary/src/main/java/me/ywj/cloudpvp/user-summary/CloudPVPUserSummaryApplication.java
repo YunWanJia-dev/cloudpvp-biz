@@ -4,10 +4,10 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class CloudpvpPlayerApplication {
+public class CloudUserSummaryApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.run(CloudpvpPlayerApplication.class, args);
+		SpringApplication.run(CloudUserSummaryApplication.class, args);
 	}
 
 }
