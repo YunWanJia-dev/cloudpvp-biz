@@ -14,7 +14,7 @@ public class ProfileService {
     public PlayerProfile getProfile(String id) {
         return null;
     } 
-    public void RequestUpdateProfile(String id) {
+    public void requestUpdateProfile(String id) {
         //TODO: requesting via MQ
     }
 }
