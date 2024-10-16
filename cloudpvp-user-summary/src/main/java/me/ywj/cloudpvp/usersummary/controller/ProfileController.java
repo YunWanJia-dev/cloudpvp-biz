@@ -1,4 +1,4 @@
-package me.ywj.cloudpvp.player.controller;
+package me.ywj.cloudpvp.usersummary.controller;
 
 import org.springframework.web.bind.annotation.RequestMapping;
 

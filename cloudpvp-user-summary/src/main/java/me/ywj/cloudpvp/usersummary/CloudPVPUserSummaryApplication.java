@@ -1,4 +1,5 @@
-package me.ywj.cloudpvp.player;
+package me.ywj.cloudpvp.usersummary;
+
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
