@@ -20,6 +20,11 @@ spring:
               lb://play
             predicates:
               - Path=/play/**
+          - id: user-summary
+            uri:
+              lb://user-summary
+            predicates:
+              - Path=/user-summary/**
 
 eureka:
   instance:

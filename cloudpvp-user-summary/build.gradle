@@ -1,8 +1,8 @@
 plugins {
 	id 'java'
-	id 'org.springframework.boot' version '3.2.5'
-	id 'io.spring.dependency-management' version '1.1.4'
-	id 'org.jetbrains.kotlin.jvm' version '2.0.0'
+	alias(libs.plugins.springBoot)
+	alias(libs.plugins.springDependecyManager)
+	alias(libs.plugins.kotlinJvm)
 }
 
 group = 'me.ywj.cloudpvp'
@@ -12,6 +12,9 @@ java {
 }
 
 repositories {
+	maven {
+		url 'https://maven.aliyun.com/repository/public/'
+	}
 	mavenCentral()
 }
 

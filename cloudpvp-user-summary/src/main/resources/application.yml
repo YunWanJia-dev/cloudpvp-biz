@@ -1,0 +1,14 @@
+server:
+  port: 8084
+#  servlet:
+#    context-path: /${spring.application.name}
+spring:
+  application:
+    name: user-summary
+
+eureka:
+  instance:
+    instance-id: ${spring.application.name}
+  client:
+    serviceUrl:
+      defaultZone: http://localhost:8761/eureka/
