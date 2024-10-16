@@ -2,6 +2,8 @@ package me.ywj.cloudpvp.play.constant;
 
 import me.ywj.cloudpvp.core.model.play.Game;
 
+import java.util.List;
+
 
 /**
  * GamePool
@@ -19,5 +21,5 @@ public class GamePool {
      * 游戏列表
      * 因为变动少所以不存数据库先
      */
-    public static final Game[] GameList = new Game[] {CSGO, CS2};
+    public static final List<Game> GAME_LIST = List.of(CS2, CSGO);
 }
