@@ -1,4 +1,4 @@
-package me.ywj.cloudpvp.core.entity.steam
+package me.ywj.cloudpvp.core.model.steam
 
 import com.fasterxml.jackson.annotation.JsonProperty
 

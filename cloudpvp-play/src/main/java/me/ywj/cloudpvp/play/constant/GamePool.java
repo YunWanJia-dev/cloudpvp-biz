@@ -1,6 +1,6 @@
 package me.ywj.cloudpvp.play.constant;
 
-import me.ywj.cloudpvp.core.entity.play.Game;
+import me.ywj.cloudpvp.core.model.play.Game;
 
 
 /**
@@ -15,6 +15,7 @@ public class GamePool {
     static final Game CS2 = new Game("CS2", "CS2", "");
     /**
      * GameList
+     * <br> 
      * 游戏列表
      * 因为变动少所以不存数据库先
      */

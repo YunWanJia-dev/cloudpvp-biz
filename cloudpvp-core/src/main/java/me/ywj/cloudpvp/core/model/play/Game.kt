@@ -1,4 +1,4 @@
-package me.ywj.cloudpvp.core.entity.play
+package me.ywj.cloudpvp.core.model.play
 
 data class Game(
     val key: String,
