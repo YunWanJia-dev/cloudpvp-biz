@@ -22,7 +22,7 @@ repositories {
 }
 
 dependencies {
-	project(":cloudpvp-core")
+	compileOnly project(":cloudpvp-core")
 	implementation 'org.springframework.boot:spring-boot-starter-web'
 	implementation 'org.springframework.boot:spring-boot-starter-websocket'
 	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
