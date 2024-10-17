@@ -21,7 +21,7 @@ import org.springframework.web.socket.handler.AbstractWebSocketHandler
 class StateSocketHandler @Autowired constructor(private val playerStateService: PlayerStateService) : AbstractWebSocketHandler(), WebSocketHandler {
     private val PLAYER_MAP = HashMap<SteamId, PlayerState>()
     override fun afterConnectionEstablished(session: WebSocketSession) {
-        val steamId = session.attributes.get("steamId") as SteamId
+        val steamId = session.attributes["steamId"] as SteamId
         val player = PlayerState(steamId).apply {
             state = StateEnum.ONLINE
         }
@@ -30,7 +30,7 @@ class StateSocketHandler @Autowired constructor(private val playerStateService: 
     }
 
     override fun afterConnectionClosed(session: WebSocketSession, status: CloseStatus) {
-        val steamId = session.attributes.get("steamId") as SteamId
+        val steamId = session.attributes["steamId"] as SteamId
         playerStateService.onDisconnect(PLAYER_MAP[steamId]!!)
         PLAYER_MAP.remove(steamId)
     }
