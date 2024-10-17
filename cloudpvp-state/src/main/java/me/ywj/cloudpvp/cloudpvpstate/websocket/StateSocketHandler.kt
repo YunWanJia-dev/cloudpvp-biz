@@ -1,35 +1,37 @@
-package me.ywj.cloudpvp.cloudpvpstate.websocket;
+package me.ywj.cloudpvp.cloudpvpstate.websocket
 
-import me.ywj.cloudpvp.cloudpvpstate.entity.PlayerState;
-import org.springframework.web.socket.CloseStatus;
-import org.springframework.web.socket.WebSocketHandler;
-import org.springframework.web.socket.WebSocketMessage;
-import org.springframework.web.socket.WebSocketSession;
-import org.springframework.web.socket.handler.AbstractWebSocketHandler;
-
-import java.util.HashMap;
+import me.ywj.cloudpvp.cloudpvpstate.constant.StateEnum
+import me.ywj.cloudpvp.cloudpvpstate.entity.PlayerState
+import me.ywj.cloudpvp.cloudpvpstate.service.PlayerStateService
+import me.ywj.cloudpvp.core.type.SteamId
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.stereotype.Controller
+import org.springframework.web.socket.CloseStatus
+import org.springframework.web.socket.WebSocketHandler
+import org.springframework.web.socket.WebSocketSession
+import org.springframework.web.socket.handler.AbstractWebSocketHandler
 
 /**
  * StateSocketHandler
  *
  * @author sheip9
- * @since 2024/10/16 17:51
+ * @since 2024/10/17 12:21
  */
-public class StateSocketHandler extends AbstractWebSocketHandler implements WebSocketHandler {
-    private static final HashMap<String, PlayerState> PLAYER_MAP = new HashMap<>();
-
-    @Override
-    public void handleMessage(WebSocketSession session, WebSocketMessage<?> message) throws Exception {
-        super.handleMessage(session, message);
+@Controller
+class StateSocketHandler @Autowired constructor(private val playerStateService: PlayerStateService) : AbstractWebSocketHandler(), WebSocketHandler {
+    private val PLAYER_MAP = HashMap<SteamId, PlayerState>()
+    override fun afterConnectionEstablished(session: WebSocketSession) {
+        val steamId = session.attributes.get("steamId") as SteamId
+        val player = PlayerState(steamId).apply {
+            state = StateEnum.ONLINE
+        }
+        PLAYER_MAP[steamId] = player
+        playerStateService.setState(player)
     }
 
-    @Override
-    public void afterConnectionEstablished(WebSocketSession session) throws Exception {
-        super.afterConnectionEstablished(session);
-    }
-
-    @Override
-    public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
-        super.afterConnectionClosed(session, status);
+    override fun afterConnectionClosed(session: WebSocketSession, status: CloseStatus) {
+        val steamId = session.attributes.get("steamId") as SteamId
+        playerStateService.onDisconnect(PLAYER_MAP[steamId]!!)
+        PLAYER_MAP.remove(steamId)
     }
 }
