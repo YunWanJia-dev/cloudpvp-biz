@@ -7,8 +7,10 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 
 /**
  * CloudpvpAuthApplication
- * 启动类
+ * 鉴权与Token颁发模块
+ * 
  * @author sheip9
+ * @since 2024/1/21 12:30
  */
 @SpringBootApplication
 @EnableDiscoveryClient
