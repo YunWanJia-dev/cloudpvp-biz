@@ -9,5 +9,5 @@ import me.ywj.cloudpvp.core.type.SteamId
  * @since 2024/10/16 11:48
  */
 open class BasicPlayer (
-    val steamId: SteamId,
+    open val steamId: SteamId,
 ) 

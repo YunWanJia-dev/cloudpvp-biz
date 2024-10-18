@@ -13,6 +13,6 @@ import org.springframework.data.redis.core.RedisHash
  * @since 2024/10/16 16:40
  */
 @RedisHash("people")
-class PlayerState(@Id val steamId : SteamId)  {
+class PlayerState(@Id override val steamId : SteamId) : BasicPlayer(steamId)  {
     var state : StateEnum = StateEnum.UNKNOWN
 }
