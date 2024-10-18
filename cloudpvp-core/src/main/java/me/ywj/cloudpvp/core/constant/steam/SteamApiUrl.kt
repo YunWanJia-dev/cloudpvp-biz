@@ -7,6 +7,6 @@ package me.ywj.cloudpvp.core.constant.steam
  * @since 2024/10/16 16:50
  */
 object SteamApiUrl {
-    const val steamchina = "https://api.steamchina.com/"
-    const val steampowered = "http://api.steampowered.com/"
+    const val Perfecrworld = "https://api.steamchina.com/"
+    const val Worldwide = "http://api.steampowered.com/"
 }
