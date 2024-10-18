@@ -1,7 +1,7 @@
-package me.ywj.cloudpvp.cloudpvpstate.service;
+package me.ywj.cloudpvp.state.service;
 
-import me.ywj.cloudpvp.cloudpvpstate.entity.PlayerState;
-import me.ywj.cloudpvp.cloudpvpstate.repository.PlayerStateRepository;
+import me.ywj.cloudpvp.state.entity.PlayerState;
+import me.ywj.cloudpvp.state.repository.PlayerStateRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -23,5 +23,8 @@ public class PlayerStateService {
     }
     public void onDisconnect(PlayerState playerState) {
         playerStateRepository.deleteById(playerState.getSteamId());
+    }
+    public Iterable<PlayerState> getStates(Iterable<Long> ids) {
+        return playerStateRepository.findAllById(ids);
     }
 }

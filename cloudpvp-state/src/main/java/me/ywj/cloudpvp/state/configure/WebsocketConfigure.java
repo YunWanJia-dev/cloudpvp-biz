@@ -1,6 +1,6 @@
-package me.ywj.cloudpvp.cloudpvpstate.configure;
+package me.ywj.cloudpvp.state.configure;
 
-import me.ywj.cloudpvp.cloudpvpstate.websocket.StateSocketHandler;
+import me.ywj.cloudpvp.state.websocket.StateSocketHandler;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.socket.config.annotation.EnableWebSocket;

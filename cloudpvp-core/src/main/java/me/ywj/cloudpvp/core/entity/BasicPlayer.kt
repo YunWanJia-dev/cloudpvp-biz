@@ -10,6 +10,4 @@ import me.ywj.cloudpvp.core.type.SteamId
  */
 open class BasicPlayer (
     val steamId: SteamId,
-) {
-    
-}
+) 

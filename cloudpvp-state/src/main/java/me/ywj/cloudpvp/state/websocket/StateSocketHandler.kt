@@ -1,9 +1,9 @@
-package me.ywj.cloudpvp.cloudpvpstate.websocket
+package me.ywj.cloudpvp.state.websocket
 
-import me.ywj.cloudpvp.cloudpvpstate.constant.StateEnum
-import me.ywj.cloudpvp.cloudpvpstate.entity.PlayerState
-import me.ywj.cloudpvp.cloudpvpstate.service.PlayerStateService
+import me.ywj.cloudpvp.state.constant.StateEnum
+import me.ywj.cloudpvp.state.service.PlayerStateService
 import me.ywj.cloudpvp.core.type.SteamId
+import me.ywj.cloudpvp.state.entity.PlayerState
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Controller
 import org.springframework.web.socket.CloseStatus
@@ -19,7 +19,9 @@ import org.springframework.web.socket.handler.AbstractWebSocketHandler
  */
 @Controller
 class StateSocketHandler @Autowired constructor(private val playerStateService: PlayerStateService) : AbstractWebSocketHandler(), WebSocketHandler {
-    private val PLAYER_MAP = HashMap<SteamId, PlayerState>()
+    companion object {
+        private val PLAYER_MAP = HashMap<SteamId, PlayerState>()
+    }
     override fun afterConnectionEstablished(session: WebSocketSession) {
         val steamId = session.attributes["steamId"] as SteamId
         val player = PlayerState(steamId).apply {

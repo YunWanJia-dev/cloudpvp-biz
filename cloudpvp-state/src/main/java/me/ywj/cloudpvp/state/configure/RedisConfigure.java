@@ -1,12 +1,12 @@
-package me.ywj.cloudpvp.cloudpvpstate.configure;
+package me.ywj.cloudpvp.state.configure;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
+import org.springframework.data.redis.repository.configuration.EnableRedisRepositories;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
-import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
@@ -17,6 +17,7 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
  * @since 2024/2/28 19:16
  */
 @Configuration
+@EnableRedisRepositories
 public class RedisConfigure {
     @Bean
     public RedisTemplate<String, ?> redisTemplate(RedisConnectionFactory connectionFactory) {

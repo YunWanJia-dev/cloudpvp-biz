@@ -1,7 +1,8 @@
-package me.ywj.cloudpvp.cloudpvpstate;
+package me.ywj.cloudpvp.state;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.data.redis.repository.configuration.EnableRedisRepositories;
 
 /**
  * CloudpvpStateApplication

@@ -1,4 +1,4 @@
-package me.ywj.cloudpvp.cloudpvpstate;
+package me.ywj.cloudpvp.state;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;

@@ -1,4 +1,4 @@
-package me.ywj.cloudpvp.cloudpvpstate.constant
+package me.ywj.cloudpvp.state.constant
 
 /**
  * StateEnum
@@ -9,5 +9,8 @@ package me.ywj.cloudpvp.cloudpvpstate.constant
 enum class StateEnum(i: Byte) {
     OFFLINE(-1),
     UNKNOWN(0),
-    ONLINE(1)
+    ONLINE(1),
+    FINDING_MATCH(2),
+    IN_MATCH(3),
+    ;
 }
