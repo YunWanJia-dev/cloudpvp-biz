@@ -9,10 +9,7 @@ import org.springframework.stereotype.Service;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
-import java.net.ProtocolException;
-import java.net.URL;
+import java.net.*;
 import java.util.ArrayList;
 
 /**
@@ -61,9 +58,9 @@ public class SteamAuthServiceImpl implements ISteamAuthService {
                     "&openid.return_to="      + openidReturnTo +
                     "&openid.response_nonce=" + openidResponseNonce +
                     "&openid.mode=check_authentication";
-            URL url = new URL("https://steamcommunity.com/openid/login?" + params);
+            URI uri = new URI("https://steamcommunity.com/openid/login?" + params);
             //创建连接，设置消息头
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            HttpURLConnection conn = (HttpURLConnection) uri.toURL().openConnection();
             conn.setDoOutput(true);
             conn.setInstanceFollowRedirects(false);
             conn.setRequestMethod("GET");
@@ -91,6 +88,8 @@ public class SteamAuthServiceImpl implements ISteamAuthService {
             throw new InternalErrorException("内部逻辑发生错误");
         } catch (IOException e) {
             throw new InternalErrorException("获取返回内容发生错误");
+        } catch (URISyntaxException e) {
+            throw new RuntimeException(e);
         }
     }
 }
