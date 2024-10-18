@@ -1,5 +1,6 @@
 plugins {
 	id 'java'
+	alias(libs.plugins.kotlinJvm)
 	alias(libs.plugins.springBoot)
 	alias(libs.plugins.springDependecyManager)
 }
@@ -8,7 +9,15 @@ group = 'me.ywj.cloudpvp'
 version = '0.0.1-SNAPSHOT'
 
 java {
-	sourceCompatibility = '17'
+	sourceCompatibility = libs.versions.java.get()
+	targetCompatibility = libs.versions.java.get()
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(libs.versions.java.get().toInteger())
+	}
+}
+
+kotlin {
+	jvmToolchain(libs.versions.java.get().toInteger())
 }
 
 repositories {
@@ -16,10 +25,6 @@ repositories {
 		url 'https://maven.aliyun.com/repository/public/'
 	}
 	mavenCentral()
-}
-
-ext {
-	set('springCloudVersion', "2023.0.1")
 }
 
 dependencies {
@@ -31,7 +36,7 @@ dependencies {
 
 dependencyManagement {
 	imports {
-		mavenBom "org.springframework.cloud:spring-cloud-dependencies:${springCloudVersion}"
+		mavenBom "org.springframework.cloud:spring-cloud-dependencies:${libs.versions.springCloudVersion.get()}"
 	}
 }
 

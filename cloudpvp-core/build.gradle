@@ -6,6 +6,18 @@ plugins {
 group = "me.ywj.cloudpvp"
 version = "1.0-SNAPSHOT"
 
+java {
+    sourceCompatibility = libs.versions.java.get()
+    targetCompatibility = libs.versions.java.get()
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(libs.versions.java.get().toInteger())
+    }
+}
+
+kotlin {
+    jvmToolchain(libs.versions.java.get().toInteger())
+}
+
 repositories {
     maven {
         url 'https://maven.aliyun.com/repository/public/'
@@ -19,9 +31,4 @@ dependencies {
 }
 
 tasks.named('test') {
-}
-java {
-}
-kotlin {
-    jvmToolchain(17)
 }
