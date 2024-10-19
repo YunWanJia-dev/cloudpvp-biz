@@ -29,7 +29,7 @@ repositories {
 
 dependencies {
 	compileOnly project(":cloudpvp-core")
-	implementation libs.kotlin.reflect
+	runtimeOnly libs.kotlin.reflect
 	implementation 'org.springframework.boot:spring-boot-starter-web'
 	implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
 	runtimeOnly 'org.postgresql:postgresql'
