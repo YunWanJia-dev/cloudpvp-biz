@@ -6,4 +6,4 @@ package me.ywj.cloudpvp.core.type
  * @author sheip9
  * @since 2024/10/16 16:48
  */
-typealias SteamId = Long
+typealias SteamId64 = Long

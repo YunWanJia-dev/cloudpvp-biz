@@ -1,7 +1,7 @@
 package me.ywj.cloudpvp.core.utils
 
 import me.ywj.cloudpvp.core.constant.steam.SteamUser
-import me.ywj.cloudpvp.core.type.SteamId
+import me.ywj.cloudpvp.core.type.SteamId64
 
 /**
  * PlayerUtils
@@ -10,7 +10,7 @@ import me.ywj.cloudpvp.core.type.SteamId
  * @since 2024/10/19 00:24
  */
 object PlayerUtils {
-    fun checkIdIsValid(steamId : SteamId?): Boolean {
-        return steamId != null && steamId >= SteamUser.MinimalId
+    fun checkIdIsValid(steamId64 : SteamId64?): Boolean {
+        return steamId64 != null && steamId64 >= SteamUser.MinimalId
     }
 }

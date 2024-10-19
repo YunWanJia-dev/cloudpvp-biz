@@ -3,7 +3,7 @@ package me.ywj.cloudpvp.state.websocket
 import com.fasterxml.jackson.databind.ObjectMapper
 import me.ywj.cloudpvp.core.model.ErrorResponse
 import me.ywj.cloudpvp.core.model.ErrorType
-import me.ywj.cloudpvp.core.type.SteamId
+import me.ywj.cloudpvp.core.type.SteamId64
 import me.ywj.cloudpvp.core.utils.PlayerUtils
 import me.ywj.cloudpvp.state.constant.StateEnum
 import me.ywj.cloudpvp.state.entity.PlayerState
@@ -25,25 +25,25 @@ import org.springframework.web.socket.handler.AbstractWebSocketHandler
 @Controller
 class StateSocketHandler @Autowired constructor(private val playerStateService: PlayerStateService) : AbstractWebSocketHandler(), WebSocketHandler {
     companion object {
-        private val PLAYER_MAP = HashMap<SteamId, PlayerState>()
+        private val PLAYER_MAP = HashMap<SteamId64, PlayerState>()
     }
     override fun afterConnectionEstablished(session: WebSocketSession) {
-        val steamId = session.attributes["steamId"] as SteamId?
-        if (PlayerUtils.checkIdIsValid(steamId)) {
+        val steamId64 = session.attributes["steamId"] as SteamId64?
+        if (PlayerUtils.checkIdIsValid(steamId64)) {
             session.sendMessage(ErrorResponse(ErrorType.PLAYER_ID_INVALID, ""))
             session.close()
         }
-        val player = PlayerState(steamId!!).apply {
+        val player = PlayerState(steamId64!!).apply {
             state = StateEnum.ONLINE
         }
-        PLAYER_MAP[steamId] = player
+        PLAYER_MAP[steamId64] = player
         playerStateService.setState(player)
     }
 
     override fun afterConnectionClosed(session: WebSocketSession, status: CloseStatus) {
-        val steamId = session.attributes["steamId"] as SteamId
-        playerStateService.onDisconnect(PLAYER_MAP[steamId]!!)
-        PLAYER_MAP.remove(steamId)
+        val steamId64 = session.attributes["steamId"] as SteamId64
+        playerStateService.onDisconnect(PLAYER_MAP[steamId64]!!)
+        PLAYER_MAP.remove(steamId64)
     }
 }
 

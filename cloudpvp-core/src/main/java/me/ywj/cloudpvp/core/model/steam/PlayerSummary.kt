@@ -1,7 +1,7 @@
 package me.ywj.cloudpvp.core.model.steam
 
 import com.fasterxml.jackson.annotation.JsonProperty
-import me.ywj.cloudpvp.core.type.SteamId
+import me.ywj.cloudpvp.core.type.SteamId64
 
 data class PlayerSummary (
     val avatar: String,
@@ -44,7 +44,7 @@ data class PlayerSummary (
     @JsonProperty("realname")
     val realName: String?,
     @JsonProperty("steamid")
-    val steamId: SteamId,
+    val steamId: SteamId64,
     @JsonProperty("timecreated")
     val timeCreated: Long,
 ) 
