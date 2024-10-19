@@ -11,6 +11,6 @@ import me.ywj.cloudpvp.core.type.SteamId64
  */
 object PlayerUtils {
     fun checkIdIsValid(steamId64 : SteamId64?): Boolean {
-        return steamId64 != null && steamId64 >= SteamUser.MinimalId
+        return steamId64 != null && steamId64 > SteamUser.MinimalId
     }
 }
