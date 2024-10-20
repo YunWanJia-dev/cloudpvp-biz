@@ -1,6 +1,7 @@
 package me.ywj.cloudpvp.core.entity
 
 import me.ywj.cloudpvp.core.type.SteamId64
+import java.util.Date
 
 /**
  * PlayerProfile
@@ -13,4 +14,5 @@ class PlayerProfile (
     val name: String,
     val avatarLink: String,
 ) {
+    var auditAt: Date? = null
 }
