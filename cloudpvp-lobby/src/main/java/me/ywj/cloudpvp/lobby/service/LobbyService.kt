@@ -7,6 +7,7 @@ import kotlinx.coroutines.launch
 import me.ywj.cloudpvp.core.constant.lobby.LobbyConstant
 import me.ywj.cloudpvp.core.entity.BasicPlayer
 import me.ywj.cloudpvp.lobby.entity.Lobby
+import me.ywj.cloudpvp.lobby.exception.LobbyNotExist
 import me.ywj.cloudpvp.lobby.repository.LobbyRepository
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
@@ -40,7 +41,7 @@ class LobbyService @Autowired constructor(val lobbyRepository : LobbyRepository)
                 return@launch
             }
             val lobby = lobbyOption.get()
-            if(lobby.players == null) {
+            if(lobby.players!!.isEmpty()) {
                 lobbyRepository.deleteById(lobbyIdNum)
             }
         }
@@ -52,23 +53,22 @@ class LobbyService @Autowired constructor(val lobbyRepository : LobbyRepository)
     fun joinLobby(player: BasicPlayer, targetLobbyId : Int) {
         val lobbyOption = lobbyRepository.findById(targetLobbyId)
         if (!lobbyOption.isPresent) {
-            throw Exception()
+            throw LobbyNotExist()
         }
         val lobby = lobbyOption.get().apply {
-            if (players != null) {
-                players!!.add(player.steamId64)
-            } else {
-                players = ArrayList()
-                players!!.add(player.steamId64)
-            }
+            players!!.add(player.steamId64)
         }
         lobbyRepository.save(lobby)
     }
     
     fun leaveLobby(player: BasicPlayer, targetLobbyId : Int) {
-        val lobby = lobbyRepository.findById(targetLobbyId).get()
-        lobby.players?.remove(player.steamId64)
-        if(lobby.players == null || lobby.players!!.isEmpty() == true) {
+        val lobbyOption = lobbyRepository.findById(targetLobbyId)
+        if(!lobbyOption.isPresent) {
+            return
+        }
+        val lobby = lobbyOption.get()
+        lobby.players!!.remove(player.steamId64)
+        if(lobby.players!!.isEmpty()) {
             return lobbyRepository.deleteById(targetLobbyId)
         }
         lobbyRepository.save(lobby)

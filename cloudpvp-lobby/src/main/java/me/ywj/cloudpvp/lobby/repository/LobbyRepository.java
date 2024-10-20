@@ -12,6 +12,4 @@ import org.springframework.stereotype.Repository;
  */
 @Repository
 public interface LobbyRepository extends CrudRepository<Lobby, Integer> {
-    @Override
-    <S extends Lobby> S save(S entity);
 }

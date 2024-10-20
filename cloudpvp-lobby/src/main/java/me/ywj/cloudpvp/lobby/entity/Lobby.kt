@@ -10,28 +10,14 @@ import org.springframework.data.redis.core.RedisHash
  * @since 2024/10/20 16:38
  */
 @RedisHash("Lobby")
-
-class Lobby {
-    constructor() //垃圾repository能不能支持全参构造函数啊
-    constructor(
-        id : Int,
-    ) {
-        this.id = id
+data class Lobby(
+    @Id val id: Int,
+    var players : ArrayList<Long>?
+) {
+    constructor(id: Int) : this(id, ArrayList<Long>())
+    init {
+        if (players == null) {
+            players = ArrayList<Long>()
+        }
     }
-
-    @Id
-    var id: Int? = null
-        set (value) {
-            if (field != null) {
-                return
-            }
-            field = value
-        }
-    var players : ArrayList<Long>? = null
-        set (value) {
-            if (field != null) {
-                return
-            }
-            field = value
-        }
 }
