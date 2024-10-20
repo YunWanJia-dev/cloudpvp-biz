@@ -1,16 +1,12 @@
 package me.ywj.cloudpvp.usersummary.controller;
 
 import me.ywj.cloudpvp.core.entity.PlayerProfile;
-import me.ywj.cloudpvp.core.type.SteamIdKt;
-import me.ywj.cloudpvp.usersummary.constant.ProfileConstant;
 import me.ywj.cloudpvp.usersummary.service.ProfileService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
-import java.util.Objects;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * ProfileController
@@ -28,9 +24,8 @@ public class ProfileController {
         this.profileService = profileService;
     }
 
-    @GetMapping("/{id}")
-    public PlayerProfile getProfile(@PathVariable SteamIdKt id) {
-        final PlayerProfile profile = profileService.getProfile(id);
-        return profile;
+    @GetMapping
+    public List<PlayerProfile> getProfile(@RequestParam ArrayList<Long> ids) {
+        return profileService.getProfile(ids);
     }
 }
