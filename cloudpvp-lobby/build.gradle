@@ -1,0 +1,50 @@
+plugins {
+    id 'java'
+    alias(libs.plugins.kotlinJvm)
+    alias(libs.plugins.springBoot)
+    alias(libs.plugins.springDependecyManager)
+}
+
+group = 'me.ywj.cloudpvp'
+version = '0.0.1-SNAPSHOT'
+
+java {
+    sourceCompatibility = libs.versions.java.get()
+    targetCompatibility = libs.versions.java.get()
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(libs.versions.java.get().toInteger())
+    }
+}
+
+kotlin {
+    jvmToolchain(libs.versions.java.get().toInteger())
+}
+
+repositories {
+    maven {
+        url 'https://maven.aliyun.com/repository/public/'
+    }
+    mavenCentral()
+}
+
+dependencies {
+    compileOnly project(":cloudpvp-core")
+    runtimeOnly libs.kotlin.reflect
+    implementation libs.ktx.coroutines.core
+    implementation libs.ktx.coroutines.jvm
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-websocket'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+dependencyManagement {
+    imports {
+        mavenBom "org.springframework.cloud:spring-cloud-dependencies:${libs.versions.springCloudVersion.get()}"
+    }
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
