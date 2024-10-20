@@ -12,10 +12,10 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * @since 2024/6/6  17:18
  */
 @SpringBootApplication
-public class CloudPVPUserSummaryApplication {
+public class CloudpvpUserSummaryApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.run(CloudPVPUserSummaryApplication.class, args);
+		SpringApplication.run(CloudpvpUserSummaryApplication.class, args);
 	}
 
 }
