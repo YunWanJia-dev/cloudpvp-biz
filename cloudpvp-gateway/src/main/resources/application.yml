@@ -10,16 +10,21 @@ spring:
               lb://auth
             predicates:
               - Path=/auth/**
-          - id: matchmaking
+          - id: lobby
             uri:
-              lb://matchmaking
+              lb://lobby
             predicates:
-              - Path=/matchmaking/**
+              - Path=/lobby/**
           - id: play
             uri:
               lb://play
             predicates:
               - Path=/play/**
+          - id: state
+            uri:
+              lb://state
+            predicates:
+              - Path=/state/**
           - id: user-summary
             uri:
               lb://user-summary
