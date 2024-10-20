@@ -1,8 +1,8 @@
 package me.ywj.cloudpvp.state.websocket
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import me.ywj.cloudpvp.core.model.ErrorResponse
-import me.ywj.cloudpvp.core.model.ErrorType
+import me.ywj.cloudpvp.core.model.base.ErrorResponse
+import me.ywj.cloudpvp.core.model.base.ErrorType
 import me.ywj.cloudpvp.core.type.SteamId64
 import me.ywj.cloudpvp.core.utils.PlayerUtils
 import me.ywj.cloudpvp.state.constant.StateEnum

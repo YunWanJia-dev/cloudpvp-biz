@@ -1,4 +1,4 @@
-package me.ywj.cloudpvp.core.model
+package me.ywj.cloudpvp.core.model.base
 
 /**
  * ErrorReturn
