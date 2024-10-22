@@ -1,5 +1,6 @@
 package me.ywj.cloudpvp.lobby.entity
 
+import com.fasterxml.jackson.annotation.JsonIgnore
 import me.ywj.cloudpvp.core.entity.BasicPlayer
 import me.ywj.cloudpvp.core.type.SteamId64
 import org.springframework.data.annotation.Id
@@ -13,5 +14,6 @@ import org.springframework.data.redis.core.RedisHash
  */
 @RedisHash("LobbyPlayer")
 class LobbyPlayer(@Id override val steamId64 : SteamId64) : BasicPlayer(steamId64)  {
-    
+    @JsonIgnore
+    var msgSender :( (Any) -> Unit)? = null;
 }
