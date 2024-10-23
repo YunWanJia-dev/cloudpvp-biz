@@ -14,6 +14,7 @@ import org.springframework.web.socket.WebSocketHandler
 import org.springframework.web.socket.WebSocketSession
 import org.springframework.web.socket.handler.AbstractWebSocketHandler
 import org.springframework.web.util.UriTemplate
+import kotlin.reflect.typeOf
 
 /**
  * StateSocketHandler
@@ -32,7 +33,12 @@ class LobbySocketHandler @Autowired constructor(val lobbyService: LobbyService) 
     override fun afterConnectionEstablished(session: WebSocketSession, ) {
         val lobbyId = URI_TEMPLATE.match(session.uri!!.path)[PARAM_LOBBY_ID] as String
         val steamId64 = session.attributes["steamId"] as SteamId64?
+        val f = { session.sendMessage("") }
         val player = LobbyPlayer(steamId64 ?: 1L)
+//            .apply { 
+//            xx =f
+//        }
+        
         runCatching {
             lobbyService.joinLobby(player, lobbyId.toInt())
         }.onFailure {

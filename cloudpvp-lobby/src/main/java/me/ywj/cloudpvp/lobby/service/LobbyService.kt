@@ -24,30 +24,29 @@ import kotlin.time.ExperimentalTime
 @Service
 class LobbyService @Autowired constructor(val lobbyRepository : LobbyRepository) {
     @OptIn(DelicateCoroutinesApi::class, ExperimentalTime::class)
-    fun createLobby() : String {
+    fun createLobby() : Number {
         val sb = StringBuilder()
         for (i in 1..8) {
             sb.append(Random.nextInt(10))
         }
-        val lobbyIdStr = sb.toString()
-        val lobbyIdNum = lobbyIdStr.toInt()
-        val lobby = Lobby(lobbyIdNum)
+        val lobbyId = sb.toString().toInt()
+        val lobby = Lobby(lobbyId)
         
         //特定时间过后 “创建房间”的玩家未能加入 则清理掉
         GlobalScope.launch {
             delay((LobbyConstant.CREATE_TIMEOUT).seconds)
-            val lobbyOption = lobbyRepository.findById(lobbyIdNum)
+            val lobbyOption = lobbyRepository.findById(lobbyId)
             if (!lobbyOption.isPresent) {
                 return@launch
             }
             val lobby = lobbyOption.get()
             if(lobby.players!!.isEmpty()) {
-                lobbyRepository.deleteById(lobbyIdNum)
+                lobbyRepository.deleteById(lobbyId)
             }
         }
         
         lobbyRepository.save(lobby)
-        return lobbyIdStr
+        return lobbyId
     }
     
     fun joinLobby(player: BasicPlayer, targetLobbyId : Int) {
