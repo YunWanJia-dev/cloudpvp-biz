@@ -13,6 +13,7 @@ data class ErrorResponse(val errors: ErrorContent) {
 data class ErrorContent(val id: ErrorType, val detail: String)
 
 enum class ErrorType {
+    PARAM_INVALID,
     PLAYER_ID_INVALID,
     
     LOBBY_NOT_EXIST,

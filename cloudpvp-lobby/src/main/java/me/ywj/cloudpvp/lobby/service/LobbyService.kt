@@ -5,8 +5,10 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import me.ywj.cloudpvp.core.constant.lobby.LobbyConstant
+import me.ywj.cloudpvp.core.model.lobby.LobbyMessage
+import me.ywj.cloudpvp.core.model.lobby.LobbyMessageType
 import me.ywj.cloudpvp.core.type.LobbyId
-import me.ywj.cloudpvp.core.type.toLobbyId
+import me.ywj.cloudpvp.core.utils.LobbyUtils
 import me.ywj.cloudpvp.lobby.entity.Lobby
 import me.ywj.cloudpvp.lobby.entity.LobbyPlayer
 import me.ywj.cloudpvp.lobby.exception.LobbyNotExist
@@ -16,7 +18,6 @@ import org.springframework.data.redis.core.RedisTemplate
 import org.springframework.data.redis.listener.PatternTopic
 import org.springframework.data.redis.listener.RedisMessageListenerContainer
 import org.springframework.stereotype.Service
-import kotlin.random.Random
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.ExperimentalTime
 
@@ -31,11 +32,7 @@ class LobbyService @Autowired constructor(val lobbyRepository : LobbyRepository,
     
     @OptIn(DelicateCoroutinesApi::class, ExperimentalTime::class)
     fun createLobby() : LobbyId {
-        val sb = StringBuilder()
-        for (i in 1..LobbyConstant.ID_SIZE) {
-            sb.append(Random.nextInt(10))
-        }
-        val lobbyId = sb.toString().toLobbyId()
+        val lobbyId = LobbyUtils.generateLobbyId()
         
         if (lobbyRepository.findById(lobbyId).isPresent) {
             //如果生成的id已存在，则重新生成
@@ -61,8 +58,7 @@ class LobbyService @Autowired constructor(val lobbyRepository : LobbyRepository,
         return lobbyId
     }
     
-    fun joinLobby(player: LobbyPlayer) {
-        val targetLobbyId = player.lobbyId
+    fun joinLobby(player: LobbyPlayer, targetLobbyId : LobbyId) {
         val lobbyOption = lobbyRepository.findById(targetLobbyId)
         if (!lobbyOption.isPresent) {
             throw LobbyNotExist()
@@ -72,11 +68,15 @@ class LobbyService @Autowired constructor(val lobbyRepository : LobbyRepository,
         }
         container.addMessageListener(player.msgListener, PatternTopic(lobby.id.toString()))
         lobbyRepository.save(lobby)
+        player.lobbyId = targetLobbyId
+        lobby.sendMsg(LobbyMessage(LobbyMessageType.JOIN).apply { 
+            playerId = player.steamId64
+        })
     }
     
     fun leaveLobby(player: LobbyPlayer) {
         val targetLobbyId = player.lobbyId
-        val lobbyOption = lobbyRepository.findById(targetLobbyId)
+        val lobbyOption = lobbyRepository.findById(targetLobbyId!!)
         if(!lobbyOption.isPresent) {
             return
         }
@@ -87,6 +87,17 @@ class LobbyService @Autowired constructor(val lobbyRepository : LobbyRepository,
         }
         container.removeMessageListener(player.msgListener, PatternTopic(lobby.id.toString()))
         lobbyRepository.save(lobby)
+        lobby.sendMsg(LobbyMessage(LobbyMessageType.LEAVE).apply {
+            playerId = player.steamId64
+        })
+    }
+    
+    fun playerTexting(player: LobbyPlayer, content: String) {
+        val lobby = Lobby(player.lobbyId!!)
+        lobby.sendMsg(LobbyMessage(LobbyMessageType.TEXTING).apply {
+            playerId = player.steamId64
+            this.content = content
+        })
     }
     
     fun Lobby.sendMsg(msg: Any) {
