@@ -33,14 +33,14 @@ class LobbySocketHandler @Autowired constructor(val lobbyService: LobbyService) 
         val steamId64 = session.attributes["steamId"] as SteamId64?
         val player = LobbyPlayer(steamId64 ?: 1L, session)
         if(player.lobbyId <= 0){
-            session.sendMessage(ErrorResponse(ErrorType.LOBBY_ID_INVALID, ""))
+            player.sendMessage(ErrorResponse(ErrorType.LOBBY_ID_INVALID, ""))
             session.close()
             return
         }
         runCatching {
             lobbyService.joinLobby(player)
         }.onFailure {
-            session.sendMessage(ErrorResponse(ErrorType.LOBBY_NOT_EXIST, ""))
+            player.sendMessage(ErrorResponse(ErrorType.LOBBY_NOT_EXIST, ""))
             session.close()
         }
     }
@@ -54,6 +54,3 @@ class LobbySocketHandler @Autowired constructor(val lobbyService: LobbyService) 
     
 }
 
-private fun WebSocketSession.sendMessage(response: Any) {
-    sendMessage(TextMessage(ObjectMapper().writeValueAsString(response)))
-}
