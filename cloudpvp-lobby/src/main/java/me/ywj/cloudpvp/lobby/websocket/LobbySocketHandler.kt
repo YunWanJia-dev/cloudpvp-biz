@@ -74,7 +74,8 @@ class LobbySocketHandler @Autowired constructor(val lobbyService: LobbyService) 
         session: WebSocketSession,
         message: TextMessage
     ) {
-        message.payload
+        val player = PLAYER_MAP[session.getPlayerId()!!]
+        lobbyService.playerTexting(player!!, message.payload)
     }
 }
 
