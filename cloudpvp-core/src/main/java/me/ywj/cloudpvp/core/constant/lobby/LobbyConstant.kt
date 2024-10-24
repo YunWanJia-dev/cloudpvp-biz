@@ -1,7 +1,5 @@
 package me.ywj.cloudpvp.core.constant.lobby
 
-import jdk.internal.joptsimple.internal.Strings
-
 /**
  * LobbyConstant
  *
