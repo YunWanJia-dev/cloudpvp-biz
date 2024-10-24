@@ -1,6 +1,5 @@
 package me.ywj.cloudpvp.lobby.entity
 
-import com.fasterxml.jackson.annotation.JsonIgnore
 import me.ywj.cloudpvp.core.entity.BasicPlayer
 import me.ywj.cloudpvp.core.type.LobbyId
 import me.ywj.cloudpvp.core.type.SteamId64
