@@ -90,7 +90,7 @@ class LobbyService @Autowired constructor(val lobbyRepository : LobbyRepository,
     }
     
     fun Lobby.sendMsg(msg: Any) {
-        redisTemplate.convertAndSend(this.id.toString(), msg);    
+        redisTemplate.convertAndSend(this.id.toString(), msg)    
     }
     
 }

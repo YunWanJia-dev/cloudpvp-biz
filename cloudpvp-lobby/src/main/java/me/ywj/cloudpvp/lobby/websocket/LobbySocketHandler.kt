@@ -1,6 +1,5 @@
 package me.ywj.cloudpvp.lobby.websocket
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import me.ywj.cloudpvp.core.model.base.ErrorResponse
 import me.ywj.cloudpvp.core.model.base.ErrorType
 import me.ywj.cloudpvp.core.type.SteamId64
@@ -9,7 +8,6 @@ import me.ywj.cloudpvp.lobby.service.LobbyService
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Controller
 import org.springframework.web.socket.CloseStatus
-import org.springframework.web.socket.TextMessage
 import org.springframework.web.socket.WebSocketHandler
 import org.springframework.web.socket.WebSocketSession
 import org.springframework.web.socket.handler.AbstractWebSocketHandler
