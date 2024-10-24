@@ -1,7 +1,6 @@
 package me.ywj.cloudpvp.lobby.entity
 
 import com.fasterxml.jackson.annotation.JsonIgnore
-import com.fasterxml.jackson.databind.ObjectMapper
 import me.ywj.cloudpvp.core.entity.BasicPlayer
 import me.ywj.cloudpvp.core.type.LobbyId
 import me.ywj.cloudpvp.core.type.SteamId64
@@ -9,8 +8,6 @@ import org.springframework.data.annotation.Id
 import org.springframework.data.redis.connection.Message
 import org.springframework.data.redis.connection.MessageListener
 import org.springframework.data.redis.core.RedisHash
-import org.springframework.web.socket.TextMessage
-import org.springframework.web.socket.WebSocketSession
 
 /**
  * LobbyPlayer
