@@ -32,6 +32,12 @@ class LobbyService @Autowired constructor(val lobbyRepository : LobbyRepository)
             sb.append(Random.nextInt(10))
         }
         val lobbyId = sb.toString().toLobbyId()
+        
+        if (lobbyRepository.findById(lobbyId).isPresent) {
+            //如果生成的id已存在，则重新生成
+            return createLobby()
+        }
+        
         val lobby = Lobby(lobbyId)
         
         //特定时间过后 “创建房间”的玩家未能加入 则清理掉
@@ -53,7 +59,7 @@ class LobbyService @Autowired constructor(val lobbyRepository : LobbyRepository)
     
     fun joinLobby(player: LobbyPlayer) {
         val targetLobbyId = player.lobbyId
-        val lobbyOption = lobbyRepository.findById(targetLobbyId!!)
+        val lobbyOption = lobbyRepository.findById(targetLobbyId)
         if (!lobbyOption.isPresent) {
             throw LobbyNotExist()
         }
@@ -65,7 +71,7 @@ class LobbyService @Autowired constructor(val lobbyRepository : LobbyRepository)
     
     fun leaveLobby(player: LobbyPlayer) {
         val targetLobbyId = player.lobbyId
-        val lobbyOption = lobbyRepository.findById(targetLobbyId!!)
+        val lobbyOption = lobbyRepository.findById(targetLobbyId)
         if(!lobbyOption.isPresent) {
             return
         }

@@ -26,13 +26,17 @@ class LobbySocketHandler @Autowired constructor(val lobbyService: LobbyService) 
     companion object {
         const val PARAM_LOBBY_ID = "lobbyId"
         const val PATH = "/ws/{${PARAM_LOBBY_ID}}"
-
         val URI_TEMPLATE = UriTemplate(PATH)
         private val PLAYER_MAP = HashMap<SteamId64, LobbyPlayer>()
     }
     override fun afterConnectionEstablished(session: WebSocketSession) {
         val steamId64 = session.attributes["steamId"] as SteamId64?
         val player = LobbyPlayer(steamId64 ?: 1L, session)
+        if(player.lobbyId <= 0){
+            session.sendMessage(ErrorResponse(ErrorType.LOBBY_ID_INVALID, ""))
+            session.close()
+            return
+        }
         runCatching {
             lobbyService.joinLobby(player)
         }.onFailure {

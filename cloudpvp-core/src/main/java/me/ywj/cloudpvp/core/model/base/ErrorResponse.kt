@@ -15,5 +15,6 @@ data class ErrorContent(val id: ErrorType, val detail: String)
 enum class ErrorType {
     PLAYER_ID_INVALID,
     
-    LOBBY_NOT_EXIST
+    LOBBY_NOT_EXIST,
+    LOBBY_ID_INVALID
 }
