@@ -12,6 +12,9 @@ import me.ywj.cloudpvp.lobby.entity.LobbyPlayer
 import me.ywj.cloudpvp.lobby.exception.LobbyNotExist
 import me.ywj.cloudpvp.lobby.repository.LobbyRepository
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.data.redis.core.RedisTemplate
+import org.springframework.data.redis.listener.PatternTopic
+import org.springframework.data.redis.listener.RedisMessageListenerContainer
 import org.springframework.stereotype.Service
 import kotlin.random.Random
 import kotlin.time.Duration.Companion.seconds
@@ -24,7 +27,8 @@ import kotlin.time.ExperimentalTime
  * @since 2024/10/20 16:35
  */
 @Service
-class LobbyService @Autowired constructor(val lobbyRepository : LobbyRepository) {
+class LobbyService @Autowired constructor(val lobbyRepository : LobbyRepository, val redisTemplate: RedisTemplate<Number, Lobby>, val container: RedisMessageListenerContainer) {
+    
     @OptIn(DelicateCoroutinesApi::class, ExperimentalTime::class)
     fun createLobby() : LobbyId {
         val sb = StringBuilder()
@@ -66,6 +70,7 @@ class LobbyService @Autowired constructor(val lobbyRepository : LobbyRepository)
         val lobby = lobbyOption.get().apply {
             players!!.add(player.steamId64)
         }
+        container.addMessageListener(player.msgListener, PatternTopic(lobby.id.toString()))
         lobbyRepository.save(lobby)
     }
     
@@ -80,6 +85,12 @@ class LobbyService @Autowired constructor(val lobbyRepository : LobbyRepository)
         if(lobby.players!!.isEmpty()) {
             return lobbyRepository.deleteById(targetLobbyId)
         }
+        container.removeMessageListener(player.msgListener, PatternTopic(lobby.id.toString()))
         lobbyRepository.save(lobby)
     }
+    
+    fun Lobby.sendMsg(msg: Any) {
+        redisTemplate.convertAndSend(this.id.toString(), msg);    
+    }
+    
 }
