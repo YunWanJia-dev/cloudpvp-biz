@@ -1,5 +1,6 @@
 package me.ywj.cloudpvp.lobby.websocket
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import me.ywj.cloudpvp.core.model.base.ErrorResponse
 import me.ywj.cloudpvp.core.model.base.ErrorType
 import me.ywj.cloudpvp.core.type.SteamId64
@@ -23,7 +24,7 @@ import org.springframework.web.util.UriTemplate
  * @since 2024/10/20 15:44
  */
 @Controller
-class LobbySocketHandler @Autowired constructor(val lobbyService: LobbyService) : AbstractWebSocketHandler(), WebSocketHandler {
+class LobbySocketHandler @Autowired constructor(val lobbyService: LobbyService,val objectMapper: ObjectMapper) : AbstractWebSocketHandler(), WebSocketHandler {
     companion object {
         const val PARAM_LOBBY_ID = "lobbyId"
         const val PATH = "/ws/{${PARAM_LOBBY_ID}}"
@@ -44,21 +45,24 @@ class LobbySocketHandler @Autowired constructor(val lobbyService: LobbyService) 
         val lobbyIdIsValid = LobbyUtils.checkLobbyIdIsValid(getRequestLobbyId())
         return playerIdIsValid && lobbyIdIsValid
     }
+    private fun WebSocketSession.sendMessage(response: Any) {
+        sendMessage(TextMessage(objectMapper.writeValueAsString(response)))
+    }
     
     override fun afterConnectionEstablished(session: WebSocketSession) {
-        val playerId = session.getPlayerId()!!
-        val player = LobbyPlayer(playerId, session)
-        
         if(!session.checkSessionIsValid()) {
-            player.sendMessage(ErrorResponse(ErrorType.PARAM_INVALID, ""))
+            session.sendMessage(ErrorResponse(ErrorType.PARAM_INVALID, ""))
             session.close()
         }
+        
+        val playerId = session.getPlayerId()!!
+        val player = LobbyPlayer(playerId, {it : Any -> session.sendMessage(it)})
         
         runCatching {
             lobbyService.joinLobby(player, session.getRequestLobbyId())
             PLAYER_MAP[playerId] = player
         }.onFailure {
-            player.sendMessage(ErrorResponse(ErrorType.LOBBY_NOT_EXIST, ""))
+            session.sendMessage(ErrorResponse(ErrorType.LOBBY_NOT_EXIST, ""))
             session.close()
         }
     }

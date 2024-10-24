@@ -19,13 +19,13 @@ import org.springframework.web.socket.WebSocketSession
  * @since 2024/10/20 16:31
  */
 @RedisHash("LobbyPlayer")
-class LobbyPlayer(@Id override val steamId64 : SteamId64, @JsonIgnore val session : WebSocketSession) : BasicPlayer(steamId64)  {
+class LobbyPlayer(@Id override val steamId64 : SteamId64, @JsonIgnore val msgSender: (Any) -> Unit) : BasicPlayer(steamId64)  {
     var lobbyId : LobbyId? = null
 
-    val msgListener : MessageListener = LobbyListener { it: Any -> session.sendMessage(it) }
+    val msgListener : MessageListener = LobbyListener(msgSender)
 
     fun sendMessage(msg: Any){
-        session.sendMessage(msg)
+        msgSender(msg)
     }
 }
 
@@ -33,8 +33,4 @@ class LobbyListener (val msgSender : (Any) -> Unit): MessageListener {
     override fun onMessage(message: Message, pattern: ByteArray?) {
         msgSender.invoke(message)
     }
-}
-
-private fun WebSocketSession.sendMessage(response: Any) {
-    sendMessage(TextMessage(ObjectMapper().writeValueAsString(response)))
 }
