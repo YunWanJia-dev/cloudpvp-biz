@@ -11,5 +11,5 @@ import jdk.internal.joptsimple.internal.Strings
 object LobbyConstant {
     const val CREATE_TIMEOUT = 10L
     const val ID_SIZE = 8
-    val MAXIMUM_ID = Strings.repeat('9', ID_SIZE).toInt()
+    val MAXIMUM_ID = "9".repeat(ID_SIZE).toInt()
 }
