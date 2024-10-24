@@ -1,6 +1,5 @@
 package me.ywj.cloudpvp.core.model.lobby
 
-import lombok.Builder
 import me.ywj.cloudpvp.core.type.SteamId64
 
 /**

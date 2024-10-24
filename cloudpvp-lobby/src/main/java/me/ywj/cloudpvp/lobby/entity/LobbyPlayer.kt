@@ -5,8 +5,6 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import me.ywj.cloudpvp.core.entity.BasicPlayer
 import me.ywj.cloudpvp.core.type.LobbyId
 import me.ywj.cloudpvp.core.type.SteamId64
-import me.ywj.cloudpvp.lobby.websocket.LobbySocketHandler
-import me.ywj.cloudpvp.lobby.websocket.LobbySocketHandler.Companion.PARAM_LOBBY_ID
 import org.springframework.data.annotation.Id
 import org.springframework.data.redis.connection.Message
 import org.springframework.data.redis.connection.MessageListener
