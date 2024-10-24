@@ -18,9 +18,6 @@ import org.springframework.web.socket.WebSocketSession
  */
 @RedisHash("LobbyPlayer")
 class LobbyPlayer(@Id override val steamId64 : SteamId64, val session : WebSocketSession) : BasicPlayer(steamId64)  {
-    @JsonIgnore
-    var msgSender :( (Any) -> Unit)? = null;
-    
     var lobbyId : LobbyId? = null
         get() {
             if (lobbyId == null) {
