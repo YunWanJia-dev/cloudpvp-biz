@@ -3,11 +3,14 @@ package me.ywj.cloudpvp.lobby.websocket
 import me.ywj.cloudpvp.core.model.base.ErrorResponse
 import me.ywj.cloudpvp.core.model.base.ErrorType
 import me.ywj.cloudpvp.core.type.SteamId64
+import me.ywj.cloudpvp.core.utils.LobbyUtils
+import me.ywj.cloudpvp.core.utils.PlayerUtils
 import me.ywj.cloudpvp.lobby.entity.LobbyPlayer
 import me.ywj.cloudpvp.lobby.service.LobbyService
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Controller
 import org.springframework.web.socket.CloseStatus
+import org.springframework.web.socket.TextMessage
 import org.springframework.web.socket.WebSocketHandler
 import org.springframework.web.socket.WebSocketSession
 import org.springframework.web.socket.handler.AbstractWebSocketHandler
@@ -24,19 +27,36 @@ class LobbySocketHandler @Autowired constructor(val lobbyService: LobbyService) 
     companion object {
         const val PARAM_LOBBY_ID = "lobbyId"
         const val PATH = "/ws/{${PARAM_LOBBY_ID}}"
-        val URI_TEMPLATE = UriTemplate(PATH)
+        private val URI_TEMPLATE = UriTemplate(PATH)
         private val PLAYER_MAP = HashMap<SteamId64, LobbyPlayer>()
     }
+    
+    private fun WebSocketSession.getPlayerId(): SteamId64? {
+        return attributes["steamId"] as SteamId64?
+    }
+    
+    private fun WebSocketSession.getRequestLobbyId(): Int {
+        return(URI_TEMPLATE.match(uri!!.path)[PARAM_LOBBY_ID] as String).toInt()
+    }
+
+    private fun WebSocketSession.checkSessionIsValid(): Boolean {
+        val playerIdIsValid = PlayerUtils.checkIdIsValid(getPlayerId())
+        val lobbyIdIsValid = LobbyUtils.checkLobbyIdIsValid(getRequestLobbyId())
+        return playerIdIsValid && lobbyIdIsValid
+    }
+    
     override fun afterConnectionEstablished(session: WebSocketSession) {
-        val steamId64 = session.attributes["steamId"] as SteamId64?
-        val player = LobbyPlayer(steamId64 ?: 1L, session)
-        if(player.lobbyId <= 0){
-            player.sendMessage(ErrorResponse(ErrorType.LOBBY_ID_INVALID, ""))
+        val playerId = session.getPlayerId()!!
+        val player = LobbyPlayer(playerId, session)
+        
+        if(!session.checkSessionIsValid()) {
+            player.sendMessage(ErrorResponse(ErrorType.PARAM_INVALID, ""))
             session.close()
-            return
         }
+        
         runCatching {
-            lobbyService.joinLobby(player)
+            lobbyService.joinLobby(player, session.getRequestLobbyId())
+            PLAYER_MAP[playerId] = player
         }.onFailure {
             player.sendMessage(ErrorResponse(ErrorType.LOBBY_NOT_EXIST, ""))
             session.close()
@@ -44,11 +64,17 @@ class LobbySocketHandler @Autowired constructor(val lobbyService: LobbyService) 
     }
 
     override fun afterConnectionClosed(session: WebSocketSession, status: CloseStatus) {
-        val steamId64 = session.attributes["steamId"] as SteamId64?
-        val player = PLAYER_MAP[steamId64]
+        val playerId = session.getPlayerId()!!
+        val player = PLAYER_MAP[playerId]
         lobbyService.leaveLobby(player!!)
-        PLAYER_MAP.remove(steamId64)
+        PLAYER_MAP.remove(playerId)
     }
-    
+
+    override fun handleTextMessage(
+        session: WebSocketSession,
+        message: TextMessage
+    ) {
+        message.payload
+    }
 }
 
