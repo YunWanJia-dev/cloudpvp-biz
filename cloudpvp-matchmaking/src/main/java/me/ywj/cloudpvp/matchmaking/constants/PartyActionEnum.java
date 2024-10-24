@@ -18,5 +18,4 @@ public enum PartyActionEnum {
     MATCHMAKING_START,
     MATCHMAKING_STOP,
     MESSAGE,
-    ;
 }

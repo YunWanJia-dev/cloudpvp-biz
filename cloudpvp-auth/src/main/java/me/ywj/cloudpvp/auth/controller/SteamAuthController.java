@@ -25,7 +25,7 @@ public class SteamAuthController {
 
     /**
      * 完成steam登录后的重定向
-     * @param openidAccocHandler
+     * @param openidAccOcHandler
      * @param openidSigned
      * @param openidSig
      * @param openidNs
@@ -39,7 +39,7 @@ public class SteamAuthController {
      */
     @GetMapping("/login")
     public boolean receiveReturnFromSteam(
-            @RequestParam("openid.assoc_handle")   String openidAccocHandler,
+            @RequestParam("openid.assoc_handle")   String openidAccOcHandler,
             @RequestParam("openid.signed")         String openidSigned,
             @RequestParam("openid.sig")            String openidSig,
             @RequestParam("openid.ns")             String openidNs,
@@ -50,7 +50,7 @@ public class SteamAuthController {
             @RequestParam("openid.return_to")      String openidReturnTo,
             @RequestParam("openid.response_nonce") String openidResponseNonce
     ) {
-        System.out.println(openidAccocHandler);
+        System.out.println(openidAccOcHandler);
         System.out.println(openidSigned);
         System.out.println(openidSig);
         System.out.println(openidNs);
@@ -61,7 +61,7 @@ public class SteamAuthController {
         System.out.println(openidReturnTo);
         System.out.println(openidResponseNonce);
         return steamAuthService.validRequestFromUser(
-                openidAccocHandler,
+                openidAccOcHandler,
                 openidSigned,
                 openidSig,
                 openidNs,

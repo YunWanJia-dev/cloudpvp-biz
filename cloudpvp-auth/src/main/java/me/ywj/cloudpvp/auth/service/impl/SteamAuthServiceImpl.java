@@ -34,7 +34,7 @@ public class SteamAuthServiceImpl implements ISteamAuthService {
     }
     @Override
     public boolean validRequestFromUser(
-            String openidAccocHandler,
+            String openidAccOcHandler,
             String openidSigned,
             String openidSig,
             String openidNs,
@@ -47,7 +47,7 @@ public class SteamAuthServiceImpl implements ISteamAuthService {
     ){
         try {
             String params =
-                    "openid.assoc_handle="   + openidAccocHandler +
+                    "openid.assoc_handle="   + openidAccOcHandler +
                     "&openid.signed="         + openidSigned +
                     "&openid.sig="            + openidSig +
                     "&openid.ns="             + openidNs +
