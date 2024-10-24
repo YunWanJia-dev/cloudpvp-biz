@@ -5,8 +5,10 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import me.ywj.cloudpvp.core.constant.lobby.LobbyConstant
-import me.ywj.cloudpvp.core.entity.BasicPlayer
+import me.ywj.cloudpvp.core.type.LobbyId
+import me.ywj.cloudpvp.core.type.toLobbyId
 import me.ywj.cloudpvp.lobby.entity.Lobby
+import me.ywj.cloudpvp.lobby.entity.LobbyPlayer
 import me.ywj.cloudpvp.lobby.exception.LobbyNotExist
 import me.ywj.cloudpvp.lobby.repository.LobbyRepository
 import org.springframework.beans.factory.annotation.Autowired
@@ -24,12 +26,12 @@ import kotlin.time.ExperimentalTime
 @Service
 class LobbyService @Autowired constructor(val lobbyRepository : LobbyRepository) {
     @OptIn(DelicateCoroutinesApi::class, ExperimentalTime::class)
-    fun createLobby() : Number {
+    fun createLobby() : LobbyId {
         val sb = StringBuilder()
-        for (i in 1..8) {
+        for (i in 1..LobbyConstant.ID_SIZE) {
             sb.append(Random.nextInt(10))
         }
-        val lobbyId = sb.toString().toInt()
+        val lobbyId = sb.toString().toLobbyId()
         val lobby = Lobby(lobbyId)
         
         //特定时间过后 “创建房间”的玩家未能加入 则清理掉
@@ -49,8 +51,9 @@ class LobbyService @Autowired constructor(val lobbyRepository : LobbyRepository)
         return lobbyId
     }
     
-    fun joinLobby(player: BasicPlayer, targetLobbyId : Int) {
-        val lobbyOption = lobbyRepository.findById(targetLobbyId)
+    fun joinLobby(player: LobbyPlayer) {
+        val targetLobbyId = player.lobbyId
+        val lobbyOption = lobbyRepository.findById(targetLobbyId!!)
         if (!lobbyOption.isPresent) {
             throw LobbyNotExist()
         }
@@ -60,8 +63,9 @@ class LobbyService @Autowired constructor(val lobbyRepository : LobbyRepository)
         lobbyRepository.save(lobby)
     }
     
-    fun leaveLobby(player: BasicPlayer, targetLobbyId : Int) {
-        val lobbyOption = lobbyRepository.findById(targetLobbyId)
+    fun leaveLobby(player: LobbyPlayer) {
+        val targetLobbyId = player.lobbyId
+        val lobbyOption = lobbyRepository.findById(targetLobbyId!!)
         if(!lobbyOption.isPresent) {
             return
         }

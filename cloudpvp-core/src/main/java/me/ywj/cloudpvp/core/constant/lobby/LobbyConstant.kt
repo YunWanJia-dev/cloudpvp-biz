@@ -8,4 +8,5 @@ package me.ywj.cloudpvp.core.constant.lobby
  */
 object LobbyConstant {
     const val CREATE_TIMEOUT = 10L
+    const val ID_SIZE = 8
 }

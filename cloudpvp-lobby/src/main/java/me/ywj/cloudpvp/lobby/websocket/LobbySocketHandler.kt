@@ -6,6 +6,8 @@ import me.ywj.cloudpvp.core.model.base.ErrorType
 import me.ywj.cloudpvp.core.type.SteamId64
 import me.ywj.cloudpvp.lobby.entity.LobbyPlayer
 import me.ywj.cloudpvp.lobby.service.LobbyService
+import me.ywj.cloudpvp.lobby.websocket.LobbySocketHandler.Companion.PARAM_LOBBY_ID
+import me.ywj.cloudpvp.lobby.websocket.LobbySocketHandler.Companion.URI_TEMPLATE
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Controller
 import org.springframework.web.socket.CloseStatus
@@ -27,20 +29,15 @@ class LobbySocketHandler @Autowired constructor(val lobbyService: LobbyService) 
     companion object {
         const val PARAM_LOBBY_ID = "lobbyId"
         const val PATH = "/ws/{${PARAM_LOBBY_ID}}"
-        private val PLAYER_MAP = HashMap<SteamId64, Any>()
-        private val URI_TEMPLATE = UriTemplate(PATH)
+
+        val URI_TEMPLATE = UriTemplate(PATH)
+        private val PLAYER_MAP = HashMap<SteamId64, LobbyPlayer>()
     }
-    override fun afterConnectionEstablished(session: WebSocketSession, ) {
-        val lobbyId = URI_TEMPLATE.match(session.uri!!.path)[PARAM_LOBBY_ID] as String
+    override fun afterConnectionEstablished(session: WebSocketSession) {
         val steamId64 = session.attributes["steamId"] as SteamId64?
-        val f = { session.sendMessage("") }
-        val player = LobbyPlayer(steamId64 ?: 1L)
-//            .apply { 
-//            xx =f
-//        }
-        
+        val player = LobbyPlayer(steamId64 ?: 1L, session)
         runCatching {
-            lobbyService.joinLobby(player, lobbyId.toInt())
+            lobbyService.joinLobby(player)
         }.onFailure {
             session.sendMessage(ErrorResponse(ErrorType.LOBBY_NOT_EXIST, ""))
             session.close()
@@ -48,11 +45,12 @@ class LobbySocketHandler @Autowired constructor(val lobbyService: LobbyService) 
     }
 
     override fun afterConnectionClosed(session: WebSocketSession, status: CloseStatus) {
-        val lobbyId = URI_TEMPLATE.match(session.uri!!.path)[PARAM_LOBBY_ID] as String
         val steamId64 = session.attributes["steamId"] as SteamId64?
-        val player = LobbyPlayer(steamId64 ?: 1L)
-        lobbyService.leaveLobby(player, lobbyId.toInt())
+        val player = PLAYER_MAP[steamId64]
+        lobbyService.leaveLobby(player!!)
+        PLAYER_MAP.remove(steamId64)
     }
+    
 }
 
 private fun WebSocketSession.sendMessage(response: Any) {

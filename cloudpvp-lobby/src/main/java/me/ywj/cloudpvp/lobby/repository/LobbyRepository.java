@@ -11,5 +11,5 @@ import org.springframework.stereotype.Repository;
  * @since 2024/10/20 16:42
  */
 @Repository
-public interface LobbyRepository extends CrudRepository<Lobby, Integer> {
+public interface LobbyRepository extends CrudRepository<Lobby, Number> {
 }
