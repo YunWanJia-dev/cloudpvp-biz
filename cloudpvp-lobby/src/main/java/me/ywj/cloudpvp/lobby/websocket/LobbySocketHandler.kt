@@ -53,6 +53,7 @@ class LobbySocketHandler @Autowired constructor(val lobbyService: LobbyService,v
         if(!session.checkSessionIsValid()) {
             session.sendMessage(ErrorResponse(ErrorType.PARAM_INVALID, ""))
             session.close()
+            return
         }
         
         val playerId = session.getPlayerId()!!
@@ -68,9 +69,12 @@ class LobbySocketHandler @Autowired constructor(val lobbyService: LobbyService,v
     }
 
     override fun afterConnectionClosed(session: WebSocketSession, status: CloseStatus) {
-        val playerId = session.getPlayerId()!!
+        val playerId = session.getPlayerId()
         val player = PLAYER_MAP[playerId]
-        lobbyService.leaveLobby(player!!)
+        if(player == null) {
+            return
+        }
+        lobbyService.leaveLobby(player)
         PLAYER_MAP.remove(playerId)
     }
 
