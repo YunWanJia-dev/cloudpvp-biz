@@ -17,7 +17,7 @@ object LobbyUtils {
      * @return 生成的大厅Id
      */
     fun generateLobbyId(): LobbyId {
-        return RandomUtils().buildRandomNumString(LobbyConstant.ID_SIZE).toLobbyId()
+        return RandomUtils().buildRandomNumString(LobbyConstant.ID_SIZE).toLobbyId()!!
     }
 
     /**
