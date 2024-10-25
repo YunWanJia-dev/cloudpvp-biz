@@ -3,7 +3,7 @@ package me.ywj.cloudpvp.lobby.websocket
 import me.ywj.cloudpvp.core.model.base.ErrorResponse
 import me.ywj.cloudpvp.core.model.base.ErrorType
 import me.ywj.cloudpvp.core.type.SteamID64
-import me.ywj.cloudpvp.core.type.toSteamId64
+import me.ywj.cloudpvp.core.type.toSteamID64
 import me.ywj.cloudpvp.core.utils.JacksonUtils
 import me.ywj.cloudpvp.core.utils.LobbyUtils
 import me.ywj.cloudpvp.core.utils.PlayerUtils
@@ -34,7 +34,7 @@ class LobbySocketHandler @Autowired constructor(val lobbyService: LobbyService) 
     }
     
     private fun WebSocketSession.getPlayerId(): SteamID64? {
-        return (attributes["steamId"] as String).toSteamId64()
+        return (attributes["steamId"] as String).toSteamID64()
     }
     
     private fun WebSocketSession.getRequestLobbyId(): Int {

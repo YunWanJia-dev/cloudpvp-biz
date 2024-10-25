@@ -10,7 +10,7 @@ import java.util.Date
  * @since 2024/10/16 11:49
  */
 class PlayerProfile (
-    val steamId64: SteamID64,
+    val steamID64: SteamID64,
     val name: String,
     val avatarLink: String,
 ) {

@@ -64,13 +64,13 @@ class LobbyService @Autowired constructor(val lobbyRepository : LobbyRepository,
             throw LobbyNotExist()
         }
         val lobby = lobbyOption.get().apply {
-            players!!.add(player.steamId64)
+            players!!.add(player.steamID64)
         }
         container.addMessageListener(player.msgListener, PatternTopic(lobby.id.toString()))
         lobbyRepository.save(lobby)
         player.lobbyId = targetLobbyId
         lobby.sendMsg(LobbyMessage(LobbyMessageType.JOIN).apply { 
-            playerId = player.steamId64
+            playerId = player.steamID64
         })
     }
     
@@ -81,21 +81,21 @@ class LobbyService @Autowired constructor(val lobbyRepository : LobbyRepository,
             return
         }
         val lobby = lobbyOption.get()
-        lobby.players!!.remove(player.steamId64)
+        lobby.players!!.remove(player.steamID64)
         if(lobby.players!!.isEmpty()) {
             return lobbyRepository.deleteById(targetLobbyId)
         }
         container.removeMessageListener(player.msgListener, PatternTopic(lobby.id.toString()))
         lobbyRepository.save(lobby)
         lobby.sendMsg(LobbyMessage(LobbyMessageType.LEAVE).apply {
-            playerId = player.steamId64
+            playerId = player.steamID64
         })
     }
     
     fun playerTexting(player: LobbyPlayer, content: String) {
         val lobby = Lobby(player.lobbyId!!)
         lobby.sendMsg(LobbyMessage(LobbyMessageType.TEXTING).apply {
-            playerId = player.steamId64
+            playerId = player.steamID64
             this.content = content
         })
     }

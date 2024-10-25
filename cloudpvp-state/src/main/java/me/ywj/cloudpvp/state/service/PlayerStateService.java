@@ -22,7 +22,7 @@ public class PlayerStateService {
         playerStateRepository.save(playerState);
     }
     public void onDisconnect(PlayerState playerState) {
-        playerStateRepository.deleteById(playerState.getSteamId64());
+        playerStateRepository.deleteById(playerState.getSteamID64());
     }
     public Iterable<PlayerState> getStates(Iterable<Long> ids) {
         return playerStateRepository.findAllById(ids);

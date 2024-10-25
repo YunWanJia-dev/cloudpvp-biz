@@ -17,7 +17,7 @@ import org.springframework.data.redis.core.RedisHash
  * @since 2024/10/20 16:31
  */
 @RedisHash("LobbyPlayer")
-class LobbyPlayer(@Id override val steamId64 : SteamID64, @JsonIgnore val msgSender: (Any) -> Unit) : BasicPlayer(steamId64)  {
+class LobbyPlayer(@Id override val steamID64 : SteamID64, @JsonIgnore val msgSender: (Any) -> Unit) : BasicPlayer(steamID64)  {
     var lobbyId : LobbyId? = null
 
     val msgListener : MessageListener = LobbyListener(msgSender)
