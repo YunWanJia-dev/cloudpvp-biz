@@ -14,7 +14,7 @@ subprojects {
     def process = 'git rev-parse HEAD'.execute()
     process.waitFor()
     def lastCommitHash = process.text.trim()
-    version = lastCommitHash.substring(lastCommitHash.length() - 7,lastCommitHash.length())
+    version = lastCommitHash.substring(0, 7)
     // 设置所有项目的默认目录
     def allProjectsOutputDir = new File(projectDir, '../build')
 
