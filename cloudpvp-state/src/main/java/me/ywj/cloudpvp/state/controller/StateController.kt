@@ -1,6 +1,6 @@
 package me.ywj.cloudpvp.state.controller
 
-import me.ywj.cloudpvp.core.type.SteamId64
+import me.ywj.cloudpvp.core.type.SteamID64
 import me.ywj.cloudpvp.state.entity.PlayerState
 import me.ywj.cloudpvp.state.service.PlayerStateService
 import org.springframework.beans.factory.annotation.Autowired
@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RestController
 @RestController
 class StateController @Autowired constructor(val stateService: PlayerStateService){
     @GetMapping
-    fun getPlayerStates(@RequestParam ids: ArrayList<SteamId64>): Iterable<PlayerState?>? {
+    fun getPlayerStates(@RequestParam ids: ArrayList<SteamID64>): Iterable<PlayerState?>? {
         return stateService.getStates(ids)
     }
 }

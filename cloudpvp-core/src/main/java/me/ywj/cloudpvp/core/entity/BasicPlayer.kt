@@ -1,6 +1,6 @@
 package me.ywj.cloudpvp.core.entity
 
-import me.ywj.cloudpvp.core.type.SteamId64
+import me.ywj.cloudpvp.core.type.SteamID64
 
 /**
  * BasicPlayer
@@ -9,5 +9,5 @@ import me.ywj.cloudpvp.core.type.SteamId64
  * @since 2024/10/16 11:48
  */
 open class BasicPlayer (
-    open val steamId64: SteamId64,
+    open val steamId64: SteamID64,
 ) 
