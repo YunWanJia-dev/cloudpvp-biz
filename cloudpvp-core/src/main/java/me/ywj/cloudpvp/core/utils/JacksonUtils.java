@@ -12,7 +12,7 @@ import java.io.IOException;
  * @since 2024/10/25 16:26
  */
 public class JacksonUtils {
-    public static ObjectMapper INSTANCE = createInstance();
+    public final static ObjectMapper INSTANCE = createInstance();
     
     private JacksonUtils() {}
     
