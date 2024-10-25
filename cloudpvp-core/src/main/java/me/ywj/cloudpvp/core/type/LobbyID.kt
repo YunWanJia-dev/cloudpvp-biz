@@ -9,6 +9,6 @@ package me.ywj.cloudpvp.core.type
  */
 typealias LobbyId = Int
 
-fun String.toLobbyId() : LobbyId? {
-    return this.toIntOrNull()
-}
+//fun String.toLobbyId() : LobbyId? {
+//    return this.toIntOrNull()
+//}
