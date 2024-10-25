@@ -6,7 +6,6 @@ plugins {
 }
 
 group = 'me.ywj.cloudpvp'
-version = '0.0.1-SNAPSHOT'
 
 java {
     sourceCompatibility = libs.versions.java.get()

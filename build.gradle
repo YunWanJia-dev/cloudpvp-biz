@@ -6,3 +6,52 @@ plugins {
     alias(libs.plugins.kotlinJvm) apply false
     alias(libs.plugins.kotlinMultiplatform) apply false
 }
+
+subprojects {
+    // 配置每个子项目的构建结果输出到同一个目录
+    apply plugin: 'java'
+    //获取当前commit HEAD
+    def process = 'git rev-parse HEAD'.execute()
+    process.waitFor()
+    def lastCommitHash = process.text.trim()
+    version = lastCommitHash.substring(lastCommitHash.length() - 7,lastCommitHash.length())
+    // 设置所有项目的默认目录
+    def allProjectsOutputDir = new File(projectDir, '../build')
+
+    // 覆盖默认的jar任务，指定输出位置
+    jar {
+        destinationDirectory = allProjectsOutputDir
+    }
+
+    // 覆盖默认的assemble任务，确保它不会构建到其他目录
+    assemble {
+        dependsOn { [] }
+    }
+
+    // 覆盖默认的check任务，确保它不会检查其他目录的构建
+    check {
+        dependsOn { [] }
+    }
+
+    // 覆盖默认的build任务，使其依赖于jar任务
+    build {
+        dependsOn jar
+    }
+
+    // 覆盖默认的clean任务，清理自定义目录
+    clean {
+        doLast {
+            delete allProjectsOutputDir
+        }
+    }
+}
+
+// 在所有项目应用后，重写根项目的 assemble 和 check 任务
+// 以确保它们不会执行子项目的任务
+//assemble {
+//    dependsOn subprojects.assemble
+//}
+
+//check {
+//    dependsOn subprojects.check
+//}
