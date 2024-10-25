@@ -9,7 +9,6 @@ import org.springframework.data.annotation.Id
 import org.springframework.data.redis.connection.Message
 import org.springframework.data.redis.connection.MessageListener
 import org.springframework.data.redis.core.RedisHash
-import java.util.Objects
 
 /**
  * LobbyPlayer

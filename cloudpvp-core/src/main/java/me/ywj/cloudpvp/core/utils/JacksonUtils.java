@@ -2,7 +2,6 @@ package me.ywj.cloudpvp.core.utils;
 
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializerProvider;
 
 import java.io.IOException;
 
@@ -23,15 +22,7 @@ public class JacksonUtils {
         return objectMapper;
     }
     
-    public static <T> T deserializeFromBytes(byte[] bytes, Class<T> clazz) throws IOException {
-        return INSTANCE.readValue(bytes, clazz);
-    }
-    
     public static String serialize(Object o) throws IOException {
         return INSTANCE.writeValueAsString(o);
-    }
-    
-    public static String byteToJson(byte[] bytes) throws IOException {
-        return deserializeFromBytes(bytes, String.class);
     }
 }
