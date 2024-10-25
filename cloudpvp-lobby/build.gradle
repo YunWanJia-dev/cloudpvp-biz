@@ -32,8 +32,14 @@ dependencies {
     runtimeOnly libs.kotlin.reflect
     implementation libs.ktx.coroutines.core
     implementation libs.ktx.coroutines.jvm
+    implementation 'org.springframework.boot:spring-boot-starter-jetty'
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
     implementation 'org.springframework.boot:spring-boot-starter-web'
+    modules {
+        module("org.springframework.boot:spring-boot-starter-tomcat") {
+            replacedBy("org.springframework.boot:spring-boot-starter-jetty", "Use Jetty instead of Tomcat")
+        }
+    }
     implementation 'org.springframework.boot:spring-boot-starter-websocket'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
