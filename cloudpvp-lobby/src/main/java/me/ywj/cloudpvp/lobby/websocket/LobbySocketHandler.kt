@@ -56,8 +56,8 @@ class LobbySocketHandler @Autowired constructor(val lobbyService: LobbyService,v
         }
         
         val playerId = session.getPlayerId()!!
-        val player = LobbyPlayer(playerId, {it : Any -> session.sendMessage(it)})
-        
+        val player = LobbyPlayer(playerId) { it: Any -> session.sendMessage(it) }
+
         runCatching {
             lobbyService.joinLobby(player, session.getRequestLobbyId())
             PLAYER_MAP[playerId] = player
