@@ -3,11 +3,13 @@ package me.ywj.cloudpvp.lobby.entity
 import com.fasterxml.jackson.annotation.JsonIgnore
 import me.ywj.cloudpvp.core.entity.BasicPlayer
 import me.ywj.cloudpvp.core.type.LobbyId
-import me.ywj.cloudpvp.core.type.SteamId64
+import me.ywj.cloudpvp.core.type.SteamID64
+import me.ywj.cloudpvp.lobby.configure.RedisConfigure
 import org.springframework.data.annotation.Id
 import org.springframework.data.redis.connection.Message
 import org.springframework.data.redis.connection.MessageListener
 import org.springframework.data.redis.core.RedisHash
+import java.util.Objects
 
 /**
  * LobbyPlayer
@@ -16,7 +18,7 @@ import org.springframework.data.redis.core.RedisHash
  * @since 2024/10/20 16:31
  */
 @RedisHash("LobbyPlayer")
-class LobbyPlayer(@Id override val steamId64 : SteamId64, @JsonIgnore val msgSender: (Any) -> Unit) : BasicPlayer(steamId64)  {
+class LobbyPlayer(@Id override val steamId64 : SteamID64, @JsonIgnore val msgSender: (Any) -> Unit) : BasicPlayer(steamId64)  {
     var lobbyId : LobbyId? = null
 
     val msgListener : MessageListener = LobbyListener(msgSender)
@@ -28,6 +30,9 @@ class LobbyPlayer(@Id override val steamId64 : SteamId64, @JsonIgnore val msgSen
 
 class LobbyListener (val msgSender : (Any) -> Unit): MessageListener {
     override fun onMessage(message: Message, pattern: ByteArray?) {
-        msgSender.invoke(message)
+        val msg = RedisConfigure.SERIALIZER.deserialize(message.body)
+        if(msg != null) {
+            msgSender.invoke(msg)
+        }
     }
 }
