@@ -112,6 +112,10 @@ class LobbyService @Autowired constructor(
             this.content = content
         })
     }
+    
+    fun getLobby(id: LobbyId): Lobby? {
+        return lobbyRepository.findById(id).get()
+    }
 
     //    @OptIn(DelicateCoroutinesApi::class)
     fun Lobby.sendMsg(msg: Any) {
