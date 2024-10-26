@@ -16,7 +16,7 @@ import java.io.IOException;
 @RestController
 @RequestMapping("/steam")
 public class SteamAuthController {
-    SteamAuthService steamAuthService;
+    final SteamAuthService steamAuthService;
 
     @Autowired
     public SteamAuthController(SteamAuthService steamAuthService) {

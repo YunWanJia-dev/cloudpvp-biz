@@ -15,7 +15,7 @@ object PlayerUtils {
     /**
      * checkIdIsValid
      * 校验玩家SteamID64有效性
-     * @param steamId64 SteamID64
+     * @param steamID64 SteamID64
      * @return id是否有校
      */
     fun checkIdIsValid(steamID64 : SteamID64?): Boolean {
