@@ -24,18 +24,18 @@ public class SteamAuthController {
     }
 
     /**
-     * 完成steam登录后的重定向
-     * @param openidAccOcHandler
-     * @param openidSigned
-     * @param openidSig
-     * @param openidNs
-     * @param openidMode
-     * @param openidOpEndpoint
-     * @param openidClaimedId
-     * @param openidIdentity
-     * @param openidReturnTo
-     * @param openidResponseNonce
-     * @return
+     * redirectToSteam
+     * 重定向至steam以登录
+     */
+    @GetMapping("/redirect_to_steam")
+    public void redirectToSteam(@RequestHeader(value = "Host") String host, HttpServletResponse response) throws IOException {
+        String redirectUrl = steamAuthService.generateSteamLoginUrl(host, "/auth/steam/login");
+        response.sendRedirect(redirectUrl);
+    }
+
+    /**
+     * receiveReturnFromSteam
+     * 接受完成steam登录后的重定向请求
      */
     @GetMapping("/login")
     public boolean receiveReturnFromSteam(
@@ -62,17 +62,5 @@ public class SteamAuthController {
                 openidReturnTo,
                 openidResponseNonce
         );
-    }
-
-    /**
-     * 重定向至steam
-     * @param host
-     * @param response
-     * @throws IOException
-     */
-    @GetMapping("/redirect_to_steam")
-    public void redirectToSteam(@RequestHeader(value = "Host") String host, HttpServletResponse response) throws IOException {
-        String redirectUrl = steamAuthService.generateSteamLoginUrl(host, "/auth/steam/login");
-        response.sendRedirect(redirectUrl);
     }
 }

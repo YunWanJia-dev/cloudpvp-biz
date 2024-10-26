@@ -19,7 +19,13 @@ import java.util.ArrayList;
  */
 @Service
 public class SteamAuthService {
-    
+    /**
+     * generateSteamLoginUrl
+     * 生成用于重定向至的URL
+     * @param hostname 重定向目标域名
+     * @param router 重定向目标路径
+     * @return 重定向至steam的URL
+     */
     public String generateSteamLoginUrl(String hostname, String router) {
         String baseUrl =
                 "https://steamcommunity.com/openid/login?" +
@@ -31,7 +37,12 @@ public class SteamAuthService {
                 ;
         return String.format(baseUrl, hostname, router, hostname, router);
     }
-    
+
+    /**
+     * validRequestFromUser
+     * 校验完成steam登录后重定向过来的请求是否有效
+     * @return 是否有效
+     */
     public boolean validRequestFromUser(
             String openidAccOcHandler,
             String openidSigned,
@@ -57,6 +68,7 @@ public class SteamAuthService {
                     "&openid.return_to="      + openidReturnTo +
                     "&openid.response_nonce=" + openidResponseNonce +
                     "&openid.mode=check_authentication";
+            //TODO 提取工具类
             URI uri = new URI("https://steamcommunity.com/openid/login?" + params);
             //创建连接，设置消息头
             HttpURLConnection conn = (HttpURLConnection) uri.toURL().openConnection();
