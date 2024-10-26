@@ -1,8 +1,7 @@
-package me.ywj.cloudpvp.auth.service.impl;
+package me.ywj.cloudpvp.auth.service;
 
 import me.ywj.cloudpvp.auth.exceptions.InternalErrorException;
 import me.ywj.cloudpvp.auth.exceptions.SteamServiceErrorException;
-import me.ywj.cloudpvp.auth.service.ISteamAuthService;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
@@ -19,8 +18,8 @@ import java.util.ArrayList;
  * @since 2024/1/19 11:47
  */
 @Service
-public class SteamAuthServiceImpl implements ISteamAuthService {
-    @Override
+public class SteamAuthService {
+    
     public String generateSteamLoginUrl(String hostname, String router) {
         String baseUrl =
                 "https://steamcommunity.com/openid/login?" +
@@ -32,7 +31,7 @@ public class SteamAuthServiceImpl implements ISteamAuthService {
                 ;
         return String.format(baseUrl, hostname, router, hostname, router);
     }
-    @Override
+    
     public boolean validRequestFromUser(
             String openidAccOcHandler,
             String openidSigned,
@@ -78,7 +77,6 @@ public class SteamAuthServiceImpl implements ISteamAuthService {
             ArrayList<String> response = new ArrayList<>();
             String inputLine;
             while ((inputLine = in.readLine()) != null) {
-//                System.out.println(inputLine);
                 response.add(inputLine);
             }
             in.close();

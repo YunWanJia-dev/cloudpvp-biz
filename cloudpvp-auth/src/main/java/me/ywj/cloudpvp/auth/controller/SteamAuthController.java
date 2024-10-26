@@ -1,7 +1,7 @@
 package me.ywj.cloudpvp.auth.controller;
 
 import jakarta.servlet.http.HttpServletResponse;
-import me.ywj.cloudpvp.auth.service.ISteamAuthService;
+import me.ywj.cloudpvp.auth.service.SteamAuthService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -16,10 +16,10 @@ import java.io.IOException;
 @RestController
 @RequestMapping("/steam")
 public class SteamAuthController {
-    ISteamAuthService steamAuthService;
+    SteamAuthService steamAuthService;
 
     @Autowired
-    public SteamAuthController(ISteamAuthService steamAuthService) {
+    public SteamAuthController(SteamAuthService steamAuthService) {
         this.steamAuthService = steamAuthService;
     }
 
@@ -50,16 +50,6 @@ public class SteamAuthController {
             @RequestParam("openid.return_to")      String openidReturnTo,
             @RequestParam("openid.response_nonce") String openidResponseNonce
     ) {
-        System.out.println(openidAccOcHandler);
-        System.out.println(openidSigned);
-        System.out.println(openidSig);
-        System.out.println(openidNs);
-        System.out.println(openidMode);
-        System.out.println(openidOpEndpoint);
-        System.out.println(openidClaimedId);
-        System.out.println(openidIdentity);
-        System.out.println(openidReturnTo);
-        System.out.println(openidResponseNonce);
         return steamAuthService.validRequestFromUser(
                 openidAccOcHandler,
                 openidSigned,
@@ -81,7 +71,7 @@ public class SteamAuthController {
      * @throws IOException
      */
     @GetMapping("/redirect_to_steam")
-    public void redirectToSteam(@RequestHeader(value = "Host") String host,HttpServletResponse response) throws IOException {
+    public void redirectToSteam(@RequestHeader(value = "Host") String host, HttpServletResponse response) throws IOException {
         String redirectUrl = steamAuthService.generateSteamLoginUrl(host, "/auth/steam/login");
         response.sendRedirect(redirectUrl);
     }
