@@ -34,11 +34,11 @@ class LobbySocketHandler @Autowired constructor(val lobbyService: LobbyService) 
     }
     
     private fun WebSocketSession.getPlayerId(): SteamID64? {
-        return (attributes["steamId"] as String).toSteamID64()
+        return (attributes["steamId"] as String?)?.toSteamID64()
     }
     
-    private fun WebSocketSession.getRequestLobbyId(): Int {
-        return(URI_TEMPLATE.match(uri!!.path)[PARAM_LOBBY_ID] as String).toInt()
+    private fun WebSocketSession.getRequestLobbyId(): Int? {
+        return URI_TEMPLATE.match(uri!!.path)[PARAM_LOBBY_ID]?.toIntOrNull()
     }
 
     private fun WebSocketSession.checkSessionIsValid(): Boolean {
@@ -47,6 +47,9 @@ class LobbySocketHandler @Autowired constructor(val lobbyService: LobbyService) 
         return playerIdIsValid && lobbyIdIsValid
     }
     private fun WebSocketSession.sendMessage(response: Any) {
+        if(!isOpen()) {
+            return
+        }
         if (response is String) {
             sendMessage(TextMessage(response))
             return
@@ -65,7 +68,7 @@ class LobbySocketHandler @Autowired constructor(val lobbyService: LobbyService) 
         val player = LobbyPlayer(playerId) { it: Any -> session.sendMessage(it) }
 
         runCatching {
-            lobbyService.joinLobby(player, session.getRequestLobbyId())
+            lobbyService.joinLobby(player, session.getRequestLobbyId()!!)
             PLAYER_MAP[playerId] = player
         }.onFailure {
             session.sendMessage(ErrorResponse(ErrorType.LOBBY_NOT_EXIST, ""))

@@ -95,14 +95,14 @@ class LobbyService @Autowired constructor(
         if (lobby.players!!.isEmpty()) {
             return lobbyRepository.deleteById(targetLobbyId)
         }
+        lobby.sendMsg(LobbyMessage(LobbyMessageType.LEAVE).apply {
+            playerId = player.steamID64
+        })
         if (lobby.host == player.steamID64) {
             lobby.updateHost(lobby.players!![0])
         }
         container.removeMessageListener(player.msgListener, PatternTopic(lobby.id.toString()))
-        lobbyRepository.save(lobby)
-        lobby.sendMsg(LobbyMessage(LobbyMessageType.LEAVE).apply {
-            playerId = player.steamID64
-        })
+        lobbyRepository.save(lobby)   
     }
 
     fun playerTexting(player: LobbyPlayer, content: String) {
@@ -116,8 +116,7 @@ class LobbyService @Autowired constructor(
     fun getLobby(id: LobbyId): Lobby? {
         return lobbyRepository.findById(id).get()
     }
-
-    //    @OptIn(DelicateCoroutinesApi::class)
+    
     fun Lobby.sendMsg(msg: Any) {
         CoroutineScope(Dispatchers.IO).launch {
             redisTemplate.convertAndSend(id.toString(), msg)

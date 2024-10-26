@@ -26,7 +26,7 @@ object LobbyUtils {
      * @param id lobbyId
      * @return id是否有校
      */
-    fun checkLobbyIdIsValid(id: LobbyId): Boolean {
-        return id > 0 && id <= LobbyConstant.MAXIMUM_ID
+    fun checkLobbyIdIsValid(id: LobbyId?): Boolean {
+        return id != null && id > 0 && id <= LobbyConstant.MAXIMUM_ID
     }
 }
