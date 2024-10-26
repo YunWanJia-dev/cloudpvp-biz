@@ -27,5 +27,6 @@ data class LobbyMessage(
 enum class LobbyMessageType {
     JOIN,
     LEAVE,
-    TEXTING
+    TEXTING,
+    UPDATE_HOST
 }
