@@ -10,7 +10,6 @@ rootProject.name = 'cloudpvp'
 include 'cloudpvp-core'
 
 include 'cloudpvp-auth'
-include 'cloudpvp-center'
 include 'cloudpvp-gateway'
 include 'cloudpvp-lobby'
 include 'cloudpvp-play'
