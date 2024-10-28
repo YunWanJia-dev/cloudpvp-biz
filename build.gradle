@@ -5,11 +5,21 @@ plugins {
     alias(libs.plugins.compose.compiler) apply false
     alias(libs.plugins.kotlinJvm) apply false
     alias(libs.plugins.kotlinMultiplatform) apply false
+    alias(libs.plugins.springBoot) apply false
+    alias(libs.plugins.springDependecyManager) apply false
 }
 
 subprojects {
-    // 配置每个子项目的构建结果输出到同一个目录
-    apply plugin: 'java'
+    //统一设置plugin
+    apply {
+        plugin("java")
+        plugin(libs.plugins.kotlinJvm.get().pluginId)
+        plugin(libs.plugins.springBoot.get().pluginId)
+        plugin(libs.plugins.springDependecyManager.get().pluginId)
+    }
+    
+    group = 'me.ywj.cloudpvp'
+    
     //获取当前commit HEAD
     def process = 'git rev-parse HEAD'.execute()
     process.waitFor()
