@@ -1,5 +1,3 @@
-group = "me.ywj.cloudpvp"
-
 java {
     sourceCompatibility = libs.versions.java.get()
     targetCompatibility = libs.versions.java.get()
@@ -10,13 +8,6 @@ java {
 
 kotlin {
     jvmToolchain(libs.versions.java.get().toInteger())
-}
-
-repositories {
-    maven {
-        url 'https://maven.aliyun.com/repository/public/'
-    }
-    mavenCentral()
 }
 
 dependencies {

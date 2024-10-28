@@ -1,3 +1,4 @@
+apply from: rootProject.file('buildSrc/shared.gradle')
 
 java {
     sourceCompatibility = libs.versions.java.get()
@@ -11,18 +12,7 @@ kotlin {
     jvmToolchain(libs.versions.java.get().toInteger())
 }
 
-repositories {
-    maven {
-        url 'https://maven.aliyun.com/repository/public/'
-    }
-    mavenCentral()
-}
-
 dependencies {
-    compileOnly project(":cloudpvp-core")
-    runtimeOnly libs.kotlin.reflect
-    implementation libs.ktx.coroutines.core
-    implementation libs.ktx.coroutines.jvm
     implementation 'org.springframework.boot:spring-boot-starter-jetty'
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
     implementation 'org.springframework.boot:spring-boot-starter-web'

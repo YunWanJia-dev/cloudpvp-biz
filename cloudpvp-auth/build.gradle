@@ -1,4 +1,4 @@
-group = 'me.ywj.cloudpvp'
+apply from: rootProject.file('buildSrc/shared.gradle')
 
 java {
     sourceCompatibility = libs.versions.java.get()
@@ -10,13 +10,6 @@ java {
 
 kotlin {
     jvmToolchain(libs.versions.java.get().toInteger())
-}
-
-repositories {
-    maven {
-        url 'https://maven.aliyun.com/repository/public/'
-    }
-    mavenCentral()
 }
 
 dependencies {

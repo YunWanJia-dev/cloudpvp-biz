@@ -1,4 +1,4 @@
-group = 'me.ywj.cloudpvp'
+apply from: rootProject.file('buildSrc/shared.gradle')
 
 java {
 	sourceCompatibility = libs.versions.java.get()
@@ -12,16 +12,7 @@ kotlin {
 	jvmToolchain(libs.versions.java.get().toInteger())
 }
 
-repositories {
-	maven {
-		url 'https://maven.aliyun.com/repository/public/'
-	}
-	mavenCentral()
-}
-
 dependencies {
-	compileOnly project(":cloudpvp-core")
-	runtimeOnly libs.kotlin.reflect
 	implementation 'org.springframework.boot:spring-boot-starter-web'
 	implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
 	runtimeOnly 'org.postgresql:postgresql'
