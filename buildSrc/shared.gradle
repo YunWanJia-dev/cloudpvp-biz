@@ -5,4 +5,5 @@ dependencies {
     runtimeOnly libs.kotlin.reflect
     implementation libs.ktx.coroutines.core
     implementation libs.ktx.coroutines.jvm
+    implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
 }
