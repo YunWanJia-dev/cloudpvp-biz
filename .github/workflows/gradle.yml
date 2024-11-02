@@ -13,6 +13,9 @@ on:
   pull_request:
     branches: [ "master" ]
 
+env:
+  NAME: cloudpvp
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -27,7 +30,16 @@ jobs:
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v4
     - name: Build with Gradle
-      run: chmod a+x ./gradlew && ./gradlew build
+      id: build
+      run: |
+        chmod a+x ./gradlew && ./gradlew build
+        echo "status=success" >> $GITHUB_OUTPUT
+    - name: Upload build directory
+      uses: actions/upload-artifact@main
+      if: steps.build.outputs.status == 'success'
+      with:
+        name: ${{ env.NAME }}_$(date +'%Y%m%d%H%M')
+        path: ./build
 
     # NOTE: The Gradle Wrapper is the default and recommended way to run Gradle (https://docs.gradle.org/current/userguide/gradle_wrapper.html).
     # If your project does not have the Gradle Wrapper configured, you can use the following configuration to run Gradle with a specified version.
