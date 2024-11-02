@@ -34,11 +34,12 @@ jobs:
       run: |
         chmod a+x ./gradlew && ./gradlew build
         echo "status=success" >> $GITHUB_OUTPUT
+        echo "FILE_DATE=_$(date +"%Y%m%d%H%M")" >> $GITHUB_ENV
     - name: Upload build directory
       uses: actions/upload-artifact@main
       if: steps.build.outputs.status == 'success'
       with:
-        name: ${{ env.NAME }}_$(date + "%Y.%m.%d-%H%M")
+        name: ${{ env.NAME }}_${{ env.FILE_DATE }}
         path: ./build/*
 
     # NOTE: The Gradle Wrapper is the default and recommended way to run Gradle (https://docs.gradle.org/current/userguide/gradle_wrapper.html).
