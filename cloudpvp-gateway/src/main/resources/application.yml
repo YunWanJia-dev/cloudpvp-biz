@@ -30,10 +30,3 @@ spring:
               lb://user-summary
             predicates:
               - Path=/user-summary/**
-
-eureka:
-  instance:
-    instance-id: ${spring.application.name}
-  client:
-    serviceUrl:
-      defaultZone: http://localhost:8761/eureka/

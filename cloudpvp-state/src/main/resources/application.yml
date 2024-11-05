@@ -1,27 +1,5 @@
 server:
   port: 8084
-  servlet:
-    context-path: /${spring.application.name}
 spring:
   application:
     name: state
-  data:
-    redis:
-      host: 192.168.1.192
-      repositories:
-        enabled: true
-      client-type: lettuce
-      #      cluster:
-      #        nodes:
-      #          - 192.168.1.192:6379
-      timeout: 10000ms
-      lettuce:
-        pool:
-          #?????
-          max-active : 8
-          #?????????????-1
-          max-wait: 10000ms
-          #?????????8
-          max-idle: 200
-          #?????????0
-          min-idle: 5
