@@ -6,4 +6,5 @@ dependencies {
     implementation libs.ktx.coroutines.core
     implementation libs.ktx.coroutines.jvm
     implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
+    implementation 'com.ctrip.framework.apollo:apollo-client-config-data:2.3.0'
 }
