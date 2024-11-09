@@ -4,3 +4,6 @@ spring:
   application:
     name: user-summary
 
+apollo:
+  bootstrap:
+    namespaces: application.yml, cloudpvp-dev.eureka.yml

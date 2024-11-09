@@ -30,3 +30,7 @@ spring:
               lb://user-summary
             predicates:
               - Path=/user-summary/**
+
+apollo:
+  bootstrap:
+    namespaces: application.yml, cloudpvp-dev.eureka.yml

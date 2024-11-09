@@ -3,3 +3,7 @@ server:
 spring:
   application:
     name: play
+    
+apollo:
+  bootstrap:
+    namespaces: application.yml, cloudpvp-dev.eureka.yml
