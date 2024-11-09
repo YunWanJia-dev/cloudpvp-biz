@@ -1,7 +1,7 @@
 group = 'me.ywj.cloudpvp'
 
 dependencies {
-    compileOnly project(":cloudpvp-core")
+    implementation project(":cloudpvp-core")
     runtimeOnly libs.kotlin.reflect
     implementation libs.ktx.coroutines.core
     implementation libs.ktx.coroutines.jvm
