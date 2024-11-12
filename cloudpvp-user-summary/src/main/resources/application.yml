@@ -1,8 +1,11 @@
 server:
   port: 8085
+  servlet:
+    context-path: ${spring.application.name}
 spring:
   application:
     name: user-summary
+
 
 apollo:
   bootstrap:
