@@ -1,7 +1,7 @@
 server:
   port: 8083
   servlet:
-    context-path: ${spring.application.name}
+    context-path: /${spring.application.name}
 spring:
   application:
     name: play
