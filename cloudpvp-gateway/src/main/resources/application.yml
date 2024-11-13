@@ -3,7 +3,6 @@ spring:
     name: gateway
   cloud:
     gateway:
-      mvc:
         routes:
           - id: auth
             uri:
