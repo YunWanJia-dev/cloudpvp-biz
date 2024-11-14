@@ -1,6 +1,7 @@
 package me.ywj.cloudpvp.core.utils;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.Getter;
 import me.ywj.cloudpvp.core.model.http.HttpBase;
 import me.ywj.cloudpvp.core.model.webhook.FeishuWebhookConfigure;
 
@@ -31,25 +32,19 @@ public class FeishuWebhookUtils {
     }
 }
 
+@Getter
 class MessageBody implements Serializable {
     @JsonProperty("msg_type")
     final String MsgType = "text";
-    @JsonProperty("content")
     final MessageContent content;
 
     public MessageBody(String content) {
         this.content = new MessageContent(content);
     }
 
-    public String getMsgType() {
-        return MsgType;
-    }
-
-    public MessageContent getContent() {
-        return content;
-    }
 }
 
+@Getter
 class MessageContent implements Serializable {
     String text;
 
@@ -57,7 +52,4 @@ class MessageContent implements Serializable {
         this.text = text;
     }
 
-    public String getText() {
-        return text;
-    }
 }
