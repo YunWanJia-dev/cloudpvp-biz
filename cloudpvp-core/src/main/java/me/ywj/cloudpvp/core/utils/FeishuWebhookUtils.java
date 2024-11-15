@@ -1,24 +1,23 @@
 package me.ywj.cloudpvp.core.utils;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.Data;
 import lombok.Getter;
 import me.ywj.cloudpvp.core.model.configure.HttpConfigure;
 import me.ywj.cloudpvp.core.model.configure.FeishuWebhookConfigure;
 
 import java.io.Serializable;
-import java.net.URISyntaxException;
 
 /**
  * FartWebhookUtils
- *
+ * 飞书webhook机器人工具类
  * @author sheip9
  * @since 2024/11/14 16:19
  */
 public class FeishuWebhookUtils {
-
     private final HttpUtils httpUtils;
 
-    public FeishuWebhookUtils(FeishuWebhookConfigure configure) throws URISyntaxException {
+    public FeishuWebhookUtils(FeishuWebhookConfigure configure) {
         this.httpUtils = new HttpUtils(
                 HttpConfigure.builder()
                 .baseUri(configure.getUri())
@@ -26,17 +25,30 @@ public class FeishuWebhookUtils {
         );
     }
 
-    public void send(String text) throws Exception {
-        var resp = httpUtils.post(new MessageBody(text));
-        System.out.println(resp.body());
+    /**
+     * send
+     * 发送消息
+     * @param text 消息文本
+     * @return 是否发送成功
+     */
+    public boolean send(String text) {
+        try {
+            var resp = httpUtils.post(new MessageBody(text));
+            var body = JacksonUtils.deserialize(resp.body(), FeishuResponse.class);
+            return body.code() == 0;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
     }
+    
 }
 
 @Getter
-class MessageBody implements Serializable {
+class MessageBody {
     @JsonProperty("msg_type")
-    final String MsgType = "text";
-    final MessageContent content;
+    private final String MsgType = "text";
+    private final MessageContent content;
 
     public MessageBody(String content) {
         this.content = new MessageContent(content);
@@ -44,12 +56,8 @@ class MessageBody implements Serializable {
 
 }
 
-@Getter
-class MessageContent implements Serializable {
-    String text;
+record MessageContent(String text) {
+}
 
-    public MessageContent(String text) {
-        this.text = text;
-    }
-
+record FeishuResponse(Integer code, String msg) {
 }
