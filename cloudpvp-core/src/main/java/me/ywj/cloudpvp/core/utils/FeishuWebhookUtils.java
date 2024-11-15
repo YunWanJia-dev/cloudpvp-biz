@@ -1,12 +1,9 @@
 package me.ywj.cloudpvp.core.utils;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.Data;
 import lombok.Getter;
 import me.ywj.cloudpvp.core.model.configure.HttpConfigure;
 import me.ywj.cloudpvp.core.model.configure.FeishuWebhookConfigure;
-
-import java.io.Serializable;
 
 /**
  * FartWebhookUtils
