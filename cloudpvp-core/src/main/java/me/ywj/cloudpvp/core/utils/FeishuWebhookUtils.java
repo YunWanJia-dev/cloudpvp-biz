@@ -2,13 +2,11 @@ package me.ywj.cloudpvp.core.utils;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
-import me.ywj.cloudpvp.core.model.http.HttpBase;
-import me.ywj.cloudpvp.core.model.webhook.FeishuWebhookConfigure;
+import me.ywj.cloudpvp.core.model.configure.HttpConfigure;
+import me.ywj.cloudpvp.core.model.configure.FeishuWebhookConfigure;
 
-import java.io.IOException;
 import java.io.Serializable;
 import java.net.URISyntaxException;
-import java.util.HashMap;
 
 /**
  * FartWebhookUtils
@@ -17,15 +15,17 @@ import java.util.HashMap;
  * @since 2024/11/14 16:19
  */
 public class FeishuWebhookUtils {
-    private final FeishuWebhookConfigure configure;
-    
+
     private final HttpUtils httpUtils;
 
     public FeishuWebhookUtils(FeishuWebhookConfigure configure) throws URISyntaxException {
-        this.configure = configure;
-        this.httpUtils = new HttpUtils(new HttpBase(configure.getUrl(), new HashMap<>())); 
+        this.httpUtils = new HttpUtils(
+                HttpConfigure.builder()
+                .baseUri(configure.getUri())
+                .build()
+        );
     }
-    
+
     public void send(String text) throws Exception {
         var resp = httpUtils.post(new MessageBody(text));
         System.out.println(resp.body());
