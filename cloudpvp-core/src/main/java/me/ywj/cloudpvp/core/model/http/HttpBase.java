@@ -1,7 +1,12 @@
 package me.ywj.cloudpvp.core.model.http;
 
+import lombok.Builder;
+import lombok.Getter;
+
 import java.util.Map;
 
+@Getter
+@Builder
 public class HttpBase {
     private String baseUri;
     private Map<String, String> header;
@@ -11,11 +16,4 @@ public class HttpBase {
         this.header = header;
     }
 
-    public String getBaseUri() {
-        return baseUri;
-    }
-
-    public Map<String, String> getHeader() {
-        return header;
-    }
 }
