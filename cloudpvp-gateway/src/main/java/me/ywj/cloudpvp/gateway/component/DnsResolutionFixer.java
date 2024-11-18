@@ -1,4 +1,4 @@
-package me.ywj.cloudpvp.gateway;
+package me.ywj.cloudpvp.gateway.component;
 
 import io.netty.resolver.DefaultAddressResolverGroup;
 import org.springframework.cloud.gateway.config.HttpClientCustomizer;
