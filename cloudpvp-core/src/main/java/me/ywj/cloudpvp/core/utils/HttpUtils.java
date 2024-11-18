@@ -1,7 +1,5 @@
 package me.ywj.cloudpvp.core.utils;
 
-import me.ywj.cloudpvp.core.model.configure.HttpConfigure;
-
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -14,30 +12,16 @@ import java.net.http.HttpResponse;
  * @since 2024/11/14 16:20
  */
 public class HttpUtils {
-    private final String baseUri;
     private final HttpClient httpClient;
-    private final HttpRequest.Builder requestBuilder;
+    private final HttpRequest baseRequest;
 
-    public HttpUtils(HttpConfigure base) {
-        this.baseUri = base.getBaseUri(); 
-        this.httpClient = constructHttpClient(base);
-        this.requestBuilder = constructRequest(base);
-    }
-
-    private static HttpRequest.Builder constructRequest(HttpConfigure base) {
-        HttpRequest.Builder builder = HttpRequest.newBuilder();
-        if (base.getHeader() != null && !base.getHeader().isEmpty()) {
-            base.getHeader().forEach(builder::header);
-        }
-        return builder; 
-    }
-    
-    public static HttpClient constructHttpClient(HttpConfigure base) {
-        return HttpClient.newHttpClient();
+    public HttpUtils(HttpRequest baseRequest) {
+        this.httpClient = HttpClient.newHttpClient();
+        this.baseRequest = baseRequest;
     }
     
     private HttpRequest.Builder newRequest(String path) {
-        return requestBuilder.copy().uri(URI.create(baseUri + path));
+        return HttpRequest.newBuilder(baseRequest, (s1, s2) -> false).uri(URI.create(baseRequest.uri().toString() + path));
     }
 
     private HttpResponse<String> send(HttpRequest request) throws Exception {

@@ -1,15 +1,12 @@
 package me.ywj.cloudpvp.auth.service;
 
 import me.ywj.cloudpvp.auth.exceptions.InternalErrorException;
-import me.ywj.cloudpvp.auth.exceptions.SteamServiceErrorException;
-import org.springframework.http.HttpStatus;
+import me.ywj.cloudpvp.core.utils.HttpUtils;
 import org.springframework.stereotype.Service;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.net.*;
-import java.util.ArrayList;
+import java.net.http.HttpRequest;
 
 /**
  * SteamAuthServiceImpl
@@ -19,6 +16,12 @@ import java.util.ArrayList;
  */
 @Service
 public class SteamAuthService {
+    private final HttpUtils httpUtils = new HttpUtils(
+            HttpRequest.newBuilder()
+                    .uri(URI.create("https://steamcommunity.com/openid/login?"))
+                    .header("Content-Type", "application/x-www-form-urlencoded")
+                    .build()
+    );
     /**
      * generateSteamLoginUrl
      * 生成用于重定向至的URL
@@ -57,7 +60,7 @@ public class SteamAuthService {
     ){
         try {
             String params =
-                    "openid.assoc_handle="   + openidAccOcHandler +
+                    "openid.assoc_handle="    + openidAccOcHandler +
                     "&openid.signed="         + openidSigned +
                     "&openid.sig="            + openidSig +
                     "&openid.ns="             + openidNs +
@@ -68,37 +71,20 @@ public class SteamAuthService {
                     "&openid.return_to="      + openidReturnTo +
                     "&openid.response_nonce=" + openidResponseNonce +
                     "&openid.mode=check_authentication";
-            //TODO 提取工具类
-            URI uri = new URI("https://steamcommunity.com/openid/login?" + params);
-            //创建连接，设置消息头
-            HttpURLConnection conn = (HttpURLConnection) uri.toURL().openConnection();
-            conn.setDoOutput(true);
-            conn.setInstanceFollowRedirects(false);
-            conn.setRequestMethod("GET");
-            conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-            conn.setRequestProperty("charset", "utf-8");
-            //状态码判断
-            if (conn.getResponseCode() != HttpStatus.OK.value()) {
-                throw new SteamServiceErrorException();
-            }
+            String resp = httpUtils.get(params).body();
             // 读取返回内容，获取is_valid的值
             // e.g:
             // ns:http://specs.openid.net/auth/2.0
             // is_valid:true
-            BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream()));
-            ArrayList<String> response = new ArrayList<>();
-            String inputLine;
-            while ((inputLine = in.readLine()) != null) {
-                response.add(inputLine);
-            }
-            in.close();
-
-            return "true".equals(response.get(1).split(":")[1]);
+            var str = resp.substring(resp.length() - 5, resp.length() - 1);
+            return "true".equals(str);
         } catch (MalformedURLException | ProtocolException e) {
             throw new InternalErrorException("内部逻辑发生错误");
         } catch (IOException e) {
             throw new InternalErrorException("获取返回内容发生错误");
         } catch (URISyntaxException e) {
+            throw new RuntimeException(e);
+        } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
