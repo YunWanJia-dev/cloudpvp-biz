@@ -22,6 +22,6 @@ public class EnablePreserveHostHeaderFilter implements GlobalFilter {
     private final PreserveHostHeaderGatewayFilterFactory preserveHostHeaderGatewayFilterFactory;
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
-        return preserveHostHeaderGatewayFilterFactory.apply(null).filter(exchange, chain);
+        return preserveHostHeaderGatewayFilterFactory.apply().filter(exchange, chain);
     }
 }
