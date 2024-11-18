@@ -5,10 +5,12 @@ kotlin = "2.0.0"
 springCloudVersion = "2023.0.2"
 java = "21"
 ktCoroutines = "1.9.0"
+lombok = "1.18.30"
 [libraries]
 kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref = "kotlin" }
 ktx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "ktCoroutines" }
 ktx-coroutines-jvm = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm", version.ref = "ktCoroutines" }
+lombok = { group = "org.projectlombok", name = "lombok", version.ref = "lombok" }
 [plugins]
 jetbrainsCompose = { id = "org.jetbrains.compose", version.ref = "compose-plugin" }
 compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
