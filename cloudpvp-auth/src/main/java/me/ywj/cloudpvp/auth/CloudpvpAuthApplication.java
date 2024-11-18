@@ -3,7 +3,7 @@ package me.ywj.cloudpvp.auth;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
-import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+//import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 
 /**
  * CloudpvpAuthApplication
@@ -14,7 +14,7 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
  */
 @SpringBootApplication
 @EnableDiscoveryClient
-@EnableWebSecurity
+//@EnableWebSecurity
 public class CloudpvpAuthApplication {
 
     public static void main(String[] args) {
