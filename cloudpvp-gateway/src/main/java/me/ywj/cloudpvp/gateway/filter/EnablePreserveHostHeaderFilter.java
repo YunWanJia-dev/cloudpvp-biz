@@ -19,6 +19,7 @@ import reactor.core.publisher.Mono;
 @AllArgsConstructor(onConstructor = @__(@Autowired))
 public class EnablePreserveHostHeaderFilter implements GlobalFilter {
     private final PreserveHostHeaderGatewayFilterFactory preserveHostHeaderGatewayFilterFactory;
+
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
         return preserveHostHeaderGatewayFilterFactory.apply().filter(exchange, chain);

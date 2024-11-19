@@ -18,7 +18,7 @@ public class CorsFilterConfiguration {
     CorsWebFilter corsFilter() {
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        
+
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowCredentials(false);
         config.addAllowedOrigin(CorsConfiguration.ALL);
