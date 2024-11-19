@@ -1,7 +1,6 @@
 package me.ywj.cloudpvp.gateway.filter;
 
 import lombok.AllArgsConstructor;
-import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
@@ -17,7 +16,7 @@ import reactor.core.publisher.Mono;
  * @since 2024/11/18 15:26
  */
 @Component
-@RequiredArgsConstructor(onConstructor = @__(@Autowired))
+@AllArgsConstructor(onConstructor = @__(@Autowired))
 public class EnablePreserveHostHeaderFilter implements GlobalFilter {
     private final PreserveHostHeaderGatewayFilterFactory preserveHostHeaderGatewayFilterFactory;
     @Override
