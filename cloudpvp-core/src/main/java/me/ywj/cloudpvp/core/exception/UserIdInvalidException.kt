@@ -6,5 +6,4 @@ package me.ywj.cloudpvp.core.exception
  * @author sheip9
  * @since 2024/10/19 00:13
  */
-class UserIdInvalidException : BusinessException() {
-}
+class UserIdInvalidException : BusinessException() 
