@@ -6,6 +6,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import me.ywj.cloudpvp.core.constant.lobby.LobbyConstant
 import me.ywj.cloudpvp.core.model.lobby.LobbyMessage
+import me.ywj.cloudpvp.core.model.lobby.LobbyMessageDataTexting
 import me.ywj.cloudpvp.core.model.lobby.LobbyMessageType
 import me.ywj.cloudpvp.core.type.LobbyId
 import me.ywj.cloudpvp.core.type.SteamID64
@@ -63,9 +64,11 @@ class LobbyService @Autowired constructor(
 
     fun joinLobby(player: LobbyPlayer, targetLobbyId: LobbyId) {
         val lobbyOption = lobbyRepository.findById(targetLobbyId)
+        
         if (!lobbyOption.isPresent) {
             throw LobbyNotExist()
         }
+        
         val lobby = lobbyOption.get().apply {
             if (players!!.isEmpty()) {
                 host = player.steamID64
@@ -76,8 +79,13 @@ class LobbyService @Autowired constructor(
         container.addMessageListener(player.msgListener, PatternTopic(lobby.id.toString()))
         lobbyRepository.save(lobby)
         player.lobbyId = targetLobbyId
+        
         lobby.sendMsg(LobbyMessage(LobbyMessageType.JOIN).apply {
-            playerId = player.steamID64
+            data = player.steamID64
+        })
+        
+        player.sendMessage(LobbyMessage(LobbyMessageType.PLAYER_LIST).apply { 
+            data = lobby.players
         })
     }
 
@@ -93,7 +101,7 @@ class LobbyService @Autowired constructor(
             return lobbyRepository.deleteById(targetLobbyId)
         }
         lobby.sendMsg(LobbyMessage(LobbyMessageType.LEAVE).apply {
-            playerId = player.steamID64
+            data = player.steamID64
         })
         if (lobby.host == player.steamID64) {
             lobby.updateHost(lobby.players!![0])
@@ -105,15 +113,10 @@ class LobbyService @Autowired constructor(
     fun playerTexting(player: LobbyPlayer, content: String) {
         val lobby = Lobby(player.lobbyId!!)
         lobby.sendMsg(LobbyMessage(LobbyMessageType.TEXTING).apply {
-            playerId = player.steamID64
-            this.content = content
+            data = LobbyMessageDataTexting(player.steamID64, content)
         })
     }
-    
-    fun getLobby(id: LobbyId): Lobby? {
-        return lobbyRepository.findById(id).get()
-    }
-    
+
     fun Lobby.sendMsg(msg: Any) {
         CoroutineScope(Dispatchers.IO).launch {
             redisTemplate.convertAndSend(id.toString(), msg)
@@ -123,7 +126,7 @@ class LobbyService @Autowired constructor(
     fun Lobby.updateHost(newHost: SteamID64) {
         this.host = newHost
         sendMsg(LobbyMessage(LobbyMessageType.UPDATE_HOST).apply { 
-            playerId = newHost
+            data = newHost
         })
     }
 

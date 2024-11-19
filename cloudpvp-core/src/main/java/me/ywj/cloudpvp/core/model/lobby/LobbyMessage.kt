@@ -16,17 +16,18 @@ data class LobbyMessage(
     val type: LobbyMessageType,
 ) {
     @JsonCreator
-    constructor(@JsonProperty("type") type: LobbyMessageType, @JsonProperty("playerId") playerId: SteamID64?, @JsonProperty("content") content: String?) :  this(type) {
-        playerId?.let { this.playerId = it }
-        content?.let { this.content = it }
+    constructor(@JsonProperty("type") type: LobbyMessageType, @JsonProperty("data") data: Any) :  this(type) {
+        this.data = data
     }
-    var playerId: SteamID64? = null
-    var content: String? = null
+    var data : Any? = null
 }
 
 enum class LobbyMessageType {
     JOIN,
     LEAVE,
     TEXTING,
-    UPDATE_HOST
+    UPDATE_HOST,
+    PLAYER_LIST
 }
+
+data class LobbyMessageDataTexting(val playerID64: SteamID64, val content: String)

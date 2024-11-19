@@ -75,9 +75,8 @@ class LobbySocketHandler @Autowired constructor(val lobbyService: LobbyService) 
             PLAYER_MAP[playerId] = player
         } catch (_: LobbyNotExist) {
             session.sendMessage(ErrorResponse(ErrorType.LOBBY_NOT_EXIST, ""))
-        } finally {
             session.close()
-        }
+        } 
     }
 
     override fun afterConnectionClosed(session: WebSocketSession, status: CloseStatus) {
