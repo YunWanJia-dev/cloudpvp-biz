@@ -2,7 +2,6 @@ package me.ywj.cloudpvp.core.utils
 
 import me.ywj.cloudpvp.core.constant.lobby.LobbyConstant
 import me.ywj.cloudpvp.core.type.LobbyId
-//import me.ywj.cloudpvp.core.type.toLobbyId
 
 /**
  * LobbyUtils
@@ -17,7 +16,7 @@ object LobbyUtils {
      * @return 生成的大厅Id
      */
     fun generateLobbyId(): LobbyId {
-        return RandomUtils().buildRandomNumString(LobbyConstant.ID_SIZE).toInt()
+        return RandomUtils().buildRandomLengthInteger(LobbyConstant.ID_SIZE)
     }
 
     /**

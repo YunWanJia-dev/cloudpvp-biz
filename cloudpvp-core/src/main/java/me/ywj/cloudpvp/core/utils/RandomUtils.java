@@ -6,13 +6,14 @@ import java.util.Random;
 
 /**
  * RandomUtils
- *  随机数和字符串工具类
+ * 随机数和字符串工具类
+ *
  * @author sheip9
  * @since 2024/10/24 15:49
  */
 public class RandomUtils {
     private final Random random;
-    
+
     public RandomUtils() {
         random = new Random();
     }
@@ -20,6 +21,7 @@ public class RandomUtils {
     /**
      * buildRandomNumString
      * 生成给定长度的随机数字字符串
+     *
      * @param length 长度
      * @return 生成结果
      */
@@ -31,12 +33,33 @@ public class RandomUtils {
         }
         return sb.toString();
     }
-    
-    public int randomSizeInt(int size) {
-        if (size > 9) {
-            throw new IllegalArgumentException("size > 9");
+
+    /**
+     * buildRandomLengthInteger
+     * 生成给定长度的随机位数的整数数字
+     *
+     * @param length 长度
+     * @return 生成结果
+     */
+    public int buildRandomLengthInteger(int length) {
+        if (length > 10) {
+            throw new IllegalArgumentException("length > 10");
         }
-        return Integer.parseInt(buildRandomNumString(size));
-    } 
-    
+        return Integer.parseInt(buildRandomNumString(length));
+    }
+
+    /**
+     * buildRandomLengthLong
+     * 生成给定长度的随机位数的整数数字
+     *
+     * @param length 长度
+     * @return 生成结果
+     */
+    public long buildRandomLengthLong(int length) {
+        if (length > 19) {
+            throw new IllegalArgumentException("length > 19");
+        }
+        return Long.parseLong(buildRandomNumString(length));
+    }
+
 }
