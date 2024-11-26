@@ -26,7 +26,7 @@ import org.springframework.web.util.UriTemplate
  * @since 2024/10/20 15:44
  */
 @Controller
-class LobbySocketHandler @Autowired constructor(val lobbyService: LobbyService) : AbstractWebSocketHandler(),
+class LobbySocketHandler @Autowired constructor(private val lobbyService: LobbyService) : AbstractWebSocketHandler(),
     WebSocketHandler {
     companion object {
         const val PARAM_LOBBY_ID = "lobbyId"
@@ -81,10 +81,7 @@ class LobbySocketHandler @Autowired constructor(val lobbyService: LobbyService) 
 
     override fun afterConnectionClosed(session: WebSocketSession, status: CloseStatus) {
         val playerId = session.getPlayerId()
-        val player = PLAYER_MAP[playerId]
-        if (player == null) {
-            return
-        }
+        val player = PLAYER_MAP[playerId] ?: return
         lobbyService.leaveLobby(player)
         PLAYER_MAP.remove(playerId)
     }
