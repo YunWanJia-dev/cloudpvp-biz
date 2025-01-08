@@ -1,5 +1,6 @@
 package me.ywj.cloudpvp.state.websocket
 
+import me.ywj.cloudpvp.core.constant.header.Attributes
 import me.ywj.cloudpvp.core.model.base.ErrorResponse
 import me.ywj.cloudpvp.core.model.base.ErrorType
 import me.ywj.cloudpvp.core.type.SteamID64
@@ -54,5 +55,5 @@ private fun WebSocketSession.sendMessage(response: Any) {
 }
 
 private fun WebSocketSession.getPlayerId() : SteamID64? {
-    return attributes["steamId"] as SteamID64?
+    return attributes[Attributes.ID] as SteamID64?
 }
