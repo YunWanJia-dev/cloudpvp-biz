@@ -1,7 +1,9 @@
 package me.ywj.cloudpvp.core.model.configure;
 
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -13,17 +15,19 @@ import org.jetbrains.annotations.Nullable;
  */
 @Builder
 @Getter
+@AllArgsConstructor
+@NoArgsConstructor
 public class FeishuWebhookConfigure {
     /**
      * url
      * webhook地址
      */
-    @NotNull
-    private final String uri;
+//    @NotNull
+    private String uri;
     /**
      * sign
      * 签名校验
      */
-    @Nullable
-    private final String sign;
+//    @Nullable
+    private String sign;
 }
