@@ -1,17 +1,5 @@
 apply from: rootProject.file('buildSrc/shared.gradle')
 
-java {
-	sourceCompatibility = libs.versions.java.get()
-	targetCompatibility = libs.versions.java.get()
-	toolchain {
-		languageVersion = JavaLanguageVersion.of(libs.versions.java.get().toInteger())
-	}
-}
-
-kotlin {
-	jvmToolchain(libs.versions.java.get().toInteger())
-}
-
 dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-web'
 	runtimeOnly 'org.postgresql:postgresql'

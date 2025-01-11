@@ -1,18 +1,5 @@
-apply from: rootProject.file('buildSrc/shared.gradle')
-
-java {
-	sourceCompatibility = libs.versions.java.get()
-	targetCompatibility = libs.versions.java.get()
-	toolchain {
-		languageVersion = JavaLanguageVersion.of(libs.versions.java.get().toInteger())
-	}
-}
-
-kotlin {
-	jvmToolchain(libs.versions.java.get().toInteger())
-}
-
 dependencies {
+	implementation project(":cloudpvp-core")
 	implementation 'org.springframework.boot:spring-boot-starter'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
@@ -24,6 +11,6 @@ dependencyManagement {
 	}
 }
 
-tasks.named('test') {
-	useJUnitPlatform()
+bootJar {
+	enabled = false
 }

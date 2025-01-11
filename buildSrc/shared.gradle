@@ -2,6 +2,7 @@ group = 'me.ywj.cloudpvp'
 
 dependencies {
     implementation project(":cloudpvp-core")
+    implementation project(':cloudpvp-beans')
     runtimeOnly libs.kotlin.reflect
     implementation libs.ktx.coroutines.core
     implementation libs.ktx.coroutines.jvm
