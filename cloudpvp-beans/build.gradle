@@ -1,0 +1,29 @@
+apply from: rootProject.file('buildSrc/shared.gradle')
+
+java {
+	sourceCompatibility = libs.versions.java.get()
+	targetCompatibility = libs.versions.java.get()
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(libs.versions.java.get().toInteger())
+	}
+}
+
+kotlin {
+	jvmToolchain(libs.versions.java.get().toInteger())
+}
+
+dependencies {
+	implementation 'org.springframework.boot:spring-boot-starter'
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+dependencyManagement {
+	imports {
+		mavenBom "org.springframework.cloud:spring-cloud-dependencies:${libs.versions.springCloudVersion.get()}"
+	}
+}
+
+tasks.named('test') {
+	useJUnitPlatform()
+}
