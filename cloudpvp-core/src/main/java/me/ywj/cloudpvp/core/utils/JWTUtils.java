@@ -22,7 +22,7 @@ public class JWTUtils {
         this.configuration = configuration;
     }
 
-    public String generateToken(Map<String, String> claims) {
+    public String generateToken(Map<String, Long> claims) {
         JWTCreator.Builder builder = JWT.create();
         claims.forEach(builder::withClaim);
         builder.withIssuedAt(new Date(System.currentTimeMillis()));
@@ -34,8 +34,8 @@ public class JWTUtils {
         return Algorithm.HMAC256(str);
     }
 
-    public Object getClaim(String token, String claimName) {
-        return JWT.decode(token).getClaim(claimName).asString();
+    public Long getClaim(String token, String claimName) {
+        return JWT.decode(token).getClaim(claimName).asLong();
     }
 
     public boolean validateToken(String token) {
