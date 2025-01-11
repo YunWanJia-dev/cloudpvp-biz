@@ -12,11 +12,9 @@ import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
  * @author sheip9
  * @since 2024/1/21 12:30
  */
-@SpringBootApplication
+@SpringBootApplication(scanBasePackages = "me.ywj.cloudpvp")
 @EnableDiscoveryClient
-//@EnableWebSecurity
 public class CloudpvpAuthApplication {
-
     public static void main(String[] args) {
         SpringApplication.run(CloudpvpAuthApplication.class, args);
     }
