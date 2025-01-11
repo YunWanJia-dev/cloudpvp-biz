@@ -12,6 +12,7 @@ kotlin {
 
 dependencies {
     implementation "com.fasterxml.jackson.module:jackson-module-kotlin:2.17.2"
+    implementation 'com.auth0:java-jwt:4.4.0'
     compileOnly libs.lombok
     annotationProcessor libs.lombok
 }
