@@ -1,9 +1,6 @@
 package me.ywj.cloudpvp.core.model.configuration;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 /**
  * FeishuWebhookConfigure
@@ -12,9 +9,9 @@ import lombok.NoArgsConstructor;
  * @since 2024/11/14 16:17
  */
 @Builder
-@Getter
-@AllArgsConstructor
+@Data
 @NoArgsConstructor
+@AllArgsConstructor
 public class FeishuWebhookConfiguration {
     /**
      * url

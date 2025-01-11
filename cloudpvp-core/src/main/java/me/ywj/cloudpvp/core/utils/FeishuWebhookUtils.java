@@ -20,7 +20,7 @@ public class FeishuWebhookUtils {
     public FeishuWebhookUtils(FeishuWebhookConfiguration configure) {
         this.httpUtils = new HttpUtils(
                 HttpRequest.newBuilder()
-                        .uri(URI.create(configure.getUri()))
+                        .uri(URI.create("https://api.feishu.com/webhook"))
                         .build()
         );
     }
