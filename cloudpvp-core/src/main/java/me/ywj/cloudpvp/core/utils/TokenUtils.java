@@ -19,8 +19,8 @@ public class TokenUtils {
         this.jwtUtils = jwtUtils;
     }
 
-    public String generateToken(BasicPlayer player) {
-        return jwtUtils.generateToken(Map.of(Attributes.ID, player.getSteamID64()));
+    public String generateToken(Long steamId64) {
+        return jwtUtils.generateToken(Map.of(Attributes.ID, steamId64));
     }
 
     public boolean validateToken(String token) {

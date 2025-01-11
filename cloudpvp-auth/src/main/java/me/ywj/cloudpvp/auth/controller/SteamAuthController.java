@@ -1,6 +1,7 @@
 package me.ywj.cloudpvp.auth.controller;
 
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.AllArgsConstructor;
 import me.ywj.cloudpvp.auth.service.SteamAuthService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -15,13 +16,9 @@ import java.io.IOException;
  */
 @RestController
 @RequestMapping("/steam")
+@AllArgsConstructor(onConstructor = @__(@Autowired))
 public class SteamAuthController {
-    final SteamAuthService steamAuthService;
-
-    @Autowired
-    public SteamAuthController(SteamAuthService steamAuthService) {
-        this.steamAuthService = steamAuthService;
-    }
+    private final SteamAuthService steamAuthService;
 
     /**
      * redirectToSteam
@@ -38,7 +35,7 @@ public class SteamAuthController {
      * 接受完成steam登录后的重定向请求
      */
     @GetMapping("/login")
-    public boolean receiveReturnFromSteam(
+    public Object receiveReturnFromSteam(
             @RequestParam("openid.assoc_handle")   String openidAccOcHandler,
             @RequestParam("openid.signed")         String openidSigned,
             @RequestParam("openid.sig")            String openidSig,
@@ -62,5 +59,6 @@ public class SteamAuthController {
                 openidReturnTo,
                 openidResponseNonce
         );
+
     }
 }

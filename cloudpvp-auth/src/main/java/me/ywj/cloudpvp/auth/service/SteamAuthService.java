@@ -1,7 +1,11 @@
 package me.ywj.cloudpvp.auth.service;
 
+import lombok.AllArgsConstructor;
 import me.ywj.cloudpvp.auth.exceptions.InternalErrorException;
+import me.ywj.cloudpvp.core.entity.BasicPlayer;
 import me.ywj.cloudpvp.core.utils.HttpUtils;
+import me.ywj.cloudpvp.core.utils.TokenUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -15,6 +19,7 @@ import java.net.http.HttpRequest;
  * @since 2024/1/19 11:47
  */
 @Service
+@AllArgsConstructor(onConstructor = @__(@Autowired))
 public class SteamAuthService {
     private final HttpUtils httpUtils = new HttpUtils(
             HttpRequest.newBuilder()
@@ -22,6 +27,7 @@ public class SteamAuthService {
                     .header("Content-Type", "application/x-www-form-urlencoded")
                     .build()
     );
+    private final TokenUtils tokenUtils;
     /**
      * generateSteamLoginUrl
      * 生成用于重定向至的URL
@@ -46,7 +52,7 @@ public class SteamAuthService {
      * 校验完成steam登录后重定向过来的请求是否有效
      * @return 是否有效
      */
-    public boolean validRequestFromUser(
+    public String validRequestFromUser(
             String openidAccOcHandler,
             String openidSigned,
             String openidSig,
@@ -71,16 +77,22 @@ public class SteamAuthService {
                     "&openid.return_to="      + openidReturnTo +
                     "&openid.response_nonce=" + openidResponseNonce +
                     "&openid.mode=check_authentication";
-            String resp = httpUtils.get(params).body();
+            var r = httpUtils.get(params);
+            String resp = r.body();
             // 读取返回内容，获取is_valid的值
             // e.g:
             // ns:http://specs.openid.net/auth/2.0
             // is_valid:true
             var str = resp.substring(resp.length() - 5, resp.length() - 1);
-            return "true".equals(str);
+            boolean validation =  "true".equals(str);
+            if(validation) {
+                return tokenUtils.generateToken(Long.valueOf(openidIdentity.replace("https://steamcommunity.com/openid/id/", "")));
+            }
+            return null;
         } catch (MalformedURLException | ProtocolException e) {
             throw new InternalErrorException("内部逻辑发生错误");
         } catch (IOException e) {
+            e.printStackTrace();
             throw new InternalErrorException("获取返回内容发生错误");
         } catch (URISyntaxException e) {
             throw new RuntimeException(e);
