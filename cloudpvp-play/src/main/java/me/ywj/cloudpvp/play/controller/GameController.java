@@ -14,7 +14,7 @@ import java.util.List;
 /**
  * GameController
  * 游戏和模式列表控制器
- *  
+ *
  * @author sheip9
  * @since 2024/9/1 12:00
  */
@@ -25,6 +25,7 @@ public class GameController {
     public List<Game> getGames() {
         return GamePool.GAME_LIST;
     }
+
     @GetMapping("/{key}/modes")
     public List<Type> getModes(@PathVariable String key) {
         return ModePool.MODE_LIST.get(key);

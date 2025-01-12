@@ -9,8 +9,6 @@ import lombok.Builder
  * @since 2024/10/19 22:14
  */
 @Builder
-data class PlayerEvent (val action: PlayerEventAction,val value : Any?)
+data class PlayerEvent(val action: PlayerEventAction, val value: Any?)
 
-enum class PlayerEventAction {
-    
-}
+enum class PlayerEventAction

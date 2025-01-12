@@ -16,10 +16,11 @@ data class LobbyMessage(
     val type: LobbyMessageType,
 ) {
     @JsonCreator
-    constructor(@JsonProperty("type") type: LobbyMessageType, @JsonProperty("data") data: Any) :  this(type) {
+    constructor(@JsonProperty("type") type: LobbyMessageType, @JsonProperty("data") data: Any) : this(type) {
         this.data = data
     }
-    var data : Any? = null
+
+    var data: Any? = null
 }
 
 enum class LobbyMessageType {

@@ -1,7 +1,7 @@
 package me.ywj.cloudpvp.core.entity
 
 import me.ywj.cloudpvp.core.type.SteamID64
-import java.util.Date
+import java.util.*
 
 /**
  * PlayerProfile
@@ -9,7 +9,7 @@ import java.util.Date
  * @author sheip9
  * @since 2024/10/16 11:49
  */
-class PlayerProfile (
+class PlayerProfile(
     val steamID64: SteamID64,
     val name: String,
     val avatarLink: String,

@@ -36,15 +36,15 @@ public class SteamAuthController {
      */
     @GetMapping("/login")
     public Object receiveReturnFromSteam(
-            @RequestParam("openid.assoc_handle")   String openidAccOcHandler,
-            @RequestParam("openid.signed")         String openidSigned,
-            @RequestParam("openid.sig")            String openidSig,
-            @RequestParam("openid.ns")             String openidNs,
-            @RequestParam("openid.mode")           String openidMode,
-            @RequestParam("openid.op_endpoint")    String openidOpEndpoint,
-            @RequestParam("openid.claimed_id")     String openidClaimedId,
-            @RequestParam("openid.identity")       String openidIdentity,
-            @RequestParam("openid.return_to")      String openidReturnTo,
+            @RequestParam("openid.assoc_handle") String openidAccOcHandler,
+            @RequestParam("openid.signed") String openidSigned,
+            @RequestParam("openid.sig") String openidSig,
+            @RequestParam("openid.ns") String openidNs,
+            @RequestParam("openid.mode") String openidMode,
+            @RequestParam("openid.op_endpoint") String openidOpEndpoint,
+            @RequestParam("openid.claimed_id") String openidClaimedId,
+            @RequestParam("openid.identity") String openidIdentity,
+            @RequestParam("openid.return_to") String openidReturnTo,
             @RequestParam("openid.response_nonce") String openidResponseNonce
     ) {
         return steamAuthService.validRequestFromUser(

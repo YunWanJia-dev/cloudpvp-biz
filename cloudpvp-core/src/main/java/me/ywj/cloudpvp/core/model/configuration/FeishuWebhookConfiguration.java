@@ -1,10 +1,14 @@
 package me.ywj.cloudpvp.core.model.configuration;
 
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /**
  * FeishuWebhookConfigure
- *  飞书webhook机器人配置
+ * 飞书webhook机器人配置
+ *
  * @author sheip9
  * @since 2024/11/14 16:17
  */

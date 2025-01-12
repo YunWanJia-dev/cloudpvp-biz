@@ -3,7 +3,10 @@ package me.ywj.cloudpvp.usersummary.controller;
 import me.ywj.cloudpvp.core.entity.PlayerProfile;
 import me.ywj.cloudpvp.usersummary.service.ProfileService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -18,7 +21,7 @@ import java.util.List;
 @RequestMapping("/profile")
 public class ProfileController {
     final ProfileService profileService;
-    
+
     @Autowired
     public ProfileController(ProfileService profileService) {
         this.profileService = profileService;

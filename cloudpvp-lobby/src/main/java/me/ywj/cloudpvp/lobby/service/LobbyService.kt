@@ -32,9 +32,9 @@ import kotlin.time.Duration.Companion.seconds
 class LobbyService @Autowired constructor(
     val lobbyRepository: LobbyRepository,
     val redisTemplate: RedisTemplate<Number, Lobby>,
-    val container: RedisMessageListenerContainer
+    val container: RedisMessageListenerContainer,
 ) {
-    
+
     fun createLobby(): LobbyId {
         val lobbyId = LobbyUtils.generateLobbyId()
 
@@ -64,11 +64,11 @@ class LobbyService @Autowired constructor(
 
     fun joinLobby(player: LobbyPlayer, targetLobbyId: LobbyId) {
         val lobbyOption = lobbyRepository.findById(targetLobbyId)
-        
+
         if (!lobbyOption.isPresent) {
             throw LobbyNotExist()
         }
-        
+
         val lobby = lobbyOption.get().apply {
             if (players!!.isEmpty()) {
                 host = player.steamID64
@@ -79,12 +79,12 @@ class LobbyService @Autowired constructor(
         container.addMessageListener(player.msgListener, PatternTopic(lobby.id.toString()))
         lobbyRepository.save(lobby)
         player.lobbyId = targetLobbyId
-        
+
         lobby.sendMsg(LobbyMessage(LobbyMessageType.JOIN).apply {
             data = player.steamID64
         })
-        
-        player.sendMessage(LobbyMessage(LobbyMessageType.PLAYER_LIST).apply { 
+
+        player.sendMessage(LobbyMessage(LobbyMessageType.PLAYER_LIST).apply {
             data = lobby.players
         })
     }
@@ -107,7 +107,7 @@ class LobbyService @Autowired constructor(
             lobby.updateHost(lobby.players!![0])
         }
         container.removeMessageListener(player.msgListener, PatternTopic(lobby.id.toString()))
-        lobbyRepository.save(lobby)   
+        lobbyRepository.save(lobby)
     }
 
     fun playerTexting(player: LobbyPlayer, content: String) {
@@ -125,7 +125,7 @@ class LobbyService @Autowired constructor(
 
     fun Lobby.updateHost(newHost: SteamID64) {
         this.host = newHost
-        sendMsg(LobbyMessage(LobbyMessageType.UPDATE_HOST).apply { 
+        sendMsg(LobbyMessage(LobbyMessageType.UPDATE_HOST).apply {
             data = newHost
         })
     }

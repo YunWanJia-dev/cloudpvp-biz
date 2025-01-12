@@ -21,6 +21,7 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 @EnableRedisRepositories
 public class RedisConfigure {
     public static final RedisSerializer<Object> SERIALIZER = new GenericJackson2JsonRedisSerializer(JacksonUtils.INSTANCE);
+
     @Bean
     public RedisTemplate<String, ?> redisTemplate(RedisConnectionFactory connectionFactory) {
         RedisTemplate<String, ?> template = new RedisTemplate<>();
@@ -34,6 +35,7 @@ public class RedisConfigure {
         template.setHashValueSerializer(SERIALIZER);
         return template;
     }
+
     @Bean
     public RedisMessageListenerContainer redisContainer(RedisConnectionFactory factory) {
         final RedisMessageListenerContainer container = new RedisMessageListenerContainer();

@@ -18,7 +18,7 @@ object PlayerUtils {
      * @param steamID64 SteamID64
      * @return id是否有校
      */
-    fun checkIdIsValid(steamID64 : SteamID64?): Boolean {
+    fun checkIdIsValid(steamID64: SteamID64?): Boolean {
         return steamID64 != null && steamID64 > SteamUser.MINIMAL_ID_64
     }
 
@@ -26,7 +26,7 @@ object PlayerUtils {
      * convertToSteamID3
      * 将64位的SteamID转换成steamID3
      */
-    fun convertToSteamID3(steamID64 : SteamID64?) : SteamID3 {
+    fun convertToSteamID3(steamID64: SteamID64?): SteamID3 {
         TODO()
     }
 
@@ -34,7 +34,7 @@ object PlayerUtils {
      * convertToSteamID
      * 将64位的SteamID转换成steamID3
      */
-    fun convertToSteamID(steamID64 : SteamID64?) : SteamID {
+    fun convertToSteamID(steamID64: SteamID64?): SteamID {
         TODO()
     }
 }

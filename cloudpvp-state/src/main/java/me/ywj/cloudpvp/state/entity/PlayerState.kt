@@ -14,7 +14,7 @@ import org.springframework.data.redis.core.RedisHash
  * @since 2024/10/16 16:40
  */
 @RedisHash("people")
-class PlayerState(@Id override val steamID64 : SteamID64) : BasicPlayer(steamID64)  {
-    var state : StateEnum = StateEnum.UNKNOWN
-    var currentLobbyId : LobbyId? = null
+class PlayerState(@Id override val steamID64: SteamID64) : BasicPlayer(steamID64) {
+    var state: StateEnum = StateEnum.UNKNOWN
+    var currentLobbyId: LobbyId? = null
 }

@@ -13,10 +13,12 @@ import org.springframework.data.redis.core.RedisHash
 @RedisHash("Lobby")
 data class Lobby(
     @Id val id: Int,
-    var players : ArrayList<Long>?
+    var players: ArrayList<Long>?,
 ) {
-    var host : SteamID64 = 0
+    var host: SteamID64 = 0
+
     constructor(id: Int) : this(id, ArrayList<Long>())
+
     init {
         if (players == null) {
             players = ArrayList<Long>()

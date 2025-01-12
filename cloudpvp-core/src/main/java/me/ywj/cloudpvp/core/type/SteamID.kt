@@ -12,6 +12,6 @@ typealias SteamID3 = Int
 
 typealias SteamID = Object //TODO 原生的SteamID类型 如：STEAM_0:0:441169418
 
-fun String.toSteamID64() : SteamID64? {
+fun String.toSteamID64(): SteamID64? {
     return this.toLongOrNull()
 }

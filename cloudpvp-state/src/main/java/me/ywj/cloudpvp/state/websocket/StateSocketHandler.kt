@@ -23,10 +23,12 @@ import org.springframework.web.socket.handler.AbstractWebSocketHandler
  * @since 2024/10/17 12:21
  */
 @Controller
-class StateSocketHandler @Autowired constructor(private val playerStateService: PlayerStateService) : AbstractWebSocketHandler(), WebSocketHandler {
+class StateSocketHandler @Autowired constructor(private val playerStateService: PlayerStateService) :
+    AbstractWebSocketHandler(), WebSocketHandler {
     companion object {
         private val PLAYER_MAP = HashMap<SteamID64, PlayerState>()
     }
+
     override fun afterConnectionEstablished(session: WebSocketSession) {
         val steamId64 = session.getPlayerId()
         if (PlayerUtils.checkIdIsValid(steamId64)) {
@@ -54,6 +56,6 @@ private fun WebSocketSession.sendMessage(response: Any) {
     sendMessage(JacksonUtils.serialize(response))
 }
 
-private fun WebSocketSession.getPlayerId() : SteamID64? {
+private fun WebSocketSession.getPlayerId(): SteamID64? {
     return attributes[Attributes.ID] as SteamID64?
 }

@@ -14,6 +14,7 @@ import java.util.List;
  */
 public class ModePool {
     public static final HashMap<String, List<Type>> MODE_LIST = new HashMap<>();
+
     static {
         List<Type> cs2Types = List.of(new Type("TEST-CS2", "测试1", List.of(new Mode("TEST-CS2", "测试模式", "测试模式，用于初期平台技术验证"))));
         List<Type> csgoTypes = List.of(new Type("TEST-CSGO", "测试2", List.of(new Mode("TEST-CSGO", "测试模式", "测试模式，用于初期平台技术验证"))));

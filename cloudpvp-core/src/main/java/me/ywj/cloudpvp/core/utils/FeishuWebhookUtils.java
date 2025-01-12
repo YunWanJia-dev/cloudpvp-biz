@@ -18,6 +18,10 @@ public class FeishuWebhookUtils {
     private final HttpUtils httpUtils;
 
     public FeishuWebhookUtils(FeishuWebhookConfiguration configure) {
+        if (configure.getUri() == null) {
+            httpUtils = null;
+            return;
+        }
         final String baseUri = "https://open.feishu.cn/open-apis/bot/v2/hook/";
         this.httpUtils = new HttpUtils(
                 HttpRequest.newBuilder()

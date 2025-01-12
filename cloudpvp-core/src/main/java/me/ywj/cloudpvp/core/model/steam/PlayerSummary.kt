@@ -3,7 +3,7 @@ package me.ywj.cloudpvp.core.model.steam
 import com.fasterxml.jackson.annotation.JsonProperty
 import me.ywj.cloudpvp.core.type.SteamID64
 
-data class PlayerSummary (
+data class PlayerSummary(
     val avatar: String,
     @JsonProperty("avatarfull")
     val avatarFull: String,
@@ -47,7 +47,8 @@ data class PlayerSummary (
     val steamId: SteamID64,
     @JsonProperty("timecreated")
     val timeCreated: Long,
-) 
+)
+
 enum class PersonaStateEnum(val state: Byte) {
     OFFLINE(0),
     ONLINE(1),
@@ -57,6 +58,7 @@ enum class PersonaStateEnum(val state: Byte) {
     LOOKING_TO_TRADE(5),
     LOOKING_TO_PLAY(6)
 }
+
 enum class CommunityVisibilityStateEnum(val value: Byte) {
     PRIVATE(1),
     PUBLIC(3),

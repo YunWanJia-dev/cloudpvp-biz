@@ -10,6 +10,7 @@ public class LobbyNotExist extends RuntimeException {
     public LobbyNotExist() {
         super();
     }
+
     public LobbyNotExist(String message) {
         super(message);
     }

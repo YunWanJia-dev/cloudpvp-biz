@@ -33,7 +33,7 @@ public class ExceptionMessageUtils {
                 moduleName,
                 e.getClass().getName(),
                 e.getLocalizedMessage(),
-                e.getStackTrace()[e.getStackTrace().length - 1]
+                e.getStackTrace()[0]
         );
     }
 

@@ -8,8 +8,8 @@ import java.util.List;
 /**
  * GamePool
  * 游戏池
- * 
- * @author sheip9 
+ *
+ * @author sheip9
  * @since 2024/9/1 12:00
  */
 public class GamePool {
@@ -17,7 +17,7 @@ public class GamePool {
     static final Game CS2 = new Game("CS2", "CS2", "");
     /**
      * GameList
-     * <br> 
+     * <br>
      * 游戏列表
      * 因为变动少所以不存数据库先
      */

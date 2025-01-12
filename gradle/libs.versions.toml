@@ -16,5 +16,5 @@ jetbrainsCompose = { id = "org.jetbrains.compose", version.ref = "compose-plugin
 compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlinJvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
-springBoot = {id = "org.springframework.boot", version = "3.3.4"}
-springDependecyManager = {id = 'io.spring.dependency-management', version= '1.1.6'}
+springBoot = { id = "org.springframework.boot", version = "3.3.4" }
+springDependecyManager = { id = 'io.spring.dependency-management', version = '1.1.6' }

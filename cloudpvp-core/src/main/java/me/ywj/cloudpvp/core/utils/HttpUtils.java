@@ -7,19 +7,20 @@ import java.net.http.HttpResponse;
 
 /**
  * HttpUtils
- *  网络请求工具类
+ * 网络请求工具类
+ *
  * @author sheip9
  * @since 2024/11/14 16:20
  */
 public class HttpUtils {
     private final HttpClient httpClient;
     private final HttpRequest baseRequest;
-    
+
     public HttpUtils(HttpRequest baseRequest) {
         this.httpClient = HttpClient.newHttpClient();
         this.baseRequest = baseRequest;
     }
-    
+
     private HttpRequest.Builder newRequest(String path) {
         return HttpRequest.newBuilder(baseRequest, (s1, s2) -> false).uri(URI.create(baseRequest.uri().toString() + path));
     }
@@ -30,6 +31,7 @@ public class HttpUtils {
 
     /**
      * 发起GET请求
+     *
      * @param path 路径
      * @return HttpResponse
      * @throws Exception 异常
@@ -41,6 +43,7 @@ public class HttpUtils {
 
     /**
      * 发起GET请求
+     *
      * @return HttpResponse
      * @throws Exception 异常
      */
@@ -50,6 +53,7 @@ public class HttpUtils {
 
     /**
      * 发起POST请求
+     *
      * @param path 路径
      * @param body 内容体
      * @return HttpResponse
@@ -62,6 +66,7 @@ public class HttpUtils {
 
     /**
      * 发起POST请求
+     *
      * @param body 内容体
      * @return HttpResponse
      * @throws Exception 异常
@@ -72,6 +77,7 @@ public class HttpUtils {
 
     /**
      * 发起POST请求
+     *
      * @return HttpResponse
      * @throws Exception 异常
      */

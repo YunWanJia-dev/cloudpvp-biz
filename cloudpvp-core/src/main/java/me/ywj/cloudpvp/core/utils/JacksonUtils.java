@@ -10,6 +10,7 @@ import java.io.IOException;
 /**
  * JacksonUtils
  * 序列化工具类
+ *
  * @author sheip9
  * @since 2024/10/25 16:26
  */
@@ -18,8 +19,9 @@ public class JacksonUtils {
      * Jackson实例
      */
     public final static ObjectMapper INSTANCE = createInstance();
-    
-    private JacksonUtils() {}
+
+    private JacksonUtils() {
+    }
 
     /**
      * 创建和设定实例
@@ -34,6 +36,7 @@ public class JacksonUtils {
 
     /**
      * 序列化对象
+     *
      * @param o 要序列化的对象
      * @return 序列化后的JSON字符串
      * @throws IOException 异常
@@ -44,7 +47,8 @@ public class JacksonUtils {
 
     /**
      * 反序列化对象
-     * @param json 要用于反序列化的JSON字符串
+     *
+     * @param json  要用于反序列化的JSON字符串
      * @param clazz 反序列化的目标对象
      * @return 反序列化后的对象
      * @throws IOException 异常

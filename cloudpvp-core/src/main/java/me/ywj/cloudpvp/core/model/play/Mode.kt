@@ -7,7 +7,7 @@ package me.ywj.cloudpvp.core.model.play
  * @since 2024/10/16 10:54
  */
 data class Mode(
-    val key : String,
-    val name : String,
-    val description : String
+    val key: String,
+    val name: String,
+    val description: String,
 )

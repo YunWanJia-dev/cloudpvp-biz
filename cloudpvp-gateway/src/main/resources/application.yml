@@ -1,34 +1,36 @@
 spring:
+  main:
+    web-application-type: reactive
   application:
     name: gateway
   cloud:
     gateway:
-        routes:
-          - id: auth
-            uri:
-              lb://auth
-            predicates:
-              - Path=/auth/**
-          - id: lobby
-            uri:
-              lb://lobby
-            predicates:
-              - Path=/lobby/**
-          - id: play
-            uri:
-              lb://play
-            predicates:
-              - Path=/play/**
-          - id: state
-            uri:
-              lb://state
-            predicates:
-              - Path=/state/**
-          - id: user-summary
-            uri:
-              lb://user-summary
-            predicates:
-              - Path=/user-summary/**
+      routes:
+        - id: auth
+          uri:
+            lb://auth
+          predicates:
+            - Path=/auth/**
+        - id: lobby
+          uri:
+            lb://lobby
+          predicates:
+            - Path=/lobby/**
+        - id: play
+          uri:
+            lb://play
+          predicates:
+            - Path=/play/**
+        - id: state
+          uri:
+            lb://state
+          predicates:
+            - Path=/state/**
+        - id: user-summary
+          uri:
+            lb://user-summary
+          predicates:
+            - Path=/user-summary/**
 
 apollo:
   bootstrap:

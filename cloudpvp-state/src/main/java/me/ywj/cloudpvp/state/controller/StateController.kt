@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RestController
  * @since 2024/10/17 13:36
  */
 @RestController
-class StateController @Autowired constructor(val stateService: PlayerStateService){
+class StateController @Autowired constructor(val stateService: PlayerStateService) {
     @GetMapping
     fun getPlayerStates(@RequestParam ids: ArrayList<SteamID64>): Iterable<PlayerState?>? {
         return stateService.getStates(ids)

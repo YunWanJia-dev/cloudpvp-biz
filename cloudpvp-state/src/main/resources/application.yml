@@ -5,7 +5,7 @@ server:
 spring:
   application:
     name: state
-    
+
 apollo:
   bootstrap:
     namespaces: application.yml, cloudpvp-dev.eureka.yml, cloudpvp-dev.redis.yml

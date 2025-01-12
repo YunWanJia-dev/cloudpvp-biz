@@ -15,12 +15,14 @@ import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry
  */
 @Configuration
 @EnableWebSocket
-public class WebsocketConfigure  implements WebSocketConfigurer {
+public class WebsocketConfigure implements WebSocketConfigurer {
     private final StateSocketHandler stateSocketHandler;
+
     @Autowired
     public WebsocketConfigure(StateSocketHandler stateSocketHandler) {
         this.stateSocketHandler = stateSocketHandler;
     }
+
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
         registry.addHandler(stateSocketHandler, "/ws");

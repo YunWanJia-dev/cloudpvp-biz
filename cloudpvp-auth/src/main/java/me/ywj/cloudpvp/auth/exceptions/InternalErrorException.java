@@ -6,7 +6,7 @@ package me.ywj.cloudpvp.auth.exceptions;
  * @author sheip9
  * @since 2024/1/21 11:47
  */
-public class InternalErrorException extends RuntimeException{
+public class InternalErrorException extends RuntimeException {
     public InternalErrorException() {
         super();
     }

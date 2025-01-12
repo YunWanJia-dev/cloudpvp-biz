@@ -14,16 +14,20 @@ import org.springframework.stereotype.Service;
 @Service
 public class PlayerStateService {
     private final PlayerStateRepository playerStateRepository;
+
     @Autowired
     public PlayerStateService(PlayerStateRepository playerStateRepository) {
         this.playerStateRepository = playerStateRepository;
     }
+
     public void setState(PlayerState playerState) {
         playerStateRepository.save(playerState);
     }
+
     public void onDisconnect(PlayerState playerState) {
         playerStateRepository.deleteById(playerState.getSteamID64());
     }
+
     public Iterable<PlayerState> getStates(Iterable<Long> ids) {
         return playerStateRepository.findAllById(ids);
     }

@@ -4,7 +4,6 @@ import me.ywj.cloudpvp.core.constant.header.Attributes
 import me.ywj.cloudpvp.core.model.base.ErrorResponse
 import me.ywj.cloudpvp.core.model.base.ErrorType
 import me.ywj.cloudpvp.core.type.SteamID64
-import me.ywj.cloudpvp.core.type.toSteamID64
 import me.ywj.cloudpvp.core.utils.JacksonUtils
 import me.ywj.cloudpvp.core.utils.LobbyUtils
 import me.ywj.cloudpvp.core.utils.PlayerUtils
@@ -77,7 +76,7 @@ class LobbySocketHandler @Autowired constructor(private val lobbyService: LobbyS
         } catch (_: LobbyNotExist) {
             session.sendMessage(ErrorResponse(ErrorType.LOBBY_NOT_EXIST, ""))
             session.close()
-        } 
+        }
     }
 
     override fun afterConnectionClosed(session: WebSocketSession, status: CloseStatus) {
@@ -89,7 +88,7 @@ class LobbySocketHandler @Autowired constructor(private val lobbyService: LobbyS
 
     override fun handleTextMessage(
         session: WebSocketSession,
-        message: TextMessage
+        message: TextMessage,
     ) {
         val player = PLAYER_MAP[session.getPlayerId()!!]
         lobbyService.playerTexting(player!!, message.payload)
