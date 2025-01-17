@@ -2,6 +2,7 @@ package me.ywj.cloudpvp.auth.service;
 
 import lombok.AllArgsConstructor;
 import me.ywj.cloudpvp.auth.exceptions.InternalErrorException;
+import me.ywj.cloudpvp.auth.model.TokenModel;
 import me.ywj.cloudpvp.core.utils.HttpUtils;
 import me.ywj.cloudpvp.core.utils.TokenUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -56,7 +57,7 @@ public class SteamAuthService {
      *
      * @return 是否有效
      */
-    public String validRequestFromUser(
+    public TokenModel validRequestFromUser(
             String openidAccOcHandler,
             String openidSigned,
             String openidSig,
@@ -90,7 +91,8 @@ public class SteamAuthService {
             var str = resp.substring(resp.length() - 5, resp.length() - 1);
             boolean validation = "true".equals(str);
             if (validation) {
-                return tokenUtils.generateToken(Long.valueOf(openidIdentity.replace("https://steamcommunity.com/openid/id/", "")));
+                String token = tokenUtils.generateToken(Long.valueOf(openidIdentity.replace("https://steamcommunity.com/openid/id/", "")));
+                return new TokenModel(token);
             }
             return null;
         } catch (MalformedURLException | ProtocolException e) {
