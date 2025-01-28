@@ -2,6 +2,7 @@ package me.ywj.cloudpvp.play.constant;
 
 import me.ywj.cloudpvp.core.model.play.Game;
 
+import java.util.ArrayList;
 import java.util.List;
 
 
@@ -13,8 +14,8 @@ import java.util.List;
  * @since 2024/9/1 12:00
  */
 public class GamePool {
-    static final Game CSGO = new Game("CSGO", "CS:GO", "");
-    static final Game CS2 = new Game("CS2", "CS2", "");
+    static final Game CSGO = new Game("CSGO", "CS:GO", "", new ArrayList<>());
+    static final Game CS2 = new Game("CS2", "CS2", "", new ArrayList<>());
     /**
      * GameList
      * <br>

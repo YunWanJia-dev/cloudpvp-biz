@@ -9,5 +9,5 @@ package me.ywj.cloudpvp.core.model.play
 data class Type(
     val key: String,
     val name: String,
-    val modes: List<Mode>,
+    var modes: MutableList<Mode> = mutableListOf()
 )
