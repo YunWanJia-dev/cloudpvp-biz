@@ -15,7 +15,7 @@ public class RandomUtils {
     private final Random random;
 
     public RandomUtils() {
-        random = new Random();
+        random = new Random(System.currentTimeMillis() * Thread.currentThread().threadId());
     }
 
     /**
