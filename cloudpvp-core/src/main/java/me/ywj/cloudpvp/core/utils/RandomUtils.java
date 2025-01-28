@@ -15,7 +15,8 @@ public class RandomUtils {
     private final Random random;
 
     public RandomUtils() {
-        random = new Random(System.currentTimeMillis() * Thread.currentThread().threadId());
+        //使用当前毫秒乘当前线程id乘进程pid作为种子
+        random = new Random(System.currentTimeMillis() * Thread.currentThread().threadId() * ProcessHandle.current().pid());
     }
 
     /**
