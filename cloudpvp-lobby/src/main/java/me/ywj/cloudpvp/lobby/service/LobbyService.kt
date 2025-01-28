@@ -37,13 +37,10 @@ class LobbyService @Autowired constructor(
 
     fun createLobby(): LobbyId {
         val lobbyId = LobbyUtils.generateLobbyId()
-
-        if (lobbyRepository.findById(lobbyId).isPresent) {
+        if (!redisTemplate.opsForValue().setIfAbsent(lobbyId, Lobby(lobbyId))!!) {
             //如果生成的id已存在，则重新生成
             return createLobby()
         }
-
-        val lobby = Lobby(lobbyId)
 
         //特定时间过后 “创建房间”的玩家未能加入 则清理掉
         CoroutineScope(Dispatchers.Default).launch {
@@ -58,7 +55,6 @@ class LobbyService @Autowired constructor(
             }
         }
 
-        lobbyRepository.save(lobby)
         return lobbyId
     }
 
