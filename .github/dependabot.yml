@@ -1,0 +1,25 @@
+version: 2
+updates:
+  # 为Gradle项目启用版本更新
+  - package-ecosystem: "gradle"
+    # 在根目录查找build.gradle.kts文件
+    directory: "/"
+    # 每周检查一次更新
+    schedule:
+      interval: "weekly"
+    # 自定义提交消息
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    # 限制最多同时打开的pr数
+    open-pull-requests-limit: 10
+
+  # 为GitHub Actions启用版本更新
+  - package-ecosystem: "github-actions"
+    # 工作流文件存储在默认位置
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "ci"
+      include: "scope"
