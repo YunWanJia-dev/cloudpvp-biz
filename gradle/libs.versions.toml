@@ -4,7 +4,7 @@ junit = "4.13.2"
 kotlin = "2.0.0"
 springCloudVersion = "2023.0.2"
 java = "21"
-ktCoroutines = "1.9.0"
+ktCoroutines = "1.10.1"
 lombok = "1.18.30"
 [libraries]
 kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref = "kotlin" }
