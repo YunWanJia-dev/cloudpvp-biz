@@ -1,5 +1,5 @@
 dependencies {
-    api "com.fasterxml.jackson.module:jackson-module-kotlin:2.19.1"
+    api "com.fasterxml.jackson.module:jackson-module-kotlin:2.19.2"
     implementation 'com.auth0:java-jwt:4.5.0'
     compileOnly libs.lombok
     annotationProcessor libs.lombok
