@@ -1,5 +1,5 @@
 [versions]
-compose-plugin = "1.6.11"
+compose-plugin = "1.8.2"
 junit = "4.13.2"
 kotlin = "2.0.0"
 springCloudVersion = "2023.0.2"
