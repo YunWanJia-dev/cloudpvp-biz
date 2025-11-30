@@ -8,4 +8,8 @@ package me.ywj.cloudpvp.core.exception;
  * @since 2024/10/24 17:14
  */
 public abstract class BizException extends Exception {
+    @Override
+    public synchronized Throwable fillInStackTrace(){
+        return this;
+    }
 }
