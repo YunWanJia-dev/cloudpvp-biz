@@ -1,11 +1,10 @@
 plugins {
     // this is necessary to avoid the plugins to be loaded multiple times
     // in each subproject's classloader
-//    alias(libs.plugins.jetbrainsCompose) apply false
-    alias(libs.plugins.compose.compiler) apply false
-    alias(libs.plugins.kotlin.jvm)
     id 'java'
+    alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.kotlin.multiplatform) apply false
+    alias(libs.plugins.kotlin.spring) apply false
     alias(libs.plugins.springBoot) apply false
     alias(libs.plugins.springDependecyManager) apply false
 }
@@ -15,7 +14,7 @@ group = 'me.ywj.cloudpvp'
 allprojects {
     repositories {
         maven {
-            url 'https://maven.aliyun.com/repository/public/'
+            url = 'https://maven.aliyun.com/repository/public/'
         }
         mavenCentral()
     }
@@ -41,9 +40,13 @@ subprojects {
     }
 
     if (project.name != 'cloudpvp-core') {
-        apply {
-            plugin(libs.plugins.springBoot.get().pluginId)
-            plugin(libs.plugins.springDependecyManager.get().pluginId)
+        [ libs.plugins.kotlin.spring,
+          libs.plugins.springBoot,
+          libs.plugins.springDependecyManager,
+        ].collect {itPlugin ->
+            apply {
+                plugin(itPlugin.get().pluginId)
+            }
         }
     }
 
