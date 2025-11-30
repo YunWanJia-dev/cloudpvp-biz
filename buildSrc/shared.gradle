@@ -9,5 +9,5 @@ dependencies {
     compileOnly libs.lombok
     annotationProcessor libs.lombok
     implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
-    implementation 'com.ctrip.framework.apollo:apollo-client-config-data:2.3.0'
+    implementation 'com.ctrip.framework.apollo:apollo-client-config-data:2.4.0'
 }
