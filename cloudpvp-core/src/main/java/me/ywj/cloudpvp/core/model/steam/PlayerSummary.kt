@@ -5,47 +5,47 @@ import me.ywj.cloudpvp.core.type.SteamID64
 
 data class PlayerSummary(
     val avatar: String,
-    @JsonProperty("avatarfull")
+    @field:JsonProperty("avatarfull")
     val avatarFull: String,
-    @JsonProperty("avatarhash")
+    @field:JsonProperty("avatarhash")
     val avatarHash: String,
-    @JsonProperty("avatarmedium")
+    @field:JsonProperty("avatarmedium")
     val avatarMedium: String,
-    @JsonProperty("commentpermission")
+    @field:JsonProperty("commentpermission")
     val commentPermission: Boolean?,
-    @JsonProperty("communityvisibilitystate")
+    @field:JsonProperty("communityvisibilitystate")
     val communityVisibilityState: CommunityVisibilityStateEnum,
-    @JsonProperty("gameid")
+    @field:JsonProperty("gameid")
     val gameId: Long?,
-    @JsonProperty("gameserverip")
+    @field:JsonProperty("gameserverip")
     val gameServerIp: String?,
-    @JsonProperty("gameextrainfo")
+    @field:JsonProperty("gameextrainfo")
     val gameExtraInfo: String?,
-    @JsonProperty("lastlogoff")
+    @field:JsonProperty("lastlogoff")
     val lastLogoff: Long,
-    @JsonProperty("loccityid")
+    @field:JsonProperty("loccityid")
     val locCityId: Long?,
-    @JsonProperty("loccountrycode")
+    @field:JsonProperty("loccountrycode")
     val locCountryCode: String?,
-    @JsonProperty("locstatecode")
+    @field:JsonProperty("locstatecode")
     val locStateCode: String?,
-    @JsonProperty("personaname")
+    @field:JsonProperty("personaname")
     val personaName: String,
-    @JsonProperty("personastate")
+    @field:JsonProperty("personastate")
     val personaState: PersonaStateEnum,
-    @JsonProperty("personastateflags")
+    @field:JsonProperty("personastateflags")
     val personaStateFlags: Byte,
-    @JsonProperty("primaryclanid")
+    @field:JsonProperty("primaryclanid")
     val primaryClanId: String,
-    @JsonProperty("profilestate")
+    @field:JsonProperty("profilestate")
     val profileState: Boolean?,
-    @JsonProperty("profileurl")
+    @field:JsonProperty("profileurl")
     val profileUrl: String,
-    @JsonProperty("realname")
+    @field:JsonProperty("realname")
     val realName: String?,
-    @JsonProperty("steamid")
+    @field:JsonProperty("steamid")
     val steamId: SteamID64,
-    @JsonProperty("timecreated")
+    @field:JsonProperty("timecreated")
     val timeCreated: Long,
 )
 
