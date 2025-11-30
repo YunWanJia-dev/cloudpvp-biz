@@ -5,7 +5,7 @@ kotlin = "2.0.0"
 springCloudVersion = "2023.0.2"
 java = "21"
 ktCoroutines = "1.9.0"
-lombok = "1.18.30"
+lombok = "1.18.42"
 [libraries]
 kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref = "kotlin" }
 ktx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "ktCoroutines" }
