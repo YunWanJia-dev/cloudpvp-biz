@@ -1,7 +1,7 @@
 [versions]
 compose-plugin = "1.6.11"
 junit = "4.13.2"
-kotlin = "2.0.0"
+kotlin = "2.2.21"
 springCloudVersion = "2023.0.2"
 java = "21"
 ktx-coroutines = "1.10.2"
@@ -14,7 +14,7 @@ lombok = { group = "org.projectlombok", name = "lombok", version.ref = "lombok" 
 [plugins]
 jetbrainsCompose = { id = "org.jetbrains.compose", version.ref = "compose-plugin" }
 compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
-kotlinJvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
-kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 springBoot = { id = "org.springframework.boot", version = "3.3.4" }
 springDependecyManager = { id = 'io.spring.dependency-management', version = '1.1.6' }

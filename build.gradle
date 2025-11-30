@@ -3,9 +3,9 @@ plugins {
     // in each subproject's classloader
 //    alias(libs.plugins.jetbrainsCompose) apply false
     alias(libs.plugins.compose.compiler) apply false
-    alias(libs.plugins.kotlinJvm)
+    alias(libs.plugins.kotlin.jvm)
     id 'java'
-    alias(libs.plugins.kotlinMultiplatform) apply false
+    alias(libs.plugins.kotlin.multiplatform) apply false
     alias(libs.plugins.springBoot) apply false
     alias(libs.plugins.springDependecyManager) apply false
 }
@@ -37,7 +37,7 @@ subprojects {
     //统一设置plugin
     apply {
         plugin("java")
-        plugin(libs.plugins.kotlinJvm.get().pluginId)
+        plugin(libs.plugins.kotlin.jvm.get().pluginId)
     }
 
     if (project.name != 'cloudpvp-core') {
