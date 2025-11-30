@@ -23,8 +23,8 @@ public class RedisConfigure {
     public static final RedisSerializer<Object> SERIALIZER = new GenericJackson2JsonRedisSerializer(JacksonUtils.INSTANCE);
 
     @Bean
-    public RedisTemplate<String, ?> redisTemplate(RedisConnectionFactory connectionFactory) {
-        RedisTemplate<String, ?> template = new RedisTemplate<>();
+    public <K, V> RedisTemplate<K, V> redisTemplate(RedisConnectionFactory connectionFactory) {
+        RedisTemplate<K, V> template = new RedisTemplate<>();
         template.setConnectionFactory(connectionFactory);
         // 使用StringRedisSerializer来序列化和反序列化redis的key值
         template.setKeySerializer(new StringRedisSerializer());
