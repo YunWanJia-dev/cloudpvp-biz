@@ -28,7 +28,7 @@ jobs:
         distribution: 'temurin'
         java-version: 21
     - name: Setup Gradle
-      uses: gradle/actions/setup-gradle@v4
+      uses: gradle/actions/setup-gradle@v5.0.0
     - name: Build with Gradle
       id: build
       run: |
@@ -70,4 +70,4 @@ jobs:
     # Generates and submits a dependency graph, enabling Dependabot Alerts for all project dependencies.
     # See: https://github.com/gradle/actions/blob/main/dependency-submission/README.md
     - name: Generate and submit dependency graph
-      uses: gradle/actions/dependency-submission@af1da67850ed9a4cedd57bfd976089dd991e2582 # v4.0.0
+      uses: gradle/actions/dependency-submission@261794afacfbe7a93883fe9e989f80e083e3547f # v4.0.0
