@@ -9,7 +9,6 @@ dependencies {
 //    implementation 'org.springframework.boot:spring-boot-starter-oauth2-authorization-server'
     runtimeOnly 'com.mysql:mysql-connector-j'
     runtimeOnly 'org.postgresql:postgresql'
-    testImplementation 'org.springframework.boot:spring-boot-starter-test'
 }
 
 dependencyManagement {
@@ -19,4 +18,5 @@ dependencyManagement {
 }
 
 tasks.named('test') {
+    useJUnitPlatform()
 }

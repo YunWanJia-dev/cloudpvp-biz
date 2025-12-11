@@ -1,10 +1,11 @@
-package me.ywj.cloudpvp.lobby;
+package me.ywj.cloudpvp.usersummary;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
-class CloudpvpLobbyApplicationTests {
+class CloudpvpUserSummaryApplicationTests {
     @Test
-    void contextLoads() {}
+    void contextLoads() {
+    }
 }

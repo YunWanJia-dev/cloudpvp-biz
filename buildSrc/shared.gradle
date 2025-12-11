@@ -4,10 +4,22 @@ dependencies {
     implementation project(":cloudpvp-core")
     implementation project(':cloudpvp-beans')
     runtimeOnly libs.kotlin.reflect
-    implementation libs.ktx.coroutines.core
-    implementation libs.ktx.coroutines.jvm
+    implementation libs.kotlinx.coroutines.core
+    implementation libs.kotlinx.coroutines.jvm
     compileOnly libs.lombok
     annotationProcessor libs.lombok
+    // https://mvnrepository.com/artifact/org.springframework.cloud/spring-cloud-starter-netflix-eureka-client
     implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
+    // https://mvnrepository.com/artifact/com.ctrip.framework.apollo/apollo-client-config-data
     implementation 'com.ctrip.framework.apollo:apollo-client-config-data:2.4.0'
+
+    testImplementation libs.kotlin.test
+    testImplementation libs.kotlin.test.junit
+    testImplementation libs.kotlinx.coroutines.test
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    // https://mvnrepository.com/artifact/io.projectreactor/reactor-test
+    testImplementation 'io.projectreactor:reactor-test'
+    // https://mvnrepository.com/artifact/org.junit.platform/junit-platform-launcher
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
