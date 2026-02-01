@@ -12,8 +12,8 @@ import reactor.core.publisher.Flux
  * @since 2024/10/20 18:30
  */
 @Service
-class ProfileService () {
-    fun getProfile(ids: ArrayList<Long>): List<PlayerProfile?>? {
+class ProfileService {
+    fun getProfiles(ids: ArrayList<Long>): List<PlayerProfile?>? {
         //先暂时这样 嘻嘻
         //TODO: 完成玩家数据从数据库查询
         return Flux.fromIterable(ids).map { id ->
@@ -30,6 +30,14 @@ class ProfileService () {
                 SteamUser.EMPTY_AVATAR
             )
         }.collectList().block()
+    }
+
+    fun getOneProfile(id: Long): PlayerProfile? {
+        return PlayerProfile(
+            id,
+            "sheip9",
+            "https://avatars.cdn.steamchina.eccdnx.com/2c78662993345cc1662988633b4e4198b6d1c7a5.jpg"
+        )
     }
 
     fun requestUpdateProfile(id: Long) {
