@@ -3,7 +3,7 @@ java = "21"
 kotlin = "2.3.10"
 kotlinx-coroutines = "1.10.2"
 springCloudVersion = "2025.0.0"
-lombok = "1.18.42"
+lombok = "1.18.44"
 
 [libraries]
 # https://mvnrepository.com/artifact/org.projectlombok/lombok
