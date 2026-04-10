@@ -9,11 +9,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
-import java.net.MalformedURLException;
-import java.net.ProtocolException;
-import java.net.URI;
-import java.net.URISyntaxException;
+import java.net.*;
 import java.net.http.HttpRequest;
+import java.util.List;
+import java.util.Map;
 
 /**
  * SteamAuthServiceImpl
@@ -26,7 +25,7 @@ import java.net.http.HttpRequest;
 public class SteamAuthService {
     private final HttpUtils httpUtils = new HttpUtils(
             HttpRequest.newBuilder()
-                    .uri(URI.create("https://steamcommunity.com/openid/login?"))
+                    .uri(URI.create("https://steamcommunity.com/"))
                     .header("Content-Type", "application/x-www-form-urlencoded")
                     .build()
     );
@@ -70,19 +69,21 @@ public class SteamAuthService {
             String openidResponseNonce
     ) {
         try {
-            String params =
-                    "openid.assoc_handle=" + openidAccOcHandler +
-                            "&openid.signed=" + openidSigned +
-                            "&openid.sig=" + openidSig +
-                            "&openid.ns=" + openidNs +
-                            "&openid.mode=" + openidMode +
-                            "&openid.op_endpoint=" + openidOpEndpoint +
-                            "&openid.claimed_id=" + openidClaimedId +
-                            "&openid.identity=" + openidIdentity +
-                            "&openid.return_to=" + openidReturnTo +
-                            "&openid.response_nonce=" + openidResponseNonce +
-                            "&openid.mode=check_authentication";
-            var r = httpUtils.get(params);
+            List<Map.Entry<String, String>> params = List.of(
+                    Map.entry("openid.ns", openidNs),
+                    Map.entry("openid.mode", openidMode),
+                    Map.entry("openid.op_endpoint", openidOpEndpoint),
+                    Map.entry("openid.claimed_id", openidClaimedId),
+                    Map.entry("openid.identity", openidIdentity),
+                    Map.entry("openid.return_to", openidReturnTo),
+                    Map.entry("openid.response_nonce", openidResponseNonce),
+                    Map.entry("openid.assoc_handle", openidAccOcHandler),
+                    Map.entry("openid.signed", openidSigned),
+                    Map.entry("openid.sig", openidSig),
+                    Map.entry("openid.mode", "check_authentication")
+            );
+            var r = httpUtils.get("/openid/login", params);
+
             String resp = r.body();
             // 读取返回内容，获取is_valid的值
             // e.g:

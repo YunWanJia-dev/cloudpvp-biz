@@ -1,9 +1,13 @@
 package me.ywj.cloudpvp.core.utils;
 
 import java.net.URI;
+import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.Map;
 
 /**
  * HttpUtils
@@ -38,6 +42,30 @@ public class HttpUtils {
      */
     public HttpResponse<String> get(String path) throws Exception {
         var req = newRequest(path).GET().build();
+        return send(req);
+    }
+
+    /**
+     * 发起GET请求
+     *
+     * @param path 路径
+     * @param params 请求参数
+     * @return HttpResponse
+     * @throws Exception 异常
+     */
+    public HttpResponse<String> get(String path, List<Map.Entry<String, String>> params) throws Exception {
+        if(params == null) {
+            return get(path);
+        }
+        StringBuilder sb = new StringBuilder();
+        params.forEach((v) -> {
+            sb.append(v.getKey());
+            sb.append("=");
+            sb.append(URLEncoder.encode(v.getValue(), StandardCharsets.UTF_8));
+            sb.append("&");
+        });
+        String realPath = String.format("%s?%s", path, sb);
+        var req = newRequest(realPath).GET().build();
         return send(req);
     }
 
