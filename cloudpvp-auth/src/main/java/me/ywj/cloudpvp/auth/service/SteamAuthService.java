@@ -2,17 +2,17 @@ package me.ywj.cloudpvp.auth.service;
 
 import lombok.AllArgsConstructor;
 import me.ywj.cloudpvp.auth.exceptions.InternalErrorException;
+import me.ywj.cloudpvp.auth.model.SteamOpenIDVerificationResult;
 import me.ywj.cloudpvp.auth.model.TokenModel;
-import me.ywj.cloudpvp.core.utils.HttpUtils;
+import me.ywj.cloudpvp.auth.utils.SteamOpenIDUtils;
 import me.ywj.cloudpvp.core.utils.TokenUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
-import java.net.*;
-import java.net.http.HttpRequest;
-import java.util.List;
-import java.util.Map;
+import java.net.MalformedURLException;
+import java.net.ProtocolException;
+import java.net.URISyntaxException;
 
 /**
  * SteamAuthServiceImpl
@@ -23,13 +23,8 @@ import java.util.Map;
 @Service
 @AllArgsConstructor(onConstructor = @__(@Autowired))
 public class SteamAuthService {
-    private final HttpUtils httpUtils = new HttpUtils(
-            HttpRequest.newBuilder()
-                    .uri(URI.create("https://steamcommunity.com/"))
-                    .header("Content-Type", "application/x-www-form-urlencoded")
-                    .build()
-    );
     private final TokenUtils tokenUtils;
+    private final SteamOpenIDUtils steamOpenIDUtils;
 
     /**
      * generateSteamLoginUrl
@@ -69,33 +64,29 @@ public class SteamAuthService {
             String openidResponseNonce
     ) {
         try {
-            List<Map.Entry<String, String>> params = List.of(
-                    Map.entry("openid.ns", openidNs),
-                    Map.entry("openid.mode", openidMode),
-                    Map.entry("openid.op_endpoint", openidOpEndpoint),
-                    Map.entry("openid.claimed_id", openidClaimedId),
-                    Map.entry("openid.identity", openidIdentity),
-                    Map.entry("openid.return_to", openidReturnTo),
-                    Map.entry("openid.response_nonce", openidResponseNonce),
-                    Map.entry("openid.assoc_handle", openidAccOcHandler),
-                    Map.entry("openid.signed", openidSigned),
-                    Map.entry("openid.sig", openidSig),
-                    Map.entry("openid.mode", "check_authentication")
+            // 调用 SteamOpenIDUtils 进行验证
+            SteamOpenIDVerificationResult result = steamOpenIDUtils.verifying(
+                    openidNs,
+                    openidMode,
+                    openidOpEndpoint,
+                    openidClaimedId,
+                    openidIdentity,
+                    openidReturnTo,
+                    openidResponseNonce,
+                    openidAccOcHandler,
+                    openidSigned,
+                    openidSig
             );
-            var r = httpUtils.get("/openid/login", params);
 
-            String resp = r.body();
-            // 读取返回内容，获取is_valid的值
-            // e.g:
-            // ns:http://specs.openid.net/auth/2.0
-            // is_valid:true
-            var str = resp.substring(resp.length() - 5, resp.length() - 1);
-            boolean validation = "true".equals(str);
-            if (validation) {
-                String token = tokenUtils.generateToken(Long.valueOf(openidIdentity.replace("https://steamcommunity.com/openid/id/", "")));
-                return new TokenModel(token);
+            // 验证失败
+            if (!result.isValid()) {
+                return null;
             }
-            return null;
+
+            // 验证成功，生成 token
+            String token = tokenUtils.generateToken(result.getSteamId64());
+            return new TokenModel(token);
+
         } catch (MalformedURLException | ProtocolException e) {
             throw new InternalErrorException("内部逻辑发生错误");
         } catch (IOException e) {

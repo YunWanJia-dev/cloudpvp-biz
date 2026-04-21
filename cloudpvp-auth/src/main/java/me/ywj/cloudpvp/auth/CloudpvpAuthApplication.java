@@ -3,6 +3,7 @@ package me.ywj.cloudpvp.auth;
 import me.ywj.cloudpvp.beans.ModuleInfo;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -18,6 +19,7 @@ import org.springframework.context.annotation.Configuration;
 @SpringBootApplication(scanBasePackages = "me.ywj.cloudpvp")
 @EnableDiscoveryClient
 @Configuration
+@ConfigurationPropertiesScan
 public class CloudpvpAuthApplication {
     public static void main(String[] args) {
         SpringApplication.run(CloudpvpAuthApplication.class, args);
