@@ -1,0 +1,11 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>登陆失败</title>
+</head>
+<body>
+    <p th:text="${errorMessage}">登陆时发生错误，请重新登陆！</p>
+    <a href="" onclick="(() => { window.close() })()">点击关闭窗口</a>
+</body>
+</html>
