@@ -2,9 +2,12 @@ package me.ywj.cloudpvp.auth.controller;
 
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.AllArgsConstructor;
+import me.ywj.cloudpvp.auth.exception.SteamAuthException;
 import me.ywj.cloudpvp.auth.service.SteamAuthService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.ModelAndView;
 
 import java.io.IOException;
 import java.util.Optional;
@@ -59,25 +62,31 @@ public class SteamAuthController {
             @RequestParam(FINALLY_REDIRECT_FIELD) Optional<String> finallyRedirection,
             HttpServletResponse response
     ) {
-        final var token = steamAuthService.validRequestFromUser(
-                openidAccOcHandler,
-                openidSigned,
-                openidSig,
-                openidNs,
-                openidMode,
-                openidOpEndpoint,
-                openidClaimedId,
-                openidIdentity,
-                openidReturnTo,
-                openidResponseNonce
-        );
-        if (finallyRedirection.isPresent()) {
-            try {
-                response.sendRedirect(finallyRedirection.get() + "?token=" + token.getToken());
-                return null;
-            } catch (IOException ignored) {
+        try {
+            final var token = steamAuthService.validRequestFromUser(
+                    openidAccOcHandler,
+                    openidSigned,
+                    openidSig,
+                    openidNs,
+                    openidMode,
+                    openidOpEndpoint,
+                    openidClaimedId,
+                    openidIdentity,
+                    openidReturnTo,
+                    openidResponseNonce
+            );
+            if (finallyRedirection.isPresent()) {
+                try {
+                    response.sendRedirect(finallyRedirection.get() + "?token=" + token.getToken());
+                    return null;
+                } catch (IOException ignored) {
+                }
             }
+            return token;
+        } catch (SteamAuthException e) {
+            ModelAndView mv = new ModelAndView("steam-auth-error");
+            mv.addObject("errorMessage", e.getMessage());
+            return mv;
         }
-        return token;
     }
 }
