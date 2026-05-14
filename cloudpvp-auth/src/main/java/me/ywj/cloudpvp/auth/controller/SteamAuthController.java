@@ -2,12 +2,10 @@ package me.ywj.cloudpvp.auth.controller;
 
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.AllArgsConstructor;
-import me.ywj.cloudpvp.auth.exception.SteamAuthException;
+import me.ywj.cloudpvp.auth.model.TokenModel;
 import me.ywj.cloudpvp.auth.service.SteamAuthService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.servlet.ModelAndView;
 
 import java.io.IOException;
 import java.util.Optional;
@@ -44,11 +42,11 @@ public class SteamAuthController {
     }
 
     /**
-     * receiveReturnFromSteam
-     * 接受完成steam登录后的重定向请求
+     * receiveReturnFromSteamJson
+     * 接受完成steam登录后的重定向请求并返回JSON
      */
-    @GetMapping("/login")
-    public Object receiveReturnFromSteam(
+    @GetMapping("/login/json")
+    public TokenModel receiveReturnFromSteamJson(
             @RequestParam("openid.assoc_handle") String openidAccOcHandler,
             @RequestParam("openid.signed") String openidSigned,
             @RequestParam("openid.sig") String openidSig,
@@ -58,35 +56,19 @@ public class SteamAuthController {
             @RequestParam("openid.claimed_id") String openidClaimedId,
             @RequestParam("openid.identity") String openidIdentity,
             @RequestParam("openid.return_to") String openidReturnTo,
-            @RequestParam("openid.response_nonce") String openidResponseNonce,
-            @RequestParam(FINALLY_REDIRECT_FIELD) Optional<String> finallyRedirection,
-            HttpServletResponse response
+            @RequestParam("openid.response_nonce") String openidResponseNonce
     ) {
-        try {
-            final var token = steamAuthService.validRequestFromUser(
-                    openidAccOcHandler,
-                    openidSigned,
-                    openidSig,
-                    openidNs,
-                    openidMode,
-                    openidOpEndpoint,
-                    openidClaimedId,
-                    openidIdentity,
-                    openidReturnTo,
-                    openidResponseNonce
-            );
-            if (finallyRedirection.isPresent()) {
-                try {
-                    response.sendRedirect(finallyRedirection.get() + "?token=" + token.getToken());
-                    return null;
-                } catch (IOException ignored) {
-                }
-            }
-            return token;
-        } catch (SteamAuthException e) {
-            ModelAndView mv = new ModelAndView("steam-auth-error");
-            mv.addObject("errorMessage", e.getMessage());
-            return mv;
-        }
+        return steamAuthService.validRequestFromUser(
+                openidAccOcHandler,
+                openidSigned,
+                openidSig,
+                openidNs,
+                openidMode,
+                openidOpEndpoint,
+                openidClaimedId,
+                openidIdentity,
+                openidReturnTo,
+                openidResponseNonce
+        );
     }
 }

@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>登陆成功</title>
+</head>
+<body>
+    <p>登陆成功，正在尝试返回...</p>
+    <script th:inline="javascript">
+        const redirectUrl = /*[[${redirectUrl}]]*/ '';
+        if (redirectUrl) {
+            window.location.href = redirectUrl;
+        } else {
+            const message = {
+                type: 'steam-auth-success',
+                token: /*[[${token}]]*/ ''
+            };
+            if (window.opener && !window.opener.closed) {
+                window.opener.postMessage(message, '*');
+                window.close();
+            } else if (window.parent && window.parent !== window) {
+                window.parent.postMessage(message, '*');
+            }
+        }
+    </script>
+</body>
+</html>
