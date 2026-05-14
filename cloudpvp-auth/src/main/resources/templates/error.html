@@ -5,7 +5,7 @@
     <title>登陆失败</title>
 </head>
 <body>
-    <p th:text="${errorMessage}">登陆时发生错误，请重新登陆！</p>
+    <p>登陆时发生错误：<span th:text="${errorMessage}"></span>，请尝试重新登陆...</p>
     <a href="" onclick="(() => { window.close() })()">点击关闭窗口</a>
 </body>
 </html>

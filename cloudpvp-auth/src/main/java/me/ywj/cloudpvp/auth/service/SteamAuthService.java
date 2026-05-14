@@ -1,7 +1,7 @@
 package me.ywj.cloudpvp.auth.service;
 
 import lombok.AllArgsConstructor;
-import me.ywj.cloudpvp.auth.exceptions.InternalErrorException;
+import me.ywj.cloudpvp.auth.exceptions.SteamLoginException;
 import me.ywj.cloudpvp.auth.model.SteamOpenIDVerificationResult;
 import me.ywj.cloudpvp.auth.model.TokenModel;
 import me.ywj.cloudpvp.auth.utils.SteamOpenIDUtils;
@@ -80,22 +80,21 @@ public class SteamAuthService {
 
             // 验证失败
             if (!result.isValid()) {
-                return null;
+                throw new SteamLoginException("登陆校验失败");
             }
 
             // 验证成功，生成 token
             String token = tokenUtils.generateToken(result.getSteamId64());
             return new TokenModel(token);
 
+        } catch (SteamLoginException e) {
+            throw e;
         } catch (MalformedURLException | ProtocolException e) {
-            throw new InternalErrorException("内部逻辑发生错误");
+            throw new SteamLoginException("内部逻辑发生错误", e);
         } catch (IOException e) {
-            e.printStackTrace();
-            throw new InternalErrorException("获取返回内容发生错误");
-        } catch (URISyntaxException e) {
-            throw new RuntimeException(e);
+            throw new SteamLoginException("与 Steam 服务器通信中发送了错误", e);
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            throw new SteamLoginException("登陆时发生内部错误，请联系管理员上报", e);
         }
     }
 }
