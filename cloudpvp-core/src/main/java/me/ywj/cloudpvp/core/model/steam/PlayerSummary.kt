@@ -61,7 +61,7 @@ enum class PersonaStateEnum(val state: Byte) {
 
     companion object {
         @JvmStatic
-        @JsonCreator
+        @JsonCreator(mode = JsonCreator.Mode.DELEGATING)
         fun fromValue(value: Int): PersonaStateEnum {
             // Steam 返回的是数字状态码，不是枚举名称；显式映射能避免 Jackson 按枚举名解析失败。
             return entries.firstOrNull { it.state.toInt() == value }
@@ -76,7 +76,7 @@ enum class CommunityVisibilityStateEnum(val value: Byte) {
 
     companion object {
         @JvmStatic
-        @JsonCreator
+        @JsonCreator(mode = JsonCreator.Mode.DELEGATING)
         fun fromValue(value: Int): CommunityVisibilityStateEnum {
             // Steam 的可见性字段同样是数字编码，保留原始映射关系比依赖枚举顺序更稳。
             return entries.firstOrNull { it.value.toInt() == value }
