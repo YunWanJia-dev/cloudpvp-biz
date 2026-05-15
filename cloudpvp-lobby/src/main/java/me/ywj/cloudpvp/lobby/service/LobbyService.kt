@@ -94,6 +94,7 @@ class LobbyService @Autowired constructor(
         val lobby = lobbyOption.get()
         lobby.players!!.remove(player.steamID64)
         if (lobby.players!!.isEmpty()) {
+            container.removeMessageListener(player.msgListener, PatternTopic(lobby.id.toString()))
             return lobbyRepository.deleteById(targetLobbyId)
         }
         lobby.sendMsg(LobbyMessage(LobbyMessageType.LEAVE).apply {
