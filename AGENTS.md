@@ -81,6 +81,13 @@ cloudpvp
 
 ## Comment Guidelines
 
+### Code Comments
+
+- Add inline or block comments when a logic block has non-obvious intent, constraints, tradeoffs, or external API quirks.
+- Prefer explaining why the code is written this way over merely restating what the code does.
+- For longer methods, add short comments above major logic blocks to make the flow easier to scan.
+- Avoid comments that only repeat obvious statements from the code.
+
 ### New Classes
 
 - Add a class-level Javadoc/KDoc comment for every new public or framework-managed class.
