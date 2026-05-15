@@ -17,6 +17,7 @@ import org.springframework.web.socket.TextMessage
 import org.springframework.web.socket.WebSocketHandler
 import org.springframework.web.socket.WebSocketSession
 import org.springframework.web.socket.handler.AbstractWebSocketHandler
+import org.springframework.web.socket.handler.ConcurrentWebSocketSessionDecorator
 import org.springframework.web.util.UriTemplate
 
 /**
@@ -31,6 +32,8 @@ class LobbySocketHandler @Autowired constructor(private val lobbyService: LobbyS
     companion object {
         const val PARAM_LOBBY_ID = "lobbyId"
         const val PATH = "/ws/{${PARAM_LOBBY_ID}}"
+        private const val SEND_TIME_LIMIT_MILLIS = 10_000
+        private const val SEND_BUFFER_SIZE_LIMIT_BYTES = 64 * 1024
         private val URI_TEMPLATE = UriTemplate(PATH)
         private val PLAYER_MAP = HashMap<SteamID64, LobbyPlayer>()
     }
@@ -61,21 +64,26 @@ class LobbySocketHandler @Autowired constructor(private val lobbyService: LobbyS
     }
 
     override fun afterConnectionEstablished(session: WebSocketSession) {
-        if (!session.checkSessionIsValid()) {
-            session.sendMessage(ErrorResponse(ErrorType.PARAM_INVALID, ""))
-            session.close()
+        val safeSession = ConcurrentWebSocketSessionDecorator(
+            session,
+            SEND_TIME_LIMIT_MILLIS,
+            SEND_BUFFER_SIZE_LIMIT_BYTES,
+        )
+        if (!safeSession.checkSessionIsValid()) {
+            safeSession.sendMessage(ErrorResponse(ErrorType.PARAM_INVALID, ""))
+            safeSession.close()
             return
         }
 
-        val playerId = session.getPlayerId()!!
-        val player = LobbyPlayer(playerId) { it: Any -> session.sendMessage(it) }
+        val playerId = safeSession.getPlayerId()!!
+        val player = LobbyPlayer(playerId) { it: Any -> safeSession.sendMessage(it) }
 
         try {
-            lobbyService.joinLobby(player, session.getRequestLobbyId()!!)
+            lobbyService.joinLobby(player, safeSession.getRequestLobbyId()!!)
             PLAYER_MAP[playerId] = player
         } catch (_: LobbyNotExist) {
-            session.sendMessage(ErrorResponse(ErrorType.LOBBY_NOT_EXIST, ""))
-            session.close()
+            safeSession.sendMessage(ErrorResponse(ErrorType.LOBBY_NOT_EXIST, ""))
+            safeSession.close()
         }
     }
 
