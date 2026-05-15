@@ -31,9 +31,10 @@ class StateSocketHandler @Autowired constructor(private val playerStateService: 
 
     override fun afterConnectionEstablished(session: WebSocketSession) {
         val steamId64 = session.getPlayerId()
-        if (PlayerUtils.checkIdIsValid(steamId64)) {
+        if (!PlayerUtils.checkIdIsValid(steamId64)) {
             session.sendMessage(ErrorResponse(ErrorType.PLAYER_ID_INVALID, ""))
             session.close()
+            return
         }
         val player = PlayerState(steamId64!!).apply {
             state = StateEnum.ONLINE
