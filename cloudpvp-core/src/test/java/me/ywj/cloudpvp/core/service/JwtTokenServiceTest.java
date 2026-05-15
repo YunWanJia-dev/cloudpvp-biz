@@ -3,7 +3,7 @@ package me.ywj.cloudpvp.core.service;
 import com.auth0.jwt.exceptions.JWTVerificationException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import me.ywj.cloudpvp.core.constant.header.Attributes;
-import me.ywj.cloudpvp.core.model.configuration.JWTConfiguration;
+import me.ywj.cloudpvp.core.model.configurations.JWTConfiguration;
 import me.ywj.cloudpvp.core.utils.JWTUtils;
 import org.junit.jupiter.api.Test;
 
