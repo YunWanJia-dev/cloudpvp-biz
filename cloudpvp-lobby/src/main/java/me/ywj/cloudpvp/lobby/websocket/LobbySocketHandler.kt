@@ -8,7 +8,7 @@ import me.ywj.cloudpvp.core.utils.JacksonUtils
 import me.ywj.cloudpvp.core.utils.LobbyUtils
 import me.ywj.cloudpvp.core.utils.PlayerUtils
 import me.ywj.cloudpvp.lobby.entity.LobbyPlayer
-import me.ywj.cloudpvp.lobby.exception.LobbyNotExist
+import me.ywj.cloudpvp.lobby.exceptions.LobbyNotExist
 import me.ywj.cloudpvp.lobby.service.LobbyService
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Controller

@@ -1,6 +1,6 @@
 package me.ywj.cloudpvp.beans.utils;
 
-import me.ywj.cloudpvp.beans.exception.UserIdInvalidException;
+import me.ywj.cloudpvp.beans.exceptions.UserIdInvalidException;
 import me.ywj.cloudpvp.core.service.TokenService;
 import org.springframework.stereotype.Component;
 

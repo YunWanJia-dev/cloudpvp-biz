@@ -4,7 +4,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.AllArgsConstructor;
 import me.ywj.cloudpvp.beans.ModuleInfo;
-import me.ywj.cloudpvp.core.exception.BizException;
+import me.ywj.cloudpvp.core.exceptions.BizException;
 import me.ywj.cloudpvp.core.utils.ExceptionMessageUtils;
 import me.ywj.cloudpvp.core.utils.FeishuWebhookUtils;
 import org.springframework.beans.factory.annotation.Autowired;

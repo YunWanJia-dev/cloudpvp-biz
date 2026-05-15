@@ -1,7 +1,7 @@
 package me.ywj.cloudpvp.usersummary.controller;
 
 import lombok.AllArgsConstructor;
-import me.ywj.cloudpvp.beans.exception.UserIdInvalidException;
+import me.ywj.cloudpvp.beans.exceptions.UserIdInvalidException;
 import me.ywj.cloudpvp.beans.utils.TokenAuthUtils;
 import me.ywj.cloudpvp.core.entity.PlayerProfile;
 import me.ywj.cloudpvp.usersummary.service.ProfileService;

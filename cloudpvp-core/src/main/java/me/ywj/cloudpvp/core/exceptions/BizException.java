@@ -1,4 +1,4 @@
-package me.ywj.cloudpvp.core.exception;
+package me.ywj.cloudpvp.core.exceptions;
 
 /**
  * BusinessException

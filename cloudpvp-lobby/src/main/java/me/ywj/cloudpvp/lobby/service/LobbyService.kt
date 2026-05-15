@@ -13,7 +13,7 @@ import me.ywj.cloudpvp.core.type.SteamID64
 import me.ywj.cloudpvp.core.utils.LobbyUtils
 import me.ywj.cloudpvp.lobby.entity.Lobby
 import me.ywj.cloudpvp.lobby.entity.LobbyPlayer
-import me.ywj.cloudpvp.lobby.exception.LobbyNotExist
+import me.ywj.cloudpvp.lobby.exceptions.LobbyNotExist
 import me.ywj.cloudpvp.lobby.repository.LobbyRepository
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.data.redis.core.RedisTemplate

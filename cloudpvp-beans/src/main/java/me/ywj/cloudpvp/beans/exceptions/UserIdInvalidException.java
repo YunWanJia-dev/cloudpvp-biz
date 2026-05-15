@@ -1,6 +1,6 @@
-package me.ywj.cloudpvp.beans.exception;
+package me.ywj.cloudpvp.beans.exceptions;
 
-import me.ywj.cloudpvp.core.exception.BizException;
+import me.ywj.cloudpvp.core.exceptions.BizException;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ResponseStatus;
 

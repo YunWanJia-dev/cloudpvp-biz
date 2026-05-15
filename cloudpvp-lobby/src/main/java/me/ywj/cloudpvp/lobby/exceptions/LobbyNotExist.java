@@ -1,4 +1,4 @@
-package me.ywj.cloudpvp.lobby.exception;
+package me.ywj.cloudpvp.lobby.exceptions;
 
 /**
  * LobbyNotExist
