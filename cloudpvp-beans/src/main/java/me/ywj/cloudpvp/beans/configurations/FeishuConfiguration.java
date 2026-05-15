@@ -1,4 +1,4 @@
-package me.ywj.cloudpvp.beans.configuration;
+package me.ywj.cloudpvp.beans.configurations;
 
 import me.ywj.cloudpvp.beans.property.FeishuProperty;
 import me.ywj.cloudpvp.core.utils.FeishuWebhookUtils;

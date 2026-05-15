@@ -1,4 +1,4 @@
-package me.ywj.cloudpvp.state.configure;
+package me.ywj.cloudpvp.lobby.configurations;
 
 import me.ywj.cloudpvp.core.utils.JacksonUtils;
 import org.springframework.context.annotation.Bean;
@@ -12,14 +12,14 @@ import org.springframework.data.redis.serializer.RedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
 /**
- * RedisConfigure
+ * RedisConfiguration
  *
  * @author sheip9
- * @since 2024/2/28 19:16
+ * @since 2024/10/20 15:44
  */
 @Configuration
 @EnableRedisRepositories
-public class RedisConfigure {
+public class RedisConfiguration {
     public static final RedisSerializer<Object> SERIALIZER = new GenericJackson2JsonRedisSerializer(JacksonUtils.INSTANCE);
 
     @Bean

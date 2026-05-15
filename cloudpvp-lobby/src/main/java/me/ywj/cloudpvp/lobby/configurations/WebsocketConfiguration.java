@@ -1,4 +1,4 @@
-package me.ywj.cloudpvp.lobby.configure;
+package me.ywj.cloudpvp.lobby.configurations;
 
 import me.ywj.cloudpvp.lobby.interceptor.IdInterceptor;
 import me.ywj.cloudpvp.lobby.websocket.LobbySocketHandler;
@@ -9,7 +9,7 @@ import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
 import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry;
 
 /**
- * WebsocketConfigure
+ * WebsocketConfiguration
  * 大厅长连接配置类
  *
  * @author sheip9
@@ -17,19 +17,19 @@ import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry
  */
 @Configuration
 @EnableWebSocket
-public class WebsocketConfigure implements WebSocketConfigurer {
+public class WebsocketConfiguration implements WebSocketConfigurer {
     private final LobbySocketHandler lobbySocketHandler;
     private final IdInterceptor idInterceptor;
 
     /**
-     * WebsocketConfigure
+     * WebsocketConfiguration
      * 创建大厅 websocket 配置。
      *
      * @param lobbySocketHandler 大厅 websocket 处理器
      * @param idInterceptor 玩家ID握手拦截器
      */
     @Autowired
-    public WebsocketConfigure(LobbySocketHandler lobbySocketHandler, IdInterceptor idInterceptor) {
+    public WebsocketConfiguration(LobbySocketHandler lobbySocketHandler, IdInterceptor idInterceptor) {
         this.lobbySocketHandler = lobbySocketHandler;
         this.idInterceptor = idInterceptor;
     }

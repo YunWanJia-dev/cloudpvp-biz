@@ -1,6 +1,6 @@
 package me.ywj.cloudpvp.beans.property;
 
-import me.ywj.cloudpvp.core.model.configuration.FeishuWebhookConfiguration;
+import me.ywj.cloudpvp.core.model.configurations.FeishuWebhookConfiguration;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 

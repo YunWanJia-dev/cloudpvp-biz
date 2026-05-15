@@ -1,4 +1,4 @@
-package me.ywj.cloudpvp.core.model.configuration;
+package me.ywj.cloudpvp.core.model.configurations;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

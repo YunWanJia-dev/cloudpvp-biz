@@ -1,4 +1,4 @@
-package me.ywj.cloudpvp.beans.configuration;
+package me.ywj.cloudpvp.beans.configurations;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import me.ywj.cloudpvp.core.utils.JacksonUtils;

@@ -1,4 +1,4 @@
-package me.ywj.cloudpvp.gateway.configuration;
+package me.ywj.cloudpvp.gateway.configurations;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

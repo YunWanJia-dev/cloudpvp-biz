@@ -1,4 +1,4 @@
-package me.ywj.cloudpvp.state.configure;
+package me.ywj.cloudpvp.state.configurations;
 
 import me.ywj.cloudpvp.state.websocket.StateSocketHandler;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -8,18 +8,18 @@ import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
 import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry;
 
 /**
- * WebsocketConfigure
+ * WebsocketConfiguration
  *
  * @author sheip9
  * @since 2024/10/16 17:50
  */
 @Configuration
 @EnableWebSocket
-public class WebsocketConfigure implements WebSocketConfigurer {
+public class WebsocketConfiguration implements WebSocketConfigurer {
     private final StateSocketHandler stateSocketHandler;
 
     @Autowired
-    public WebsocketConfigure(StateSocketHandler stateSocketHandler) {
+    public WebsocketConfiguration(StateSocketHandler stateSocketHandler) {
         this.stateSocketHandler = stateSocketHandler;
     }
 
