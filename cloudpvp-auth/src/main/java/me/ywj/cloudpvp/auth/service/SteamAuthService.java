@@ -5,17 +5,17 @@ import me.ywj.cloudpvp.auth.exceptions.SteamLoginException;
 import me.ywj.cloudpvp.auth.model.SteamOpenIDVerificationResult;
 import me.ywj.cloudpvp.auth.model.TokenModel;
 import me.ywj.cloudpvp.auth.utils.SteamOpenIDUtils;
-import me.ywj.cloudpvp.core.utils.TokenUtils;
+import me.ywj.cloudpvp.core.service.TokenService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.ProtocolException;
-import java.net.URISyntaxException;
 
 /**
- * SteamAuthServiceImpl
+ * SteamAuthService
+ * 游戏平台登录鉴权服务
  *
  * @author sheip9
  * @since 2024/1/19 11:47
@@ -23,7 +23,7 @@ import java.net.URISyntaxException;
 @Service
 @AllArgsConstructor(onConstructor = @__(@Autowired))
 public class SteamAuthService {
-    private final TokenUtils tokenUtils;
+    private final TokenService tokenService;
     private final SteamOpenIDUtils steamOpenIDUtils;
 
     /**
@@ -49,7 +49,17 @@ public class SteamAuthService {
      * validRequestFromUser
      * 校验完成steam登录后重定向过来的请求是否有效
      *
-     * @return 是否有效
+     * @param openidAccOcHandler Steam OpenID assoc handle
+     * @param openidSigned Steam OpenID 已签名字段列表
+     * @param openidSig Steam OpenID 签名
+     * @param openidNs Steam OpenID namespace
+     * @param openidMode Steam OpenID mode
+     * @param openidOpEndpoint Steam OpenID endpoint
+     * @param openidClaimedId Steam OpenID claimed id
+     * @param openidIdentity Steam OpenID identity
+     * @param openidReturnTo Steam OpenID return_to
+     * @param openidResponseNonce Steam OpenID response nonce
+     * @return 登录成功后签发的 token 模型
      */
     public TokenModel validRequestFromUser(
             String openidAccOcHandler,
@@ -84,7 +94,7 @@ public class SteamAuthService {
             }
 
             // 验证成功，生成 token
-            String token = tokenUtils.generateToken(result.getSteamId64());
+            String token = tokenService.generateToken(result.getSteamId64());
             return new TokenModel(token);
 
         } catch (SteamLoginException e) {
