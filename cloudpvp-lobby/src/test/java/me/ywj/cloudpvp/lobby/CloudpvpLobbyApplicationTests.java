@@ -1,12 +1,13 @@
 package me.ywj.cloudpvp.lobby;
 
 import me.ywj.cloudpvp.core.service.TokenService;
-import me.ywj.cloudpvp.lobby.configure.WebsocketConfigure;
+import me.ywj.cloudpvp.lobby.configurations.WebsocketConfiguration;
 import me.ywj.cloudpvp.lobby.interceptor.IdInterceptor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
 
 import java.lang.reflect.Field;
 
@@ -34,7 +35,7 @@ class CloudpvpLobbyApplicationTests {
     private IdInterceptor idInterceptor;
 
     @Autowired
-    private WebsocketConfigure websocketConfigure;
+    private WebSocketConfigurer websocketConfigure;
 
     private Field idInterceptorTokenServiceField;
     private Field websocketIdInterceptorField;
@@ -49,7 +50,7 @@ class CloudpvpLobbyApplicationTests {
     void setUp() throws Exception {
         idInterceptorTokenServiceField = IdInterceptor.class.getDeclaredField("tokenService");
         idInterceptorTokenServiceField.setAccessible(true);
-        websocketIdInterceptorField = WebsocketConfigure.class.getDeclaredField("idInterceptor");
+        websocketIdInterceptorField = WebsocketConfiguration.class.getDeclaredField("idInterceptor");
         websocketIdInterceptorField.setAccessible(true);
     }
 
