@@ -8,4 +8,4 @@ spring:
 
 apollo:
   bootstrap:
-    namespaces: application.yml, cloudpvp-dev.eureka.yml, cloudpvp-dev.redis.yml
+    namespaces: application.yml, cloudpvp-dev.eureka.yml, cloudpvp-dev.redis.yml, cloudpvp-dev.jwt.yml

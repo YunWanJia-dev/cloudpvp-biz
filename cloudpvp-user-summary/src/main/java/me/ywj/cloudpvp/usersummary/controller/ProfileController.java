@@ -1,8 +1,12 @@
 package me.ywj.cloudpvp.usersummary.controller;
 
+import lombok.AllArgsConstructor;
+import me.ywj.cloudpvp.beans.exception.UserIdInvalidException;
+import me.ywj.cloudpvp.beans.utils.TokenAuthUtils;
 import me.ywj.cloudpvp.core.entity.PlayerProfile;
 import me.ywj.cloudpvp.usersummary.service.ProfileService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
@@ -16,13 +20,10 @@ import java.util.List;
  */
 @RestController
 @RequestMapping("/profile")
+@AllArgsConstructor(onConstructor = @__(@Autowired))
 public class ProfileController {
     private final ProfileService profileService;
-
-    @Autowired
-    public ProfileController(ProfileService profileService) {
-        this.profileService = profileService;
-    }
+    private final TokenAuthUtils tokenAuthUtils;
 
     /**
      * 获取多个用户的资料
@@ -35,11 +36,13 @@ public class ProfileController {
 
     /**
      * 获取自己的个人资料
+     *
+     * @param token 请求头中的 token
      */
     @GetMapping("/self")
-    public PlayerProfile getSelf() {
-        //TODO: 从token里获取id
-        return profileService.getOneProfile(0);
+    public PlayerProfile getSelf(@RequestHeader(HttpHeaders.AUTHORIZATION) String token) throws UserIdInvalidException {
+        Long id = tokenAuthUtils.getIDFromToken(token);
+        return profileService.getOneProfile(id);
     }
 
     /**
