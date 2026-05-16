@@ -1,13 +1,11 @@
 package me.ywj.cloudpvp.usersummary.service
 
 import me.ywj.cloudpvp.core.constant.steam.SteamUser
-import me.ywj.cloudpvp.core.entity.PlayerProfile
-import me.ywj.cloudpvp.core.model.steam.PlayerSummary
+import me.ywj.cloudpvp.core.type.SteamID64
+import me.ywj.cloudpvp.usersummary.entity.PlayerProfile
 import me.ywj.cloudpvp.core.utils.SteamApiUtils
-import me.ywj.cloudpvp.usersummary.entity.PlayerProfileCache
 import me.ywj.cloudpvp.usersummary.repository.PlayerProfileRepository
 import org.springframework.stereotype.Service
-import java.util.Date
 
 /**
  * ProfileService
@@ -47,7 +45,7 @@ class ProfileService(
         val profilesById = cachedProfiles + fetchedProfiles
         return ids.map { id ->
             // Steam 对部分 ID 可能不返回玩家资料，兜底值只保障接口契约，不写入缓存。
-            profilesById[id] ?: createFallbackProfile(id)
+            profilesById[id] ?: fallbackEmptyProfile(id)
         }
     }
 
@@ -62,41 +60,39 @@ class ProfileService(
     }
 
     /**
-     * 主动刷新玩家资料缓存。
+     * fetchAndCacheProfiles
+     * 从steam获取资料并缓存
      *
-     * @param id Steam ID64
+     * @param ids 要获取的id列表
+     * @return 查询结果列表
      */
-    fun requestUpdateProfile(id: Long) {
-        fetchAndCacheProfiles(listOf(id))
-    }
-
-    private fun fetchAndCacheProfiles(ids: List<Long>): Map<Long, PlayerProfileCache> {
+    private fun fetchAndCacheProfiles(ids: List<Long>): Map<Long, PlayerProfile> {
         val fetchedProfiles = steamApiUtils.getPlayerSummaries(ids)
             .response
             .players
-            .map { it.toCache() }
+            .map { PlayerProfile(
+                steamID64 = it.steamId,
+                name = it.personaName,
+                avatarLink = it.avatarFull
+            ) }
 
         if (fetchedProfiles.isNotEmpty()) {
             profileRepository.saveAll(fetchedProfiles)
         }
 
         return fetchedProfiles.associateBy { it.steamID64 }
+
     }
 
-    private fun PlayerSummary.toCache(): PlayerProfileCache {
-        return PlayerProfileCache(
-            steamID64 = steamId,
-            name = personaName,
-            avatarLink = avatarFull.ifBlank { SteamUser.EMPTY_AVATAR },
-            auditAt = Date(),
-        )
-    }
-
-    private fun createFallbackProfile(id: Long): PlayerProfile {
+    /**
+     * fallbackEmptyProfile
+     *  根据 steamid 返回默认资料
+     *
+     *  @param id SteamID
+     */
+    private fun fallbackEmptyProfile(id: SteamID64): PlayerProfile {
         val idText = id.toString()
         val suffix = idText.takeLast(6)
-        return PlayerProfile(id, "用户$suffix", SteamUser.EMPTY_AVATAR).also {
-            it.auditAt = Date()
-        }
+        return PlayerProfile(id, "用户$suffix", SteamUser.EMPTY_AVATAR)
     }
 }
