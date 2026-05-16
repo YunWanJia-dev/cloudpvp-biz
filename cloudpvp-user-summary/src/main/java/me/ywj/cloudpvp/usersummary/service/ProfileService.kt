@@ -73,6 +73,7 @@ class ProfileService(
             .map { PlayerProfile(
                 steamID64 = it.steamId,
                 name = it.personaName,
+                // Steam 返回的有效玩家资料按接口契约一定包含非空 avatarFull，所以不需要对这个字段 fallback 默认值；没有资料时由 fallbackEmptyProfile 兜底。
                 avatarLink = it.avatarFull
             ) }
 
