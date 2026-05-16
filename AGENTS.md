@@ -83,10 +83,14 @@ cloudpvp
 
 ### Code Comments
 
+- First and foremost, all comments must serve to improve code readability and maintainability.
 - Add inline or block comments when a logic block has non-obvious intent, constraints, tradeoffs, or external API quirks.
 - Prefer explaining why the code is written this way over merely restating what the code does.
+- For variables, constants, methods, and other declarations, use Javadoc/KDoc comments for declaration-level information such as purpose, units, constraints, and caller-visible contracts, so IDE hover can show it.
+- Use ordinary inline or block comments for explanations that depend on nearby implementation context, such as why a branch, ordering, workaround, or tradeoff is needed.
 - For longer methods, add short comments above major logic blocks to make the flow easier to scan.
 - Avoid comments that only repeat obvious statements from the code.
+- When conducting a review and making the corresponding fixes, be sure to add a comment after the relevant changes explaining why you made them.
 
 ### New Classes
 
