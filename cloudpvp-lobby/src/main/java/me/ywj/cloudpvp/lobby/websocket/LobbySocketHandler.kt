@@ -32,7 +32,13 @@ class LobbySocketHandler @Autowired constructor(private val lobbyService: LobbyS
     companion object {
         const val PARAM_LOBBY_ID = "lobbyId"
         const val PATH = "/ws/{${PARAM_LOBBY_ID}}"
+        /**
+         * 单次发送持有锁的最长时间，避免慢连接让同一会话的后续消息长期排队。
+         */
         private const val SEND_TIME_LIMIT_MILLIS = 10_000
+        /**
+         * 装饰器排队发送消息的最大缓冲，防止异常连接持续堆积待发送数据。
+         */
         private const val SEND_BUFFER_SIZE_LIMIT_BYTES = 64 * 1024
         private val URI_TEMPLATE = UriTemplate(PATH)
         private val PLAYER_MAP = HashMap<SteamID64, LobbyPlayer>()
@@ -64,6 +70,10 @@ class LobbySocketHandler @Autowired constructor(private val lobbyService: LobbyS
     }
 
     override fun afterConnectionEstablished(session: WebSocketSession) {
+        /**
+         * Redis 监听回调和连接建立流程都可能向同一个连接发送消息；原始 session 不保证并发发送安全，
+         * 使用装饰器串行化发送，并通过超时和缓冲限制避免慢连接长期阻塞。
+         */
         val safeSession = ConcurrentWebSocketSessionDecorator(
             session,
             SEND_TIME_LIMIT_MILLIS,
