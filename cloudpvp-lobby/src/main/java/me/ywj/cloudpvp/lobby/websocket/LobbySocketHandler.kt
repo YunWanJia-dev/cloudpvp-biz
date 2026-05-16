@@ -70,10 +70,8 @@ class LobbySocketHandler @Autowired constructor(private val lobbyService: LobbyS
     }
 
     override fun afterConnectionEstablished(session: WebSocketSession) {
-        /**
-         * Redis 监听回调和连接建立流程都可能向同一个连接发送消息；原始 session 不保证并发发送安全，
-         * 使用装饰器串行化发送，并通过超时和缓冲限制避免慢连接长期阻塞。
-         */
+        // Redis 监听回调和连接建立流程都可能向同一个连接发送消息；原始 session 不保证并发发送安全，
+        // 使用装饰器串行化发送，并通过超时和缓冲限制避免慢连接长期阻塞。
         val safeSession = ConcurrentWebSocketSessionDecorator(
             session,
             SEND_TIME_LIMIT_MILLIS,
