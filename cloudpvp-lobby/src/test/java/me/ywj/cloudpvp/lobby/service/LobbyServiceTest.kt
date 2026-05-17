@@ -381,8 +381,7 @@ class LobbyServiceTest {
         val playerId = 456L
         val lobby = Lobby(123, arrayListOf(456L))
         lobby.host = 456L
-        `when`(fixture.playerLobbyRepository.findById(playerId))
-            .thenReturn(Optional.of(PlayerLobby(playerId, 123)))
+        stubMembershipUntilDeleted(fixture.playerLobbyRepository, PlayerLobby(playerId, 123))
         `when`(fixture.lobbyRepository.findById(123)).thenReturn(Optional.of(lobby))
 
         fixture.lobbyService.leaveLobby(playerId)
@@ -406,8 +405,7 @@ class LobbyServiceTest {
     fun leaveLobbyDeletesMembershipWhenIndexedLobbyDoesNotExist() = runTest {
         val fixture = createFixture(true)
         val playerId = 456L
-        `when`(fixture.playerLobbyRepository.findById(playerId))
-            .thenReturn(Optional.of(PlayerLobby(playerId, 123)))
+        stubMembershipUntilDeleted(fixture.playerLobbyRepository, PlayerLobby(playerId, 123))
         `when`(fixture.lobbyRepository.findById(123)).thenReturn(Optional.empty())
 
         fixture.lobbyService.leaveLobby(playerId)
@@ -428,8 +426,7 @@ class LobbyServiceTest {
         val playerId = 456L
         val lobby = Lobby(123, arrayListOf(111L))
         lobby.host = 111L
-        `when`(fixture.playerLobbyRepository.findById(playerId))
-            .thenReturn(Optional.of(PlayerLobby(playerId, 123)))
+        stubMembershipUntilDeleted(fixture.playerLobbyRepository, PlayerLobby(playerId, 123))
         `when`(fixture.lobbyRepository.findById(123)).thenReturn(Optional.of(lobby))
 
         fixture.lobbyService.leaveLobby(playerId)
@@ -449,8 +446,7 @@ class LobbyServiceTest {
         val playerId = 456L
         val lobby = Lobby(123, arrayListOf(111L, playerId))
         lobby.host = 111L
-        `when`(fixture.playerLobbyRepository.findById(playerId))
-            .thenReturn(Optional.of(PlayerLobby(playerId, 123)))
+        stubMembershipUntilDeleted(fixture.playerLobbyRepository, PlayerLobby(playerId, 123))
         `when`(fixture.lobbyRepository.findById(123)).thenReturn(Optional.of(lobby))
         `when`(fixture.lobbyRepository.save(any(Lobby::class.java))).thenAnswer { it.getArgument(0) }
 
@@ -469,16 +465,15 @@ class LobbyServiceTest {
     }
 
     /**
-     * 验证房主离开时多个广播按锁内顺序发送，且发送完成后才释放大厅锁。
+     * 验证房主离开时先广播房主更新再广播离开，且两条消息都在释放大厅锁前发送。
      */
     @Test
-    fun leaveLobbyPublishesLeaveAndHostUpdateBeforeUnlock() = runTest {
+    fun leaveLobbyPublishesHostUpdateAndLeaveBeforeUnlock() = runTest {
         val fixture = createFixture(true)
         val playerId = 456L
         val lobby = Lobby(123, arrayListOf(playerId, 111L))
         lobby.host = playerId
-        `when`(fixture.playerLobbyRepository.findById(playerId))
-            .thenReturn(Optional.of(PlayerLobby(playerId, 123)))
+        stubMembershipUntilDeleted(fixture.playerLobbyRepository, PlayerLobby(playerId, 123))
         `when`(fixture.lobbyRepository.findById(123)).thenReturn(Optional.of(lobby))
         `when`(fixture.lobbyRepository.save(any(Lobby::class.java))).thenAnswer { it.getArgument(0) }
 
@@ -488,13 +483,13 @@ class LobbyServiceTest {
         Mockito.inOrder(fixture.redisTemplate, fixture.lock).apply {
             verify(fixture.redisTemplate).convertAndSend(eq("123"), argThat { message ->
                 message is LobbyMessage &&
-                    message.type == LobbyMessageType.LEAVE &&
-                    message.data == playerId
+                    message.type == LobbyMessageType.UPDATE_HOST &&
+                    message.data == 111L
             })
             verify(fixture.redisTemplate).convertAndSend(eq("123"), argThat { message ->
                 message is LobbyMessage &&
-                    message.type == LobbyMessageType.UPDATE_HOST &&
-                    message.data == 111L
+                    message.type == LobbyMessageType.LEAVE &&
+                    message.data == playerId
             })
             verify(fixture.lock).unlockAsync(anyLong())
         }
@@ -765,6 +760,21 @@ class LobbyServiceTest {
             ),
         ).thenReturn(futures.first(), *futures.drop(1).toTypedArray())
         `when`(lock.unlockAsync(anyLong())).thenReturn(unlockFuture)
+    }
+
+    /**
+     * 模拟玩家索引被删除后的 Repository 状态，避免 leaveLobby 的退出确认读到旧 mock 数据。
+     *
+     * @param repository 玩家大厅索引 Repository mock
+     * @param playerLobby 删除前存在的玩家索引
+     */
+    private fun stubMembershipUntilDeleted(repository: PlayerLobbyRepository, playerLobby: PlayerLobby) {
+        val membership = AtomicReference(Optional.of(playerLobby))
+        `when`(repository.findById(playerLobby.playerId)).thenAnswer { membership.get() }
+        Mockito.doAnswer {
+            membership.set(Optional.empty())
+            null
+        }.`when`(repository).deleteById(playerLobby.playerId)
     }
 
     /**
