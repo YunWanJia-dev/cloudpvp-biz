@@ -224,8 +224,9 @@ class LobbyService @Autowired constructor(
             if (!lobby.players!!.contains(player.steamID64)) {
                 return@withLobbyLock false
             }
-            container.addMessageListener(player.msgListener, PatternTopic(lobby.id.toString()))
+            // Redis 监听注册后可能立刻收到关闭类消息；先记录大厅 ID，确保回调能按正确频道取消订阅。
             player.lobbyId = targetLobbyId
+            container.addMessageListener(player.msgListener, PatternTopic(lobby.id.toString()))
             // HTTP 加入接口已经返回完整大厅信息；这里仍在注册监听后补发一次快照，
             // 确保 WebSocket 连接建立时先拿到完整状态，再处理后续 JOIN/LEAVE 等增量消息。
             player.sendMessage(LobbyMessage(LobbyMessageType.LOBBY_SNAPSHOT).apply {
