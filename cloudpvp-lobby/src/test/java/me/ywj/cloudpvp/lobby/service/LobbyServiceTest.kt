@@ -469,7 +469,7 @@ class LobbyServiceTest {
     }
 
     /**
-     * 验证 WebSocket 订阅只在玩家已属于大厅时注册监听，并在监听后发送完整大厅快照。
+     * 验证 WebSocket 订阅只在玩家已属于大厅时注册监听，并在监听前记录当前大厅 ID。
      */
     @Test
     fun subscribeLobbyRegistersListenerAndSendsLobbySnapshot() = runTest {
@@ -484,7 +484,7 @@ class LobbyServiceTest {
         lobby.host = 111L
         `when`(fixture.lobbyRepository.findById(123)).thenReturn(Optional.of(lobby))
         Mockito.doAnswer {
-            events.add("listener")
+            events.add("listener:${player.lobbyId}")
             null
         }.`when`(fixture.container).addMessageListener(eq(player.msgListener), any(PatternTopic::class.java))
 
@@ -492,7 +492,7 @@ class LobbyServiceTest {
 
         assertThat(subscribed).isTrue()
         assertThat(player.lobbyId).isEqualTo(123)
-        assertThat(events).containsExactly("listener", "snapshot")
+        assertThat(events).containsExactly("listener:123", "snapshot")
         assertThat(sentMessages)
             .anySatisfy { message ->
                 assertThat(message).isInstanceOf(LobbyMessage::class.java)
@@ -502,6 +502,37 @@ class LobbyServiceTest {
         verify(fixture.redissonClient).getLock("LobbyLock:123")
         verify(fixture.container).addMessageListener(eq(player.msgListener), any(PatternTopic::class.java))
         verify(fixture.lock).unlockAsync(anyLong())
+        verifyNoInteractions(fixture.redisTemplate)
+    }
+
+    /**
+     * 验证监听注册期间立即关闭连接时，也能按已记录的大厅 ID 移除 Redis 监听器。
+     */
+    @Test
+    fun subscribeLobbyRemovesListenerWhenConnectionClosesDuringRegistration() = runTest {
+        val fixture = createFixture(true)
+        val player = LobbyPlayer(
+            456L,
+            {},
+            { closedPlayer -> fixture.lobbyService.unsubscribeLobby(closedPlayer) },
+        )
+        val lobby = Lobby(123, arrayListOf(111L, 456L))
+        lobby.host = 111L
+        `when`(fixture.lobbyRepository.findById(123)).thenReturn(Optional.of(lobby))
+        Mockito.doAnswer {
+            player.closeConnection()
+            null
+        }.`when`(fixture.container).addMessageListener(eq(player.msgListener), any(PatternTopic::class.java))
+
+        val subscribed = fixture.lobbyService.subscribeLobby(player, 123)
+
+        assertThat(subscribed).isTrue()
+        assertThat(player.lobbyId).isNull()
+        verify(fixture.container).addMessageListener(eq(player.msgListener), any(PatternTopic::class.java))
+        verify(fixture.container).removeMessageListener(
+            eq(player.msgListener),
+            eq(PatternTopic("123")),
+        )
         verifyNoInteractions(fixture.redisTemplate)
     }
 
