@@ -35,7 +35,7 @@ class LobbyController @Autowired constructor(
      * @return 创建成功后的大厅 ID 响应
      */
     @PostMapping
-    suspend fun createLobby(@RequestHeader(HttpHeaders.AUTHORIZATION) token: String,): CreatedResponse {
+    suspend fun createLobby(@RequestHeader(HttpHeaders.AUTHORIZATION) token: String): CreatedResponse {
         val playerId = tokenAuthUtils.getIDFromToken(token)
         return CreatedResponse(lobbyService.createLobby(playerId))
     }
@@ -47,7 +47,7 @@ class LobbyController @Autowired constructor(
      * @return 当前玩家所在大厅；未加入大厅时返回 null
      */
     @GetMapping("/players/self/lobby")
-    suspend fun getCurrentLobby(@RequestHeader(HttpHeaders.AUTHORIZATION) token: String,): Lobby? {
+    suspend fun getCurrentLobby(@RequestHeader(HttpHeaders.AUTHORIZATION) token: String): Lobby? {
         val playerId = tokenAuthUtils.getIDFromToken(token)
         return lobbyService.getCurrentLobby(playerId)
     }
