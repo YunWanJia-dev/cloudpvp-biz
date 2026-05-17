@@ -469,7 +469,40 @@ class LobbyServiceTest {
     }
 
     /**
-     * 验证 WebSocket 订阅只在玩家已属于大厅时注册监听，并在监听前记录当前大厅 ID。
+     * 验证房主离开时多个广播按锁内顺序发送，且发送完成后才释放大厅锁。
+     */
+    @Test
+    fun leaveLobbyPublishesLeaveAndHostUpdateBeforeUnlock() = runTest {
+        val fixture = createFixture(true)
+        val playerId = 456L
+        val lobby = Lobby(123, arrayListOf(playerId, 111L))
+        lobby.host = playerId
+        `when`(fixture.playerLobbyRepository.findById(playerId))
+            .thenReturn(Optional.of(PlayerLobby(playerId, 123)))
+        `when`(fixture.lobbyRepository.findById(123)).thenReturn(Optional.of(lobby))
+        `when`(fixture.lobbyRepository.save(any(Lobby::class.java))).thenAnswer { it.getArgument(0) }
+
+        fixture.lobbyService.leaveLobby(playerId)
+
+        assertThat(lobby.host).isEqualTo(111L)
+        Mockito.inOrder(fixture.redisTemplate, fixture.lock).apply {
+            verify(fixture.redisTemplate).convertAndSend(eq("123"), argThat { message ->
+                message is LobbyMessage &&
+                    message.type == LobbyMessageType.LEAVE &&
+                    message.data == playerId
+            })
+            verify(fixture.redisTemplate).convertAndSend(eq("123"), argThat { message ->
+                message is LobbyMessage &&
+                    message.type == LobbyMessageType.UPDATE_HOST &&
+                    message.data == 111L
+            })
+            verify(fixture.lock).unlockAsync(anyLong())
+        }
+        verifyNoInteractions(fixture.container)
+    }
+
+    /**
+     * 验证 WebSocket 订阅只在玩家已属于大厅时注册监听，并在监听后发送当前大厅快照。
      */
     @Test
     fun subscribeLobbyRegistersListenerAndSendsLobbySnapshot() = runTest {
@@ -628,7 +661,7 @@ class LobbyServiceTest {
     }
 
     /**
-     * 验证发送文本消息时通过当前大厅索引定位广播频道。
+     * 验证发送文本消息时通过当前大厅索引定位广播频道，并保持业务约定的无锁读路径。
      */
     @Test
     fun sendTextMessageUsesMembershipLobby() = runTest {
@@ -647,6 +680,27 @@ class LobbyServiceTest {
                 message.type == LobbyMessageType.TEXTING
         })
         verifyNoInteractions(fixture.redissonClient, fixture.lock, fixture.container)
+    }
+
+    /**
+     * 验证当前大厅快照不包含发送者时，不再广播文本消息。
+     */
+    @Test
+    fun sendTextMessageFailsWhenLobbyDoesNotContainPlayer() = runTest {
+        val fixture = createFixture(true)
+        val playerId = 456L
+        val lobby = Lobby(123, arrayListOf(111L))
+        lobby.host = 111L
+        `when`(fixture.playerLobbyRepository.findById(playerId))
+            .thenReturn(Optional.of(PlayerLobby(playerId, 123)))
+        `when`(fixture.lobbyRepository.findById(123)).thenReturn(Optional.of(lobby))
+
+        assertFailsWith<LobbyNotExist> {
+            fixture.lobbyService.sendTextMessage(playerId, "hello")
+        }
+
+        verify(fixture.lobbyRepository).findById(123)
+        verifyNoInteractions(fixture.redisTemplate, fixture.redissonClient, fixture.lock, fixture.container)
     }
 
     /**

@@ -8,7 +8,10 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import me.ywj.cloudpvp.core.constant.header.Attributes
 import me.ywj.cloudpvp.core.model.base.ErrorType
+import me.ywj.cloudpvp.core.model.lobby.LobbyMessage
+import me.ywj.cloudpvp.core.model.lobby.LobbyMessageType
 import me.ywj.cloudpvp.core.type.SteamID64
+import me.ywj.cloudpvp.lobby.entity.Lobby
 import me.ywj.cloudpvp.lobby.entity.LobbyPlayer
 import me.ywj.cloudpvp.lobby.exceptions.LobbyBusyException
 import me.ywj.cloudpvp.lobby.exceptions.LobbyNotExist
@@ -16,7 +19,9 @@ import me.ywj.cloudpvp.lobby.service.LobbyService
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.mockito.ArgumentCaptor
+import org.mockito.ArgumentMatchers.any
 import org.mockito.ArgumentMatchers.eq
+import org.mockito.Mockito.atLeastOnce
 import org.mockito.Mockito
 import org.mockito.Mockito.never
 import org.mockito.Mockito.verify
@@ -50,11 +55,15 @@ class LobbySocketHandlerTest {
         val lobbyService = Mockito.mock(LobbyService::class.java)
         val handler = lobbySocketHandler(lobbyService)
         val subscribedPlayer = AtomicReference<LobbyPlayer>()
+        val lobby = Lobby(123, arrayListOf(VALID_PLAYER_ID))
 
         Mockito.doAnswer { invocation ->
             val player = invocation.getArgument<LobbyPlayer>(0)
             player.lobbyId = 123
             subscribedPlayer.set(player)
+            player.sendMessage(LobbyMessage(LobbyMessageType.LOBBY_SNAPSHOT).apply {
+                data = lobby
+            })
             true
         }.`when`(lobbyService).subscribeLobby(anyLobbyPlayer(), eq(123))
 
@@ -68,6 +77,7 @@ class LobbySocketHandlerTest {
         assertThat(player.steamID64).isEqualTo(VALID_PLAYER_ID)
         assertThat(session.attributes.values).contains(player)
         verify(lobbyService).subscribeLobby(player, 123)
+        assertSentSnapshot(session)
 
         handler.afterConnectionClosed(session, CloseStatus.NORMAL)
 
@@ -200,6 +210,68 @@ class LobbySocketHandlerTest {
     }
 
     /**
+     * 验证快照发送失败时由处理器统一清理已经建立的订阅。
+     */
+    @Test
+    fun afterConnectionEstablishedUnsubscribesWhenSnapshotSendFails() = runTest {
+        val lobbyService = Mockito.mock(LobbyService::class.java)
+        val handler = lobbySocketHandler(lobbyService)
+        val subscribedPlayer = AtomicReference<LobbyPlayer>()
+        val lobby = Lobby(123, arrayListOf(VALID_PLAYER_ID))
+
+        Mockito.doAnswer { invocation ->
+            val player = invocation.getArgument<LobbyPlayer>(0)
+            player.lobbyId = 123
+            subscribedPlayer.set(player)
+            player.sendMessage(LobbyMessage(LobbyMessageType.LOBBY_SNAPSHOT).apply {
+                data = lobby
+            })
+            true
+        }.`when`(lobbyService).subscribeLobby(anyLobbyPlayer(), eq(123))
+
+        val session = lobbySession(VALID_PLAYER_ID, "/ws/123")
+        Mockito.doThrow(IllegalStateException("closed"))
+            .`when`(session).sendMessage(any(TextMessage::class.java))
+
+        handler.afterConnectionEstablished(session)
+        advanceUntilIdle()
+
+        val player = subscribedPlayer.get()
+        assertThat(player).isNotNull()
+        verify(lobbyService).unsubscribeLobby(player)
+        verify(session).close()
+        assertThat(session.attributes.values).doesNotContain(player)
+    }
+
+    /**
+     * 验证订阅过程已记录大厅 ID 后失败时，处理器仍会取消这个半注册状态。
+     */
+    @Test
+    fun afterConnectionEstablishedUnsubscribesWhenSubscribeFailsAfterLobbyIdRecorded() = runTest {
+        val lobbyService = Mockito.mock(LobbyService::class.java)
+        val handler = lobbySocketHandler(lobbyService)
+        val subscribedPlayer = AtomicReference<LobbyPlayer>()
+
+        Mockito.doAnswer { invocation ->
+            val player = invocation.getArgument<LobbyPlayer>(0)
+            player.lobbyId = 123
+            subscribedPlayer.set(player)
+            throw IllegalStateException("listener failed")
+        }.`when`(lobbyService).subscribeLobby(anyLobbyPlayer(), eq(123))
+
+        val session = lobbySession(VALID_PLAYER_ID, "/ws/123")
+
+        handler.afterConnectionEstablished(session)
+        advanceUntilIdle()
+
+        val player = subscribedPlayer.get()
+        assertThat(player).isNotNull()
+        verify(lobbyService).unsubscribeLobby(player)
+        verify(session).close()
+        assertThat(session.attributes.values).doesNotContain(player)
+    }
+
+    /**
      * 验证无效连接参数会在进入服务层前被拒绝。
      */
     @Test
@@ -254,6 +326,18 @@ class LobbySocketHandlerTest {
         val messageCaptor = ArgumentCaptor.forClass(TextMessage::class.java)
         verify(session).sendMessage(messageCaptor.capture())
         assertThat(messageCaptor.value.payload).contains("\"id\":\"$errorType\"")
+    }
+
+    /**
+     * 验证连接建立成功后处理器向客户端发送大厅快照。
+     *
+     * @param session 已完成连接建立的会话
+     */
+    private fun assertSentSnapshot(session: WebSocketSession) {
+        val messageCaptor = ArgumentCaptor.forClass(TextMessage::class.java)
+        verify(session, atLeastOnce()).sendMessage(messageCaptor.capture())
+        assertThat(messageCaptor.allValues.map { it.payload })
+            .anySatisfy { payload -> assertThat(payload).contains("\"type\":\"${LobbyMessageType.LOBBY_SNAPSHOT}\"") }
     }
 
     /**

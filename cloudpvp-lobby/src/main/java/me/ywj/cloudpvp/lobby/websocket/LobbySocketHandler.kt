@@ -176,19 +176,25 @@ class LobbySocketHandler : AbstractWebSocketHandler,
                 if (!safeSession.isOpen) {
                     // 订阅完成前连接可能已断开；这里补偿清理，避免 Redis 监听器泄漏。
                     val removedPlayer = safeSession.attributes.remove(ATTR_LOBBY_PLAYER) as? LobbyPlayer
-                    if (removedPlayer != null) {
-                        lobbyService.unsubscribeLobby(removedPlayer)
+                    val playerToCleanup = removedPlayer ?: player.takeIf { it.lobbyId != null }
+                    if (playerToCleanup != null) {
+                        lobbyService.unsubscribeLobby(playerToCleanup)
                     }
                     return@launch
                 }
             } catch (e: Throwable) {
-                if (e is kotlinx.coroutines.CancellationException) {
+                if (e is CancellationException) {
                     throw e
+                }
+                val removedPlayer = safeSession.attributes.remove(ATTR_LOBBY_PLAYER) as? LobbyPlayer
+                val playerToCleanup = removedPlayer ?: player.takeIf { it.lobbyId != null }
+                if (playerToCleanup != null) {
+                    lobbyService.unsubscribeLobby(playerToCleanup)
                 }
                 // 订阅失败可能是大厅运行时状态，保留具体错误类型供客户端选择正确提示和重试策略。
                 val errorType = (e as? LobbySocketError)?.errorType ?: ErrorType.PARAM_INVALID
-                safeSession.sendMessage(ErrorResponse(errorType, e.message ?: ""))
-                safeSession.close()
+                runCatching { safeSession.sendMessage(ErrorResponse(errorType, e.message ?: "")) }
+                runCatching { safeSession.close() }
             }
         }
     }
