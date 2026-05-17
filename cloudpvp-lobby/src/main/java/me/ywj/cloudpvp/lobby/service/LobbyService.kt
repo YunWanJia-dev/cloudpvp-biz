@@ -155,48 +155,42 @@ class LobbyService @Autowired constructor(
                 return
             }
             val targetLobbyId = playerLobbyOption.get().lobbyId
-            val completed = withPlayerAndLobbyLock(playerId, targetLobbyId) {
-                // 加锁后复查索引，防止读取索引和拿锁之间玩家已经切换到其他大厅。
-                val lockedPlayerLobbyOption = playerLobbyRepository.findById(playerId)
-                if (!lockedPlayerLobbyOption.isPresent) {
-                    return@withPlayerAndLobbyLock true
-                }
-                if (lockedPlayerLobbyOption.get().lobbyId != targetLobbyId) {
-                    return@withPlayerAndLobbyLock false
-                }
-
+            withPlayerAndLobbyLock(playerId, targetLobbyId) {
+                // 直接使用前面拿到的ID，不需要加锁后复查索引，不需要防止读取索引和拿锁之间玩家已经切换到其他大厅，因为只有加入或者退出会更新索引，加入的时候发现已加入房间了不会更新索引，所以没必要再查询一遍。
                 val lobbyOption = lobbyRepository.findById(targetLobbyId)
                 if (!lobbyOption.isPresent) {
                     // 退出接口保持幂等：索引指向的大厅已不存在时，只清理当前玩家索引。
                     playerLobbyRepository.deleteById(playerId)
-                    return@withPlayerAndLobbyLock true
+                    return@withPlayerAndLobbyLock
                 }
+
+                // 真正开始执行对象的更新
                 val lobby = lobbyOption.get()
                 val removed = lobby.players!!.removeAll { it == playerId }
+
                 if (!removed) {
                     // 退出接口保持幂等：玩家已不在成员列表时，只清理当前玩家索引。
                     playerLobbyRepository.deleteById(playerId)
-                    return@withPlayerAndLobbyLock true
+                    return@withPlayerAndLobbyLock
                 }
-                // 最后一名玩家离开时先广播销毁事件，让所有仍订阅该频道的 WebSocket 连接自清理。
-                if (lobby.players!!.isEmpty()) {
-                    lobby.sendMsg(LobbyMessage(LobbyMessageType.LOBBY_DESTROYED))
-                    lobbyRepository.deleteById(targetLobbyId)
-                    playerLobbyRepository.deleteById(playerId)
-                    return@withPlayerAndLobbyLock true
-                }
+
+                lobbyRepository.save(lobby)
+                playerLobbyRepository.deleteById(playerId)
+                //订阅者可能会在看到 LEAVE 之前先看到 UPDATE_HOST，或者收到反映尚未持久化状态的消息（如果 save 失败，这些消息将丢失），所以在 save 成功后才进行发布。
                 lobby.sendMsg(LobbyMessage(LobbyMessageType.LEAVE).apply {
                     data = playerId
                 })
                 if (lobby.host == playerId) {
                     lobby.updateHost(lobby.players!![0])
                 }
-                lobbyRepository.save(lobby)
-                playerLobbyRepository.deleteById(playerId)
-                true
-            }
-            if (completed) {
-                return
+
+                // 最后一名玩家离开时先广播销毁事件，让所有仍订阅该频道的 WebSocket 连接自清理。
+                if (lobby.players!!.isEmpty()) {
+                    lobby.sendMsg(LobbyMessage(LobbyMessageType.LOBBY_DESTROYED))
+                    lobbyRepository.deleteById(targetLobbyId)
+                    playerLobbyRepository.deleteById(playerId)
+                    return@withPlayerAndLobbyLock
+                }
             }
         }
         throw LobbyBusyException("Player $playerId lobby mapping changed too frequently")
