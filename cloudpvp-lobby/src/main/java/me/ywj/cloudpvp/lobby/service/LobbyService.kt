@@ -72,7 +72,7 @@ class LobbyService @Autowired constructor(
                     // 创建实体必须走 Repository，确保写入 @RedisHash("Lobby") 管理的 keyspace。
                     lobbyRepository.save(Lobby(lobbyId).apply {
                         host = playerId
-                        (players ?: ArrayList()).add(playerId)
+                        players!!.add(playerId)
                     })
                     lobbyId
                 }
