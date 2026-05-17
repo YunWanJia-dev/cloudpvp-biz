@@ -2,7 +2,6 @@ package me.ywj.cloudpvp.lobby.controller
 
 import me.ywj.cloudpvp.beans.utils.TokenAuthUtils
 import me.ywj.cloudpvp.core.model.base.CreatedResponse
-import me.ywj.cloudpvp.core.type.SteamID64
 import me.ywj.cloudpvp.lobby.entity.Lobby
 import me.ywj.cloudpvp.lobby.service.LobbyService
 import org.springframework.beans.factory.annotation.Autowired
@@ -57,36 +56,32 @@ class LobbyController @Autowired constructor(
     }
 
     /**
-     * 通过 HTTP 将当前玩家从指定大厅移除。
+     * 通过 HTTP 将当前玩家从所在大厅移除。
      *
      * @param token 请求头中的授权令牌
-     * @param lobbyId 目标大厅 ID
      */
-    @DeleteMapping("/{lobbyId}/players/self")
+    @DeleteMapping("/players/self")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     suspend fun leaveLobby(
         @RequestHeader(HttpHeaders.AUTHORIZATION) token: String,
-        @PathVariable lobbyId: Int,
     ) {
         val playerId = tokenAuthUtils.getIDFromToken(token)
-        lobbyService.leaveLobby(playerId, lobbyId)
+        lobbyService.leaveLobby(playerId)
     }
 
     /**
-     * 通过 HTTP 向指定大厅发送文本消息。
+     * 通过 HTTP 向当前玩家所在大厅发送文本消息。
      *
      * @param token 请求头中的授权令牌
-     * @param lobbyId 目标大厅 ID
      * @param body 请求体，使用 content 字段传递文本内容
      */
-    @PostMapping("/{lobbyId}/messages/text")
+    @PostMapping("/messages/text")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     suspend fun sendTextMessage(
         @RequestHeader(HttpHeaders.AUTHORIZATION) token: String,
-        @PathVariable lobbyId: Int,
         @RequestBody body: Map<String, String>,
     ) {
         val playerId = tokenAuthUtils.getIDFromToken(token)
-        lobbyService.sendTextMessage(playerId, lobbyId, body["content"].orEmpty())
+        lobbyService.sendTextMessage(playerId, body["content"].orEmpty())
     }
 }
