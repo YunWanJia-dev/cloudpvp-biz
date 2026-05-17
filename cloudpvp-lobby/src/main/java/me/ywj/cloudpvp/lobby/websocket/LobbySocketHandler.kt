@@ -163,11 +163,11 @@ class LobbySocketHandler : AbstractWebSocketHandler,
                     }
                     return@launch
                 }
-            } catch (_: LobbyNotExist) {
-                safeSession.sendMessage(ErrorResponse(ErrorType.LOBBY_NOT_EXIST, ""))
-                safeSession.close()
-            } catch (_: LobbyBusyException) {
-                safeSession.sendMessage(ErrorResponse(ErrorType.LOBBY_BUSY, ""))
+            } catch (e: Throwable) {
+                if (e is kotlinx.coroutines.CancellationException) {
+                    throw e
+                }
+                safeSession.sendMessage(ErrorResponse(ErrorType.PARAM_INVALID, ""))
                 safeSession.close()
             }
         }

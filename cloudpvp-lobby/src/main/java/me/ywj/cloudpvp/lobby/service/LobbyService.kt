@@ -102,19 +102,18 @@ class LobbyService @Autowired constructor(
     }
 
     /**
-     * 通过 HTTP 将玩家加入目标大厅，并返回最新玩家列表。
+     * 通过 HTTP 将玩家加入目标大厅，并返回最新房间信息。
      *
      * @param playerId 待加入大厅的玩家 ID
      * @param targetLobbyId 目标大厅 ID
-     * @return 加入后的玩家 ID 列表
+     * @return 房间当前完整信息
      * @throws LobbyNotExist 当目标大厅不存在时抛出
      * @throws LobbyBusyException 当目标大厅状态正被其他操作长期占用时抛出
      * @throws PlayerAlreadyInLobbyException 当玩家已属于其他大厅时抛出
      */
-    suspend fun joinLobby(playerId: SteamID64, targetLobbyId: LobbyId): Lobby? {
-        var updatedLobby: Lobby? = null
+    suspend fun joinLobby(playerId: SteamID64, targetLobbyId: LobbyId): Lobby {
         // 玩家索引和大厅成员列表必须在同一个组合锁内校验和写入，避免并发加入两个大厅。
-        withPlayerAndLobbyLock(playerId, targetLobbyId) {
+        return withPlayerAndLobbyLock(playerId, targetLobbyId) {
             val playerLobbyOption = playerLobbyRepository.findById(playerId)
             if (playerLobbyOption.isPresent && playerLobbyOption.get().lobbyId != targetLobbyId) {
                 throw PlayerAlreadyInLobbyException(playerId, playerLobbyOption.get().lobbyId)
@@ -130,17 +129,18 @@ class LobbyService @Autowired constructor(
             val lobby = lobbyOption.get()
             val players = lobby.players!!
             val alreadyInLobby = players.contains(playerId)
-            if (!alreadyInLobby) {
-                players.add(playerId)
-                lobbyRepository.save(lobby)
+            if (alreadyInLobby) {
                 playerLobbyRepository.save(PlayerLobby(playerId, targetLobbyId))
-                lobby.sendMsg(LobbyMessage(LobbyMessageType.JOIN).apply {
-                    data = playerId
-                })
+                return@withPlayerAndLobbyLock lobby
             }
-            updatedLobby = lobby
+            players.add(playerId)
+            lobbyRepository.save(lobby)
+            playerLobbyRepository.save(PlayerLobby(playerId, targetLobbyId))
+            lobby.sendMsg(LobbyMessage(LobbyMessageType.JOIN).apply {
+                data = playerId
+            })
+            return@withPlayerAndLobbyLock lobby
         }
-        return updatedLobby
     }
 
     /**
@@ -213,7 +213,6 @@ class LobbyService @Autowired constructor(
      * @throws LobbyBusyException 当目标大厅状态正被其他操作长期占用时抛出
      */
     suspend fun subscribeLobby(player: LobbyPlayer, targetLobbyId: LobbyId): Boolean {
-        var playerList: ArrayList<Long>? = null
         val subscribed = withLobbyLock(targetLobbyId) {
             val lobbyOption = lobbyRepository.findById(targetLobbyId)
             if (!lobbyOption.isPresent) {
@@ -226,15 +225,9 @@ class LobbyService @Autowired constructor(
             }
             container.addMessageListener(player.msgListener, PatternTopic(lobby.id.toString()))
             player.lobbyId = targetLobbyId
-            playerList = ArrayList(lobby.players!!)
             true
         }
 
-        if (subscribed) {
-            player.sendMessage(LobbyMessage(LobbyMessageType.PLAYER_LIST).apply {
-                data = playerList
-            })
-        }
         return subscribed
     }
 
