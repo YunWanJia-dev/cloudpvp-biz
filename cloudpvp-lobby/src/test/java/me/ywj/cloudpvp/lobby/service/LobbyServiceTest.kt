@@ -465,10 +465,10 @@ class LobbyServiceTest {
     }
 
     /**
-     * 验证房主离开时先广播房主更新再广播离开，且两条消息都在释放大厅锁前发送。
+     * 验证房主离开时先持久化房主迁移，再广播房主更新和离开消息。
      */
     @Test
-    fun leaveLobbyPublishesHostUpdateAndLeaveBeforeUnlock() = runTest {
+    fun leaveLobbyPersistsHostTransferBeforePublishingMessages() = runTest {
         val fixture = createFixture(true)
         val playerId = 456L
         val lobby = Lobby(123, arrayListOf(playerId, 111L))
@@ -480,7 +480,11 @@ class LobbyServiceTest {
         fixture.lobbyService.leaveLobby(playerId)
 
         assertThat(lobby.host).isEqualTo(111L)
-        Mockito.inOrder(fixture.redisTemplate, fixture.lock).apply {
+        Mockito.inOrder(fixture.lobbyRepository, fixture.playerLobbyRepository, fixture.redisTemplate, fixture.lock).apply {
+            verify(fixture.lobbyRepository).save(argThat { savedLobby ->
+                savedLobby.host == 111L && savedLobby.players == arrayListOf(111L)
+            })
+            verify(fixture.playerLobbyRepository).deleteById(playerId)
             verify(fixture.redisTemplate).convertAndSend(eq("123"), argThat { message ->
                 message is LobbyMessage &&
                     message.type == LobbyMessageType.UPDATE_HOST &&
@@ -494,6 +498,30 @@ class LobbyServiceTest {
             verify(fixture.lock).unlockAsync(anyLong())
         }
         verifyNoInteractions(fixture.container)
+    }
+
+    /**
+     * 验证房主持久化失败时不广播房主迁移，避免客户端提前接受未落库的新房主。
+     */
+    @Test
+    fun leaveLobbyDoesNotPublishHostUpdateWhenHostTransferSaveFails() = runTest {
+        val fixture = createFixture(true)
+        val playerId = 456L
+        val lobby = Lobby(123, arrayListOf(playerId, 111L))
+        lobby.host = playerId
+        stubMembershipUntilDeleted(fixture.playerLobbyRepository, PlayerLobby(playerId, 123))
+        `when`(fixture.lobbyRepository.findById(123)).thenReturn(Optional.of(lobby))
+        `when`(fixture.lobbyRepository.save(any(Lobby::class.java))).thenThrow(IllegalStateException("save failed"))
+
+        assertFailsWith<IllegalStateException> {
+            fixture.lobbyService.leaveLobby(playerId)
+        }
+
+        assertThat(lobby.host).isEqualTo(111L)
+        verify(fixture.lobbyRepository).save(lobby)
+        verify(fixture.playerLobbyRepository, never()).deleteById(playerId)
+        verify(fixture.lock).unlockAsync(anyLong())
+        verifyNoInteractions(fixture.redisTemplate, fixture.container)
     }
 
     /**
