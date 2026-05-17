@@ -191,14 +191,14 @@ class LobbyService @Autowired constructor(
                 return@withPlayerAndLobbyLock
             }
 
-            // 如果Lobby里还有其他玩家，且是房主离开了，那么需要更新房主
-            if (lobby.host == playerId) {
-                lobby.updateHost(lobby.players!![0])
-            }
+            val nextHost = if (lobby.host == playerId) lobby.players!!.first() else null
+            nextHost?.let { lobby.host = it }
 
             lobbyRepository.save(lobby)
             playerLobbyRepository.deleteById(playerId)
-            //订阅者可能会在看到 LEAVE 之前先看到 UPDATE_HOST，或者收到反映尚未持久化状态的消息（如果 save 失败，这些消息将丢失），所以在 save 成功后才进行发布。
+            // 房主迁移必须等 Lobby 和玩家索引都写入成功后再发布，避免客户端先切换到未持久化的新房主。
+            nextHost?.let { lobby.publishHostUpdate(it) }
+            // 订阅者可能会在看到 LEAVE 之前先看到 UPDATE_HOST，但两条消息都必须反映已持久化状态。
             lobby.sendMsg(LobbyMessage(LobbyMessageType.LEAVE).apply {
                 data = playerId
             })
@@ -343,12 +343,11 @@ class LobbyService @Autowired constructor(
     }
 
     /**
-     * 更新大厅房主并广播房主变更消息。
+     * 广播大厅房主变更消息。
      *
      * @param newHost 新房主的 Steam ID64
      */
-    private suspend fun Lobby.updateHost(newHost: SteamID64) {
-        this.host = newHost
+    private suspend fun Lobby.publishHostUpdate(newHost: SteamID64) {
         sendMsg(LobbyMessage(LobbyMessageType.UPDATE_HOST).apply {
             data = newHost
         })
