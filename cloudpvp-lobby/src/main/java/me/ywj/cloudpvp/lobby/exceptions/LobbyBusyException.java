@@ -1,6 +1,7 @@
 package me.ywj.cloudpvp.lobby.exceptions;
 
 import me.ywj.cloudpvp.core.exceptions.BizException;
+import me.ywj.cloudpvp.core.model.base.ErrorType;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ResponseStatus;
 
@@ -12,7 +13,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
  * @since 2026/5/16 16:57
  */
 @ResponseStatus(HttpStatus.CONFLICT)
-public class LobbyBusyException extends BizException {
+public class LobbyBusyException extends BizException implements LobbySocketError {
     /**
      * 构造指定大厅繁忙异常。
      *
@@ -29,5 +30,15 @@ public class LobbyBusyException extends BizException {
      */
     public LobbyBusyException(String message) {
         super(message);
+    }
+
+    /**
+     * 返回大厅繁忙对应的 WebSocket 错误类型。
+     *
+     * @return 大厅繁忙错误类型
+     */
+    @Override
+    public ErrorType getErrorType() {
+        return ErrorType.LOBBY_BUSY;
     }
 }

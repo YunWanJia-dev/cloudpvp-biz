@@ -10,6 +10,7 @@ import me.ywj.cloudpvp.core.utils.JacksonUtils
 import me.ywj.cloudpvp.core.utils.LobbyUtils
 import me.ywj.cloudpvp.core.utils.PlayerUtils
 import me.ywj.cloudpvp.lobby.entity.LobbyPlayer
+import me.ywj.cloudpvp.lobby.exceptions.LobbySocketError
 import me.ywj.cloudpvp.lobby.service.LobbyService
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Controller
@@ -184,7 +185,9 @@ class LobbySocketHandler : AbstractWebSocketHandler,
                 if (e is kotlinx.coroutines.CancellationException) {
                     throw e
                 }
-                safeSession.sendMessage(ErrorResponse(ErrorType.PARAM_INVALID, ""))
+                // 订阅失败可能是大厅运行时状态，保留具体错误类型供客户端选择正确提示和重试策略。
+                val errorType = (e as? LobbySocketError)?.errorType ?: ErrorType.PARAM_INVALID
+                safeSession.sendMessage(ErrorResponse(errorType, e.message ?: ""))
                 safeSession.close()
             }
         }
