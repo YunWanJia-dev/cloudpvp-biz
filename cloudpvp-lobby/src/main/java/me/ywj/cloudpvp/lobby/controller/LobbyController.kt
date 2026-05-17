@@ -63,7 +63,7 @@ class LobbyController @Autowired constructor(
     suspend fun joinLobby(
         @RequestHeader(HttpHeaders.AUTHORIZATION) token: String,
         @PathVariable lobbyId: Int,
-    ): Lobby? {
+    ): Lobby {
         val playerId = tokenAuthUtils.getIDFromToken(token)
         return lobbyService.joinLobby(playerId, lobbyId)
     }
