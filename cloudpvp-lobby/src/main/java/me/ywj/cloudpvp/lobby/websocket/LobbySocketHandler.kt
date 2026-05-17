@@ -110,6 +110,25 @@ class LobbySocketHandler : AbstractWebSocketHandler,
     }
 
     /**
+     * 清理当前连接的大厅订阅并关闭 WebSocket。
+     *
+     * @param session 当前 WebSocket 会话
+     * @param player 当前连接绑定的大厅玩家状态
+     */
+    private fun closeSubscribedSession(session: WebSocketSession, player: LobbyPlayer) {
+        session.attributes.remove(ATTR_LOBBY_PLAYER)
+        lobbyService.unsubscribeLobby(player)
+        if (!session.isOpen) {
+            return
+        }
+        try {
+            session.close()
+        } catch (_: Exception) {
+            // 关闭失败不能影响订阅清理；连接关闭流程会在容器侧继续收敛。
+        }
+    }
+
+    /**
      * 销毁处理器时取消尚未完成的订阅任务。
      */
     @PreDestroy
@@ -138,7 +157,11 @@ class LobbySocketHandler : AbstractWebSocketHandler,
 
         val playerId = safeSession.getPlayerId()!!
         val targetLobbyId = safeSession.getRequestLobbyId()!!
-        val player = LobbyPlayer(playerId) { it: Any -> safeSession.sendMessage(it) }
+        val player = LobbyPlayer(
+            playerId,
+            { it: Any -> safeSession.sendMessage(it) },
+            { closeSubscribedSession(safeSession, it) },
+        )
 
         subscriptionScope.launch {
             try {

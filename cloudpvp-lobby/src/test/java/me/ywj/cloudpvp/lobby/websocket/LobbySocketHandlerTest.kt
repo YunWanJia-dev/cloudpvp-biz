@@ -71,6 +71,37 @@ class LobbySocketHandlerTest {
     }
 
     /**
+     * 验证频道消息触发的连接关闭回调会先清理订阅状态，再关闭底层 WebSocket。
+     */
+    @Test
+    fun playerCloseConnectionUnsubscribesAndClosesSession() = runTest {
+        val lobbyService = Mockito.mock(LobbyService::class.java)
+        val handler = lobbySocketHandler(lobbyService)
+        val subscribedPlayer = AtomicReference<LobbyPlayer>()
+
+        Mockito.doAnswer { invocation ->
+            val player = invocation.getArgument<LobbyPlayer>(0)
+            player.lobbyId = 123
+            subscribedPlayer.set(player)
+            true
+        }.`when`(lobbyService).subscribeLobby(anyLobbyPlayer(), eq(123))
+
+        val session = lobbySession(VALID_PLAYER_ID, "/ws/123")
+
+        handler.afterConnectionEstablished(session)
+        advanceUntilIdle()
+
+        val player = subscribedPlayer.get()
+        assertThat(player).isNotNull()
+
+        player.closeConnection()
+
+        verify(lobbyService).unsubscribeLobby(player)
+        verify(session).close()
+        assertThat(session.attributes.values).doesNotContain(player)
+    }
+
+    /**
      * 验证订阅失败时关闭连接，且不保存需要断开清理的玩家状态。
      */
     @Test
