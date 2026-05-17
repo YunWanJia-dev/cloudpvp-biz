@@ -306,10 +306,10 @@ class LobbyServiceTest {
     }
 
     /**
-     * 验证重复加入当前大厅保持幂等，不重复保存大厅或广播加入消息。
+     * 验证重复加入当前大厅时刷新玩家索引，不重复保存大厅或广播加入消息。
      */
     @Test
-    fun joinLobbyIsIdempotentWhenMembershipAlreadyTargetsLobby() = runTest {
+    fun joinLobbyRefreshesMembershipIndexWhenMembershipAlreadyTargetsLobby() = runTest {
         val fixture = createFixture(true)
         val playerId = 456L
         val lobby = Lobby(123, arrayListOf(111L, playerId))
@@ -322,8 +322,50 @@ class LobbyServiceTest {
 
         assertThat(updatedLobby).isSameAs(lobby)
         verify(fixture.lobbyRepository, never()).save(any(Lobby::class.java))
-        verify(fixture.playerLobbyRepository, never()).save(any(PlayerLobby::class.java))
+        verify(fixture.playerLobbyRepository).save(argThat { playerLobby ->
+            playerLobby.playerId == playerId && playerLobby.lobbyId == 123
+        })
         verifyNoInteractions(fixture.redisTemplate, fixture.container)
+        verify(fixture.lock).unlockAsync(anyLong())
+    }
+
+    /**
+     * 验证成员列表已有玩家但索引缺失时，重复加入只补写玩家索引。
+     */
+    @Test
+    fun joinLobbyRepairsMissingMembershipIndexWhenPlayerAlreadyInLobby() = runTest {
+        val fixture = createFixture(true)
+        val playerId = 456L
+        val lobby = Lobby(123, arrayListOf(111L, playerId))
+        lobby.host = 111L
+        `when`(fixture.lobbyRepository.findById(123)).thenReturn(Optional.of(lobby))
+
+        val updatedLobby = fixture.lobbyService.joinLobby(playerId, 123)
+
+        assertThat(updatedLobby).isSameAs(lobby)
+        verify(fixture.lobbyRepository, never()).save(any(Lobby::class.java))
+        verify(fixture.playerLobbyRepository).save(argThat { playerLobby ->
+            playerLobby.playerId == playerId && playerLobby.lobbyId == 123
+        })
+        verifyNoInteractions(fixture.redisTemplate, fixture.container)
+        verify(fixture.lock).unlockAsync(anyLong())
+    }
+
+    /**
+     * 验证索引指向其他大厅时优先拒绝加入，不读取目标大厅成员列表覆写索引。
+     */
+    @Test
+    fun joinLobbyRejectsMismatchedMembershipIndexBeforeReadingTargetLobby() = runTest {
+        val fixture = createFixture(true)
+        val playerId = 456L
+        `when`(fixture.playerLobbyRepository.findById(playerId))
+            .thenReturn(Optional.of(PlayerLobby(playerId, 321)))
+
+        assertFailsWith<PlayerAlreadyInLobbyException> {
+            fixture.lobbyService.joinLobby(playerId, 123)
+        }
+
+        verifyNoInteractions(fixture.lobbyRepository, fixture.redisTemplate, fixture.container)
         verify(fixture.lock).unlockAsync(anyLong())
     }
 
@@ -420,26 +462,35 @@ class LobbyServiceTest {
     }
 
     /**
-     * 验证 WebSocket 订阅只在玩家已属于大厅时注册监听并发送当前玩家列表。
+     * 验证 WebSocket 订阅只在玩家已属于大厅时注册监听，并在监听后发送完整大厅快照。
      */
     @Test
-    fun subscribeLobbyRegistersListenerAndSendsPlayerList() = runTest {
+    fun subscribeLobbyRegistersListenerAndSendsLobbySnapshot() = runTest {
         val fixture = createFixture(true)
+        val events = ArrayList<String>()
         val sentMessages = ArrayList<Any>()
-        val player = LobbyPlayer(456L) { sentMessages.add(it) }
+        val player = LobbyPlayer(456L) {
+            events.add("snapshot")
+            sentMessages.add(it)
+        }
         val lobby = Lobby(123, arrayListOf(111L, 456L))
         lobby.host = 111L
         `when`(fixture.lobbyRepository.findById(123)).thenReturn(Optional.of(lobby))
+        Mockito.doAnswer {
+            events.add("listener")
+            null
+        }.`when`(fixture.container).addMessageListener(eq(player.msgListener), any(PatternTopic::class.java))
 
         val subscribed = fixture.lobbyService.subscribeLobby(player, 123)
 
         assertThat(subscribed).isTrue()
         assertThat(player.lobbyId).isEqualTo(123)
+        assertThat(events).containsExactly("listener", "snapshot")
         assertThat(sentMessages)
             .anySatisfy { message ->
                 assertThat(message).isInstanceOf(LobbyMessage::class.java)
-                assertThat((message as LobbyMessage).type).isEqualTo(LobbyMessageType.PLAYER_LIST)
-                assertThat(message.data).isEqualTo(arrayListOf(111L, 456L))
+                assertThat((message as LobbyMessage).type).isEqualTo(LobbyMessageType.LOBBY_SNAPSHOT)
+                assertThat(message.data).isSameAs(lobby)
             }
         verify(fixture.redissonClient).getLock("LobbyLock:123")
         verify(fixture.container).addMessageListener(eq(player.msgListener), any(PatternTopic::class.java))
