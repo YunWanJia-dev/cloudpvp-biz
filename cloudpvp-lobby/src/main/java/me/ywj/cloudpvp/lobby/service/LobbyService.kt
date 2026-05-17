@@ -180,8 +180,9 @@ class LobbyService @Autowired constructor(
                     playerLobbyRepository.deleteById(playerId)
                     return@withPlayerAndLobbyLock true
                 }
-                // 最后一名玩家离开后直接删除大厅；非空大厅才需要广播离开和更新房主。
+                // 最后一名玩家离开时先广播销毁事件，让所有仍订阅该频道的 WebSocket 连接自清理。
                 if (lobby.players!!.isEmpty()) {
+                    lobby.sendMsg(LobbyMessage(LobbyMessageType.LOBBY_DESTROYED))
                     lobbyRepository.deleteById(targetLobbyId)
                     playerLobbyRepository.deleteById(playerId)
                     return@withPlayerAndLobbyLock true

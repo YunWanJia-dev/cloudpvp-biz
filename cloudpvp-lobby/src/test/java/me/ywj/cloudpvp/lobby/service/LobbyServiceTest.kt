@@ -9,6 +9,7 @@ import me.ywj.cloudpvp.core.model.lobby.LobbyMessageType
 import me.ywj.cloudpvp.lobby.entity.Lobby
 import me.ywj.cloudpvp.lobby.entity.LobbyPlayer
 import me.ywj.cloudpvp.lobby.entity.PlayerLobby
+import me.ywj.cloudpvp.lobby.configurations.RedisConfiguration
 import me.ywj.cloudpvp.lobby.exceptions.LobbyBusyException
 import me.ywj.cloudpvp.lobby.exceptions.LobbyNotExist
 import me.ywj.cloudpvp.lobby.exceptions.PlayerAlreadyInLobbyException
@@ -31,11 +32,13 @@ import org.mockito.Mockito.`when`
 import org.redisson.api.RFuture
 import org.redisson.api.RLock
 import org.redisson.api.RedissonClient
+import org.springframework.data.redis.connection.Message
 import org.springframework.data.redis.core.RedisTemplate
 import org.springframework.data.redis.listener.PatternTopic
 import org.springframework.data.redis.listener.RedisMessageListenerContainer
 import java.util.Optional
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
 import java.util.function.BiConsumer
 import kotlin.test.assertFailsWith
@@ -388,8 +391,12 @@ class LobbyServiceTest {
         verify(fixture.redissonClient).getLock("LobbyLock:123")
         verify(fixture.lobbyRepository).deleteById(123)
         verify(fixture.playerLobbyRepository).deleteById(playerId)
+        verify(fixture.redisTemplate, timeout(5_000)).convertAndSend(eq("123"), argThat { message ->
+            message is LobbyMessage &&
+                message.type == LobbyMessageType.LOBBY_DESTROYED
+        })
         verify(fixture.lock).unlockAsync(anyLong())
-        verifyNoInteractions(fixture.container, fixture.redisTemplate)
+        verifyNoInteractions(fixture.container)
     }
 
     /**
@@ -520,6 +527,76 @@ class LobbyServiceTest {
     }
 
     /**
+     * 验证收到自己的离开事件时，当前连接只执行关闭回调，不再把旧大厅消息转发给客户端。
+     */
+    @Test
+    fun lobbyListenerClosesConnectionWhenOwnLeaveMessageArrives() {
+        val sentMessages = ArrayList<Any>()
+        val closeCount = AtomicInteger()
+        val player = LobbyPlayer(
+            456L,
+            { sentMessages.add(it) },
+            { _ -> closeCount.incrementAndGet() },
+        )
+
+        player.msgListener.onMessage(
+            redisMessage(LobbyMessage(LobbyMessageType.LEAVE).apply {
+                data = 456L
+            }),
+            null,
+        )
+
+        assertThat(sentMessages).isEmpty()
+        assertThat(closeCount.get()).isEqualTo(1)
+    }
+
+    /**
+     * 验证收到其他玩家的离开事件时，当前连接保持打开并正常转发消息。
+     */
+    @Test
+    fun lobbyListenerForwardsOtherPlayerLeaveMessage() {
+        val sentMessages = ArrayList<Any>()
+        val closeCount = AtomicInteger()
+        val player = LobbyPlayer(
+            456L,
+            { sentMessages.add(it) },
+            { _ -> closeCount.incrementAndGet() },
+        )
+
+        player.msgListener.onMessage(
+            redisMessage(LobbyMessage(LobbyMessageType.LEAVE).apply {
+                data = 111L
+            }),
+            null,
+        )
+
+        assertThat(closeCount.get()).isZero()
+        val message = sentMessages.single()
+        assertThat(message).isInstanceOf(Map::class.java)
+        val lobbyMessage = message as Map<*, *>
+        assertThat(lobbyMessage["type"]).isEqualTo(LobbyMessageType.LEAVE.name)
+        assertThat((lobbyMessage["data"] as Number).toLong()).isEqualTo(111L)
+    }
+
+    /**
+     * 验证大厅销毁事件会关闭所有仍订阅该频道的本机连接。
+     */
+    @Test
+    fun lobbyListenerClosesConnectionWhenLobbyDestroyedMessageArrives() {
+        val firstCloseCount = AtomicInteger()
+        val secondCloseCount = AtomicInteger()
+        val firstPlayer = LobbyPlayer(456L, {}, { _ -> firstCloseCount.incrementAndGet() })
+        val secondPlayer = LobbyPlayer(111L, {}, { _ -> secondCloseCount.incrementAndGet() })
+        val destroyedMessage = redisMessage(LobbyMessage(LobbyMessageType.LOBBY_DESTROYED))
+
+        firstPlayer.msgListener.onMessage(destroyedMessage, null)
+        secondPlayer.msgListener.onMessage(destroyedMessage, null)
+
+        assertThat(firstCloseCount.get()).isEqualTo(1)
+        assertThat(secondCloseCount.get()).isEqualTo(1)
+    }
+
+    /**
      * 验证发送文本消息时通过当前大厅索引定位广播频道。
      */
     @Test
@@ -603,6 +680,18 @@ class LobbyServiceTest {
             ),
         ).thenReturn(futures.first(), *futures.drop(1).toTypedArray())
         `when`(lock.unlockAsync(anyLong())).thenReturn(unlockFuture)
+    }
+
+    /**
+     * 使用项目 Redis 序列化器构造监听器收到的原始消息。
+     *
+     * @param payload 需要写入 Redis 消息体的对象
+     * @return Redis 原始消息 mock
+     */
+    private fun redisMessage(payload: Any): Message {
+        val message = Mockito.mock(Message::class.java)
+        `when`(message.body).thenReturn(RedisConfiguration.SERIALIZER.serialize(payload))
+        return message
     }
 
     /**
