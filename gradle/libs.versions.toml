@@ -2,6 +2,7 @@
 java = "21"
 kotlin = "2.3.21"
 kotlinx-coroutines = "1.10.2"
+redisson = "4.3.1"
 springCloudVersion = "2025.0.0"
 lombok = "1.18.46"
 
@@ -20,6 +21,10 @@ kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-c
 kotlinx-coroutines-jvm = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm", version.ref = "kotlinx-coroutines" }
 # https://mvnrepository.com/artifact/org.jetbrains.kotlinx/kotlinx-coroutines-test
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinx-coroutines" }
+# https://mvnrepository.com/artifact/org.jetbrains.kotlinx/kotlinx-coroutines-reactor
+kotlinx-coroutines-reactor = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-reactor", version.ref = "kotlinx-coroutines" }
+# https://mvnrepository.com/artifact/org.redisson/redisson-spring-boot-starter
+redisson-spring-boot-starter = { module = "org.redisson:redisson-spring-boot-starter", version.ref = "redisson" }
 
 [plugins]
 # https://plugins.gradle.org/plugin/org.jetbrains.kotlin.jvm

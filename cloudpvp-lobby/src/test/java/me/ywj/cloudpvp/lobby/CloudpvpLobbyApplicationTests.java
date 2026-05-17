@@ -3,10 +3,12 @@ package me.ywj.cloudpvp.lobby;
 import me.ywj.cloudpvp.core.service.TokenService;
 import me.ywj.cloudpvp.lobby.configurations.WebsocketConfiguration;
 import me.ywj.cloudpvp.lobby.interceptor.IdInterceptor;
+import org.redisson.api.RedissonClient;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
 
 import java.lang.reflect.Field;
@@ -36,6 +38,9 @@ class CloudpvpLobbyApplicationTests {
 
     @Autowired
     private WebSocketConfigurer websocketConfigure;
+
+    @MockitoBean
+    private RedissonClient redissonClient;
 
     private Field idInterceptorTokenServiceField;
     private Field websocketIdInterceptorField;
