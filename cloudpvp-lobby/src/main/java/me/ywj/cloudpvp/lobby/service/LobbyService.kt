@@ -156,10 +156,17 @@ class LobbyService @Autowired constructor(
             }
             val targetLobbyId = playerLobbyOption.get().lobbyId
             withPlayerAndLobbyLock(playerId, targetLobbyId) {
-                // 直接使用前面拿到的ID，不需要加锁后复查索引，不需要防止读取索引和拿锁之间玩家已经切换到其他大厅，因为只有加入或者退出会更新索引，加入的时候发现已加入房间了不会更新索引，所以没必要再查询一遍。
+                val playerLobbyOption = playerLobbyRepository.findById(playerId)
+                if (playerLobbyOption.isEmpty || targetLobbyId != playerLobbyOption.get().lobbyId) {
+                    // 可能因为并发下的锁竞争的情况下，另一个请求先到达并完成了退出流程了，那么可以直接返回并结束了。
+                    return@withPlayerAndLobbyLock
+                }
+                // 在前面的流程结束后，走到这里了，意味着现在已经对正确的ID拿到了锁了，那么这里就直接使用前面拿到的ID了，不需要再做额外的查询和检查。
+                // 目前只有加入或者退出Lobby会更新索引，并且在更新的时候会同步更新Lobby和索引，能走到这里的流程肯定是索引一致的，不需要进行二次查询了
                 val lobbyOption = lobbyRepository.findById(targetLobbyId)
                 if (!lobbyOption.isPresent) {
                     // 退出接口保持幂等：索引指向的大厅已不存在时，只清理当前玩家索引。
+                    // 这种情况只有纯粹的想不到的意外才会发生。可能需要考虑加入日志。
                     playerLobbyRepository.deleteById(playerId)
                     return@withPlayerAndLobbyLock
                 }
@@ -174,23 +181,25 @@ class LobbyService @Autowired constructor(
                     return@withPlayerAndLobbyLock
                 }
 
-                lobbyRepository.save(lobby)
-                playerLobbyRepository.deleteById(playerId)
-                //订阅者可能会在看到 LEAVE 之前先看到 UPDATE_HOST，或者收到反映尚未持久化状态的消息（如果 save 失败，这些消息将丢失），所以在 save 成功后才进行发布。
-                lobby.sendMsg(LobbyMessage(LobbyMessageType.LEAVE).apply {
-                    data = playerId
-                })
-                if (lobby.host == playerId) {
-                    lobby.updateHost(lobby.players!![0])
-                }
-
-                // 最后一名玩家离开时先广播销毁事件，让所有仍订阅该频道的 WebSocket 连接自清理。
+                // 如果是最后一名玩家离开时，先广播销毁事件，让所有仍订阅该频道的 WebSocket 连接自清理。
                 if (lobby.players!!.isEmpty()) {
                     lobby.sendMsg(LobbyMessage(LobbyMessageType.LOBBY_DESTROYED))
                     lobbyRepository.deleteById(targetLobbyId)
                     playerLobbyRepository.deleteById(playerId)
                     return@withPlayerAndLobbyLock
                 }
+
+                // 如果Lobby里还有其他玩家，且是房主离开了，那么需要更新房主
+                if (lobby.host == playerId) {
+                    lobby.updateHost(lobby.players!![0])
+                }
+
+                lobbyRepository.save(lobby)
+                playerLobbyRepository.deleteById(playerId)
+                //订阅者可能会在看到 LEAVE 之前先看到 UPDATE_HOST，或者收到反映尚未持久化状态的消息（如果 save 失败，这些消息将丢失），所以在 save 成功后才进行发布。
+                lobby.sendMsg(LobbyMessage(LobbyMessageType.LEAVE).apply {
+                    data = playerId
+                })
             }
         }
         throw LobbyBusyException("Player $playerId lobby mapping changed too frequently")
