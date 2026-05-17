@@ -1,8 +1,6 @@
 package me.ywj.cloudpvp.lobby.service
 
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import me.ywj.cloudpvp.core.model.lobby.LobbyMessage
 import me.ywj.cloudpvp.core.model.lobby.LobbyMessageDataTexting
@@ -224,11 +222,12 @@ class LobbyService @Autowired constructor(
             if (!lobby.players!!.contains(player.steamID64)) {
                 return@withLobbyLock false
             }
+            val topic = PatternTopic(lobby.id.toString())
             // Redis 监听注册后可能立刻收到关闭类消息；先记录大厅 ID，确保回调能按正确频道取消订阅。
             player.lobbyId = targetLobbyId
-            container.addMessageListener(player.msgListener, PatternTopic(lobby.id.toString()))
-            // HTTP 加入接口已经返回完整大厅信息；这里仍在注册监听后补发一次快照，
-            // 确保 WebSocket 连接建立时先拿到完整状态，再处理后续 JOIN/LEAVE 等增量消息。
+            container.addMessageListener(player.msgListener, topic)
+            // 快照发送保留在 lobby 锁内，避免锁释放后 JOIN/LEAVE 等增量消息先于快照到达客户端。
+            // 发送异常由 WebSocket 处理器统一捕获并清理已记录的订阅状态。
             player.sendMessage(LobbyMessage(LobbyMessageType.LOBBY_SNAPSHOT).apply {
                 data = lobby
             })
@@ -252,6 +251,8 @@ class LobbyService @Autowired constructor(
     /**
      * 通过 HTTP 向玩家所在大厅广播文本消息。
      *
+     * 实现约定：文本消息是高频路径，不与 `leaveLobby` 串行加锁；退出和大厅销毁由锁内广播关闭连接收敛。
+     *
      * @param playerId 发送消息的玩家 ID
      * @param content 文本消息内容
      * @throws LobbyNotExist 当目标大厅不存在时抛出
@@ -273,6 +274,11 @@ class LobbyService @Autowired constructor(
         }
 
         val lobby = lobbyOption.get()
+        if (!lobby.players!!.contains(playerId)) {
+            throw LobbyNotExist()
+        }
+        // 这里刻意保持无锁读路径：WebSocket 连接建立在 lobby 锁内订阅监听，退出/销毁广播会负责关闭旧连接。
+        // 与 leaveLobby 并发时允许一次基于当前读到快照的发送，避免所有文本消息都争用 Redis 锁。
         lobby.sendMsg(LobbyMessage(LobbyMessageType.TEXTING).apply {
             data = LobbyMessageDataTexting(playerId, content)
         })
@@ -283,8 +289,9 @@ class LobbyService @Autowired constructor(
      *
      * @param msg 需要发布给大厅成员的消息对象
      */
-    fun Lobby.sendMsg(msg: Any) {
-        CoroutineScope(Dispatchers.IO).launch {
+    private suspend fun Lobby.sendMsg(msg: Any) {
+        withContext(Dispatchers.IO) {
+            // Redis 发布必须由调用方等待完成，保证同一次状态变更中的多条消息按锁内顺序发出。
             redisTemplate.convertAndSend(id.toString(), msg)
         }
     }
@@ -337,7 +344,7 @@ class LobbyService @Autowired constructor(
      *
      * @param newHost 新房主的 Steam ID64
      */
-    fun Lobby.updateHost(newHost: SteamID64) {
+    private suspend fun Lobby.updateHost(newHost: SteamID64) {
         this.host = newHost
         sendMsg(LobbyMessage(LobbyMessageType.UPDATE_HOST).apply {
             data = newHost
