@@ -1,0 +1,33 @@
+package me.ywj.cloudpvp.lobby.exceptions;
+
+import me.ywj.cloudpvp.core.exceptions.BizException;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.ResponseStatus;
+
+/**
+ * LobbyBusyException
+ * 大厅正在处理并发操作。
+ *
+ * @author sheip9
+ * @since 2026/5/16 16:57
+ */
+@ResponseStatus(HttpStatus.CONFLICT)
+public class LobbyBusyException extends BizException {
+    /**
+     * 构造指定大厅繁忙异常。
+     *
+     * @param lobbyId 正在被并发操作占用的大厅 ID
+     */
+    public LobbyBusyException(Number lobbyId) {
+        super("Lobby " + lobbyId + " is busy");
+    }
+
+    /**
+     * 构造自定义繁忙异常。
+     *
+     * @param message 异常说明
+     */
+    public LobbyBusyException(String message) {
+        super(message);
+    }
+}

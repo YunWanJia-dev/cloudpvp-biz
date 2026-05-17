@@ -17,5 +17,6 @@ enum class ErrorType {
     PLAYER_ID_INVALID,
 
     LOBBY_NOT_EXIST,
-    LOBBY_ID_INVALID
+    LOBBY_ID_INVALID,
+    LOBBY_BUSY
 }
