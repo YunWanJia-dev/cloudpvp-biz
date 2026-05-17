@@ -79,6 +79,14 @@ cloudpvp
 - `interceptor`: Request or WebSocket handshake interceptors.
 - `exceptions`: Business exceptions or service-local exceptions.
 
+## Review Guidelines
+
+- When reviewing, first verify whether a finding is truly a business-impacting problem. Existing architecture may already provide validation, fallback behavior, idempotency, or recovery paths that make the suspected issue harmless in practice.
+- Before fixing a confirmed issue, evaluate whether the change can introduce new problems, broaden the behavior unnecessarily, or over-design around an unlikely scenario.
+- Keep fixes proportional to the confirmed risk and consistent with the current module boundaries, data flow, and framework responsibilities.
+- After applying a fix, inspect the surrounding call paths and related business code once more to confirm the change does not break existing flows or assumptions.
+- After a review or fix, leave a concise comment near the relevant code explaining why the fix is needed, or why the reviewed issue intentionally does not need a fix, so future reviews do not repeatedly flag the same case.
+
 ## Comment Guidelines
 
 ### Code Comments
@@ -90,7 +98,7 @@ cloudpvp
 - Use ordinary inline or block comments for explanations that depend on nearby implementation context, such as why a branch, ordering, workaround, or tradeoff is needed.
 - For longer methods, add short comments above major logic blocks to make the flow easier to scan.
 - Avoid comments that only repeat obvious statements from the code.
-- When conducting a review and making the corresponding fixes, be sure to add a comment after the relevant changes explaining why you made them.
+- When conducting a review, follow the review-specific comment requirements in Review Guidelines.
 
 ### New Classes
 
