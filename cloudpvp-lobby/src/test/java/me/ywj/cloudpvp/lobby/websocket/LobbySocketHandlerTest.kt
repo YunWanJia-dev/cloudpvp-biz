@@ -1,6 +1,11 @@
 package me.ywj.cloudpvp.lobby.websocket
 
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runTest
 import me.ywj.cloudpvp.core.constant.header.Attributes
 import me.ywj.cloudpvp.core.type.SteamID64
 import me.ywj.cloudpvp.lobby.entity.LobbyPlayer
@@ -16,6 +21,7 @@ import org.mockito.Mockito.`when`
 import org.springframework.web.socket.CloseStatus
 import org.springframework.web.socket.WebSocketSession
 import java.net.URI
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 
 /**
@@ -25,37 +31,38 @@ import java.util.concurrent.atomic.AtomicReference
  * @author sheip9
  * @since 2026/5/16 18:00
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 class LobbySocketHandlerTest {
+    companion object {
+        private const val VALID_PLAYER_ID = 76561197960265729L
+    }
+
     /**
      * 验证连接建立后订阅目标大厅，并把订阅玩家保存在当前 session 中供断开时清理。
      */
     @Test
-    fun afterConnectionEstablishedSubscribesAndStoresPlayerForDisconnect() {
+    fun afterConnectionEstablishedSubscribesAndStoresPlayerForDisconnect() = runTest {
         val lobbyService = Mockito.mock(LobbyService::class.java)
-        val handler = LobbySocketHandler(lobbyService)
-        val playerId = 76561197960265729L
+        val handler = lobbySocketHandler(lobbyService)
         val subscribedPlayer = AtomicReference<LobbyPlayer>()
 
-        runBlocking {
-            Mockito.doAnswer { invocation ->
-                val player = invocation.getArgument<LobbyPlayer>(0)
-                player.lobbyId = 123
-                subscribedPlayer.set(player)
-                true
-            }.`when`(lobbyService).subscribeLobby(anyLobbyPlayer(), eq(123))
-        }
+        Mockito.doAnswer { invocation ->
+            val player = invocation.getArgument<LobbyPlayer>(0)
+            player.lobbyId = 123
+            subscribedPlayer.set(player)
+            true
+        }.`when`(lobbyService).subscribeLobby(anyLobbyPlayer(), eq(123))
 
-        val session = lobbySession(playerId, "/ws/123")
+        val session = lobbySession(VALID_PLAYER_ID, "/ws/123")
 
         handler.afterConnectionEstablished(session)
+        advanceUntilIdle()
 
         val player = subscribedPlayer.get()
         assertThat(player).isNotNull()
-        assertThat(player.steamID64).isEqualTo(playerId)
+        assertThat(player.steamID64).isEqualTo(VALID_PLAYER_ID)
         assertThat(session.attributes.values).contains(player)
-        runBlocking {
-            verify(lobbyService).subscribeLobby(player, 123)
-        }
+        verify(lobbyService).subscribeLobby(player, 123)
 
         handler.afterConnectionClosed(session, CloseStatus.NORMAL)
 
@@ -67,21 +74,50 @@ class LobbySocketHandlerTest {
      * 验证订阅失败时关闭连接，且不保存需要断开清理的玩家状态。
      */
     @Test
-    fun afterConnectionEstablishedClosesWhenSubscribeReturnsFalse() {
+    fun afterConnectionEstablishedClosesWhenSubscribeReturnsFalse() = runTest {
         val lobbyService = Mockito.mock(LobbyService::class.java)
-        val handler = LobbySocketHandler(lobbyService)
+        val handler = lobbySocketHandler(lobbyService)
 
-        runBlocking {
-            Mockito.doReturn(false).`when`(lobbyService).subscribeLobby(anyLobbyPlayer(), eq(123))
-        }
+        Mockito.doReturn(false).`when`(lobbyService).subscribeLobby(anyLobbyPlayer(), eq(123))
 
-        val session = lobbySession(456L, "/ws/123")
+        val session = lobbySession(VALID_PLAYER_ID, "/ws/123")
 
         handler.afterConnectionEstablished(session)
+        advanceUntilIdle()
 
         verify(session).close()
         verify(lobbyService, never()).unsubscribeLobby(anyLobbyPlayer())
         assertThat(session.attributes.values).noneMatch { it is LobbyPlayer }
+    }
+
+    /**
+     * 验证订阅任务完成前连接已关闭时，处理器会补偿取消 Redis 监听器。
+     */
+    @Test
+    fun afterConnectionEstablishedUnsubscribesWhenSessionClosedBeforeSubscribeCompletes() = runTest {
+        val lobbyService = Mockito.mock(LobbyService::class.java)
+        val handler = lobbySocketHandler(lobbyService)
+        val sessionOpen = AtomicBoolean(true)
+        val subscribedPlayer = AtomicReference<LobbyPlayer>()
+
+        Mockito.doAnswer { invocation ->
+            val player = invocation.getArgument<LobbyPlayer>(0)
+            player.lobbyId = 123
+            subscribedPlayer.set(player)
+            true
+        }.`when`(lobbyService).subscribeLobby(anyLobbyPlayer(), eq(123))
+
+        val session = lobbySession(VALID_PLAYER_ID, "/ws/123") { sessionOpen.get() }
+
+        handler.afterConnectionEstablished(session)
+        sessionOpen.set(false)
+        handler.afterConnectionClosed(session, CloseStatus.NORMAL)
+        advanceUntilIdle()
+
+        val player = subscribedPlayer.get()
+        assertThat(player).isNotNull()
+        verify(lobbyService).unsubscribeLobby(player)
+        assertThat(session.attributes.values).doesNotContain(player)
     }
 
     /**
@@ -91,7 +127,7 @@ class LobbySocketHandlerTest {
     fun invalidSessionClosesWithoutSubscribing() {
         val lobbyService = Mockito.mock(LobbyService::class.java)
         val handler = LobbySocketHandler(lobbyService)
-        val session = lobbySession(456L, "/ws/not-a-lobby")
+        val session = lobbySession(VALID_PLAYER_ID, "/ws/not-a-lobby")
 
         handler.afterConnectionEstablished(session)
 
@@ -106,12 +142,26 @@ class LobbySocketHandlerTest {
      * @param path WebSocket 请求路径
      * @return 可通过处理器校验的 WebSocket 会话
      */
-    private fun lobbySession(playerId: SteamID64, path: String): WebSocketSession {
+    private fun lobbySession(
+        playerId: SteamID64,
+        path: String,
+        isOpen: () -> Boolean = { true },
+    ): WebSocketSession {
         val session = Mockito.mock(WebSocketSession::class.java)
         `when`(session.attributes).thenReturn(mutableMapOf<String, Any>(Attributes.ID to playerId))
         `when`(session.uri).thenReturn(URI.create(path))
-        `when`(session.isOpen).thenReturn(true)
+        `when`(session.isOpen).thenAnswer { isOpen() }
         return session
+    }
+
+    /**
+     * 使用测试调度器创建处理器，确保异步订阅任务可由测试主动推进。
+     *
+     * @param lobbyService 大厅服务 mock
+     * @return 使用测试协程作用域的处理器
+     */
+    private fun TestScope.lobbySocketHandler(lobbyService: LobbyService): LobbySocketHandler {
+        return LobbySocketHandler(lobbyService, CoroutineScope(StandardTestDispatcher(testScheduler)))
     }
 
     /**
