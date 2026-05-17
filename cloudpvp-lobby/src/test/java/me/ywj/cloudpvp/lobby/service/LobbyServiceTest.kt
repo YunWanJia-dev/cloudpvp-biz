@@ -86,6 +86,10 @@ class LobbyServiceTest {
         verify(fixture.playerLobbyRepository).save(argThat { playerLobby ->
             playerLobby.playerId == playerId && playerLobby.lobbyId == lobbyId
         })
+        Mockito.inOrder(fixture.lobbyRepository, fixture.playerLobbyRepository).apply {
+            verify(fixture.lobbyRepository).save(any(Lobby::class.java))
+            verify(fixture.playerLobbyRepository).save(any(PlayerLobby::class.java))
+        }
         verify(fixture.lock).unlockAsync(anyLong())
         verifyNoInteractions(fixture.redisTemplate)
     }
@@ -156,6 +160,42 @@ class LobbyServiceTest {
         verify(fixture.playerLobbyRepository).findById(playerId)
         verify(fixture.lock).unlockAsync(anyLong())
         verifyNoInteractions(fixture.lobbyRepository, fixture.redisTemplate, fixture.container)
+    }
+
+    /**
+     * 验证查询当前大厅时直接返回玩家索引指向的有效大厅。
+     */
+    @Test
+    fun getCurrentLobbyReturnsMembershipLobby() = runTest {
+        val fixture = createFixture(true)
+        val playerId = 456L
+        val lobby = Lobby(123, arrayListOf(111L, playerId))
+        lobby.host = 111L
+        `when`(fixture.playerLobbyRepository.findById(playerId))
+            .thenReturn(Optional.of(PlayerLobby(playerId, 123)))
+        `when`(fixture.lobbyRepository.findById(123)).thenReturn(Optional.of(lobby))
+
+        val currentLobby = fixture.lobbyService.getCurrentLobby(playerId)
+
+        assertThat(currentLobby).isSameAs(lobby)
+        verify(fixture.playerLobbyRepository).findById(playerId)
+        verify(fixture.lobbyRepository).findById(123)
+        verifyNoInteractions(fixture.redisTemplate, fixture.redissonClient, fixture.lock, fixture.container)
+    }
+
+    /**
+     * 验证玩家没有大厅索引时查询当前大厅返回 null。
+     */
+    @Test
+    fun getCurrentLobbyReturnsNullWithoutMembership() = runTest {
+        val fixture = createFixture(true)
+
+        val currentLobby = fixture.lobbyService.getCurrentLobby(456L)
+
+        assertThat(currentLobby).isNull()
+        verify(fixture.playerLobbyRepository).findById(456L)
+        verify(fixture.lobbyRepository, never()).findById(any(Number::class.java))
+        verifyNoInteractions(fixture.redisTemplate, fixture.redissonClient, fixture.lock, fixture.container)
     }
 
     /**
@@ -232,6 +272,10 @@ class LobbyServiceTest {
         verify(fixture.playerLobbyRepository).save(argThat { playerLobby ->
             playerLobby.playerId == playerId && playerLobby.lobbyId == 123
         })
+        Mockito.inOrder(fixture.lobbyRepository, fixture.playerLobbyRepository).apply {
+            verify(fixture.lobbyRepository).save(any(Lobby::class.java))
+            verify(fixture.playerLobbyRepository).save(any(PlayerLobby::class.java))
+        }
         verify(fixture.redisTemplate, timeout(5_000)).convertAndSend(eq("123"), argThat { message ->
             // HTTP 加入只负责写入状态并广播 JOIN，WebSocket 监听注册由 subscribeLobby 单独覆盖。
             message is LobbyMessage &&
@@ -259,30 +303,6 @@ class LobbyServiceTest {
         verify(fixture.redissonClient).getLock("LobbyPlayerLock:$playerId")
         verify(fixture.lock).unlockAsync(anyLong())
         verifyNoInteractions(fixture.lobbyRepository, fixture.redisTemplate, fixture.container)
-    }
-
-    /**
-     * 验证缺少玩家索引但旧大厅成员列表仍包含玩家时，先补齐索引并拒绝加入其他大厅。
-     */
-    @Test
-    fun joinLobbyBackfillsLegacyMembershipAndRejectsAnotherLobby() = runTest {
-        val fixture = createFixture(true)
-        val playerId = 456L
-        val legacyLobby = Lobby(321, arrayListOf(playerId))
-        legacyLobby.host = playerId
-        `when`(fixture.lobbyRepository.findAll()).thenReturn(listOf(legacyLobby))
-
-        assertFailsWith<PlayerAlreadyInLobbyException> {
-            fixture.lobbyService.joinLobby(playerId, 123)
-        }
-
-        verify(fixture.playerLobbyRepository).save(argThat { playerLobby ->
-            playerLobby.playerId == playerId && playerLobby.lobbyId == 321
-        })
-        verify(fixture.lobbyRepository, never()).findById(123)
-        verify(fixture.lobbyRepository, never()).save(any(Lobby::class.java))
-        verify(fixture.lock).unlockAsync(anyLong())
-        verifyNoInteractions(fixture.redisTemplate, fixture.container)
     }
 
     /**
@@ -331,32 +351,48 @@ class LobbyServiceTest {
     }
 
     /**
-     * 验证缺少玩家索引但旧大厅成员列表仍包含玩家时，退出前会补齐索引并继续清理成员关系。
+     * 验证退出大厅时索引指向的大厅不存在会静默删除当前玩家索引。
      */
     @Test
-    fun leaveLobbyBackfillsLegacyMembershipBeforeRemovingPlayer() = runTest {
+    fun leaveLobbyDeletesMembershipWhenIndexedLobbyDoesNotExist() = runTest {
         val fixture = createFixture(true)
         val playerId = 456L
-        val lobby = Lobby(123, arrayListOf(playerId))
-        lobby.host = playerId
         `when`(fixture.playerLobbyRepository.findById(playerId))
-            .thenReturn(Optional.empty(), Optional.of(PlayerLobby(playerId, 123)))
-        `when`(fixture.lobbyRepository.findAll()).thenReturn(listOf(lobby))
-        `when`(fixture.lobbyRepository.findById(123)).thenReturn(Optional.of(lobby))
+            .thenReturn(Optional.of(PlayerLobby(playerId, 123)))
+        `when`(fixture.lobbyRepository.findById(123)).thenReturn(Optional.empty())
 
         fixture.lobbyService.leaveLobby(playerId)
 
-        verify(fixture.playerLobbyRepository).save(argThat { playerLobby ->
-            playerLobby.playerId == playerId && playerLobby.lobbyId == 123
-        })
-        verify(fixture.lobbyRepository).deleteById(123)
+        verify(fixture.lobbyRepository).findById(123)
         verify(fixture.playerLobbyRepository).deleteById(playerId)
+        verify(fixture.lobbyRepository, never()).save(any(Lobby::class.java))
         verify(fixture.lock).unlockAsync(anyLong())
         verifyNoInteractions(fixture.container, fixture.redisTemplate)
     }
 
     /**
-     * 验证离开大厅时通过当前大厅索引定位大厅，并在非空大厅中移除玩家和清理索引。
+     * 验证退出大厅时玩家已不在成员列表会静默删除当前玩家索引。
+     */
+    @Test
+    fun leaveLobbyDeletesMembershipWhenPlayerIsNotInIndexedLobby() = runTest {
+        val fixture = createFixture(true)
+        val playerId = 456L
+        val lobby = Lobby(123, arrayListOf(111L))
+        lobby.host = 111L
+        `when`(fixture.playerLobbyRepository.findById(playerId))
+            .thenReturn(Optional.of(PlayerLobby(playerId, 123)))
+        `when`(fixture.lobbyRepository.findById(123)).thenReturn(Optional.of(lobby))
+
+        fixture.lobbyService.leaveLobby(playerId)
+
+        verify(fixture.playerLobbyRepository).deleteById(playerId)
+        verify(fixture.lobbyRepository, never()).save(any(Lobby::class.java))
+        verify(fixture.lock).unlockAsync(anyLong())
+        verifyNoInteractions(fixture.container, fixture.redisTemplate)
+    }
+
+    /**
+     * 验证离开大厅时通过当前大厅索引定位大厅，并在非空大厅中移除玩家和删除玩家索引。
      */
     @Test
     fun leaveLobbyUsesMembershipAndDeletesMembership() = runTest {
@@ -455,49 +491,6 @@ class LobbyServiceTest {
     }
 
     /**
-     * 验证缺少玩家索引但旧大厅成员列表仍包含玩家时，发消息会补齐索引并路由到原大厅。
-     */
-    @Test
-    fun sendTextMessageBackfillsLegacyMembershipBeforeRouting() = runTest {
-        val fixture = createFixture(true)
-        val playerId = 456L
-        val lobby = Lobby(123, arrayListOf(111L, playerId))
-        lobby.host = 111L
-        `when`(fixture.lobbyRepository.findAll()).thenReturn(listOf(lobby))
-        `when`(fixture.lobbyRepository.findById(123)).thenReturn(Optional.of(lobby))
-
-        fixture.lobbyService.sendTextMessage(playerId, "hello")
-
-        verify(fixture.playerLobbyRepository).save(argThat { playerLobby ->
-            playerLobby.playerId == playerId && playerLobby.lobbyId == 123
-        })
-        verify(fixture.redisTemplate, timeout(5_000)).convertAndSend(eq("123"), argThat { message ->
-            message is LobbyMessage &&
-                message.type == LobbyMessageType.TEXTING
-        })
-        verifyNoInteractions(fixture.redissonClient, fixture.lock, fixture.container)
-    }
-
-    /**
-     * 验证发送消息时只读取快照，玩家不在大厅成员列表内则不广播也不清理索引。
-     */
-    @Test
-    fun sendTextMessageDoesNotLockOrCleanMembershipWhenPlayerIsNotInLobby() = runTest {
-        val fixture = createFixture(true)
-        val playerId = 456L
-        val lobby = Lobby(123, arrayListOf(111L))
-        lobby.host = 111L
-        `when`(fixture.playerLobbyRepository.findById(playerId))
-            .thenReturn(Optional.of(PlayerLobby(playerId, 123)))
-        `when`(fixture.lobbyRepository.findById(123)).thenReturn(Optional.of(lobby))
-
-        fixture.lobbyService.sendTextMessage(playerId, "hello")
-
-        verify(fixture.playerLobbyRepository, never()).deleteById(playerId)
-        verifyNoInteractions(fixture.redisTemplate, fixture.redissonClient, fixture.lock, fixture.container)
-    }
-
-    /**
      * 验证没有当前大厅索引时发送消息会按大厅不存在处理。
      */
     @Test
@@ -508,8 +501,7 @@ class LobbyServiceTest {
             fixture.lobbyService.sendTextMessage(456L, "hello")
         }
 
-        verify(fixture.lobbyRepository).findAll()
-        verifyNoInteractions(fixture.redisTemplate, fixture.redissonClient, fixture.lock, fixture.container)
+        verifyNoInteractions(fixture.lobbyRepository, fixture.redisTemplate, fixture.redissonClient, fixture.lock, fixture.container)
     }
 
     /**
@@ -529,7 +521,6 @@ class LobbyServiceTest {
         `when`(redissonClient.getLock(anyString())).thenReturn(lock)
         `when`(redissonClient.getMultiLock(any(RLock::class.java), any(RLock::class.java))).thenReturn(lock)
         `when`(playerLobbyRepository.findById(any(Number::class.java))).thenReturn(Optional.empty())
-        `when`(lobbyRepository.findAll()).thenReturn(emptyList())
         stubLock(lock, *lockResults)
         return Fixture(
             LobbyService(lobbyRepository, playerLobbyRepository, redisTemplate, redissonClient, container),

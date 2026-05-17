@@ -83,6 +83,25 @@ class LobbyService @Autowired constructor(
     }
 
     /**
+     * 查询玩家当前所在的大厅。
+     *
+     * @param playerId 玩家 ID
+     * @return 玩家当前所在大厅；未加入大厅时返回 null
+     */
+    suspend fun getCurrentLobby(playerId: SteamID64): Lobby? {
+        val playerLobbyOption = withContext(Dispatchers.IO) {
+            playerLobbyRepository.findById(playerId)
+        }
+        if (!playerLobbyOption.isPresent) {
+            return null
+        }
+
+        return withContext(Dispatchers.IO) {
+            lobbyRepository.findById(playerLobbyOption.get().lobbyId).orElse(null)
+        }
+    }
+
+    /**
      * 通过 HTTP 将玩家加入目标大厅，并返回最新玩家列表。
      *
      * @param playerId 待加入大厅的玩家 ID
@@ -107,19 +126,17 @@ class LobbyService @Autowired constructor(
                 throw LobbyNotExist()
             }
 
-            // 重复加入同一个大厅保持幂等，只补齐缺失的玩家索引，不重复广播 JOIN。
+            // 重复加入同一个大厅保持幂等，不重复广播 JOIN。
             val lobby = lobbyOption.get()
             val players = lobby.players!!
             val alreadyInLobby = players.contains(playerId)
             if (!alreadyInLobby) {
                 players.add(playerId)
                 lobbyRepository.save(lobby)
+                playerLobbyRepository.save(PlayerLobby(playerId, targetLobbyId))
                 lobby.sendMsg(LobbyMessage(LobbyMessageType.JOIN).apply {
                     data = playerId
                 })
-            }
-            if (!playerLobbyOption.isPresent) {
-                playerLobbyRepository.save(PlayerLobby(playerId, targetLobbyId))
             }
             updatedLobby = lobby
         }
@@ -150,15 +167,16 @@ class LobbyService @Autowired constructor(
                     return@withPlayerAndLobbyLock false
                 }
 
-                // 大厅或成员关系缺失时清理玩家索引，让后续查询不会继续命中脏数据。
                 val lobbyOption = lobbyRepository.findById(targetLobbyId)
                 if (!lobbyOption.isPresent) {
+                    // 退出接口保持幂等：索引指向的大厅已不存在时，只清理当前玩家索引。
                     playerLobbyRepository.deleteById(playerId)
                     return@withPlayerAndLobbyLock true
                 }
                 val lobby = lobbyOption.get()
                 val removed = lobby.players!!.removeAll { it == playerId }
                 if (!removed) {
+                    // 退出接口保持幂等：玩家已不在成员列表时，只清理当前玩家索引。
                     playerLobbyRepository.deleteById(playerId)
                     return@withPlayerAndLobbyLock true
                 }
@@ -246,7 +264,6 @@ class LobbyService @Autowired constructor(
             throw LobbyNotExist()
         }
 
-        // 发消息是高频只读路径，只校验当前快照，不为了清理脏索引而进入分布式锁。
         val targetLobbyId = playerLobbyOption.get().lobbyId
         val lobbyOption = withContext(Dispatchers.IO) {
             lobbyRepository.findById(targetLobbyId)
@@ -256,9 +273,6 @@ class LobbyService @Autowired constructor(
         }
 
         val lobby = lobbyOption.get()
-        if (!lobby.players!!.contains(playerId)) {
-            return
-        }
         lobby.sendMsg(LobbyMessage(LobbyMessageType.TEXTING).apply {
             data = LobbyMessageDataTexting(playerId, content)
         })
