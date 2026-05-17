@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.DeleteMapping
+import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
@@ -37,6 +38,18 @@ class LobbyController @Autowired constructor(
     suspend fun createLobby(@RequestHeader(HttpHeaders.AUTHORIZATION) token: String,): CreatedResponse {
         val playerId = tokenAuthUtils.getIDFromToken(token)
         return CreatedResponse(lobbyService.createLobby(playerId))
+    }
+
+    /**
+     * 查询当前玩家所在的大厅。
+     *
+     * @param token 请求头中的授权令牌
+     * @return 当前玩家所在大厅；未加入大厅时返回 null
+     */
+    @GetMapping("/players/self/lobby")
+    suspend fun getCurrentLobby(@RequestHeader(HttpHeaders.AUTHORIZATION) token: String,): Lobby? {
+        val playerId = tokenAuthUtils.getIDFromToken(token)
+        return lobbyService.getCurrentLobby(playerId)
     }
 
     /**
