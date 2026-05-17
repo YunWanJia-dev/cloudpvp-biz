@@ -28,6 +28,7 @@ enum class LobbyMessageType {
     LEAVE,
     TEXTING,
     UPDATE_HOST,
+    LOBBY_SNAPSHOT,
     PLAYER_LIST
 }
 

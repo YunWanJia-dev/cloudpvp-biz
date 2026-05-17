@@ -204,11 +204,11 @@ class LobbyService @Autowired constructor(
     }
 
     /**
-     * 为当前 WebSocket 连接注册目标大厅的消息监听器。
+     * 为当前 WebSocket 连接注册目标大厅的消息监听器，并发送一次大厅快照。
      *
      * @param player 当前 socket 绑定的玩家连接状态
      * @param targetLobbyId 目标大厅 ID
-     * @return true 表示玩家已在大厅内并完成监听注册
+     * @return true 表示玩家已在大厅内、完成监听注册并已发送当前大厅快照
      * @throws LobbyNotExist 当目标大厅不存在时抛出
      * @throws LobbyBusyException 当目标大厅状态正被其他操作长期占用时抛出
      */
@@ -225,6 +225,11 @@ class LobbyService @Autowired constructor(
             }
             container.addMessageListener(player.msgListener, PatternTopic(lobby.id.toString()))
             player.lobbyId = targetLobbyId
+            // HTTP 加入接口已经返回完整大厅信息；这里仍在注册监听后补发一次快照，
+            // 确保 WebSocket 连接建立时先拿到完整状态，再处理后续 JOIN/LEAVE 等增量消息。
+            player.sendMessage(LobbyMessage(LobbyMessageType.LOBBY_SNAPSHOT).apply {
+                data = lobby
+            })
             true
         }
 
