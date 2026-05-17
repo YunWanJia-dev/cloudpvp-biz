@@ -2,14 +2,8 @@ package me.ywj.cloudpvp.lobby.service
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.NonCancellable
-import kotlinx.coroutines.currentCoroutineContext
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
-import me.ywj.cloudpvp.core.constant.lobby.LobbyConstant
 import me.ywj.cloudpvp.core.model.lobby.LobbyMessage
 import me.ywj.cloudpvp.core.model.lobby.LobbyMessageDataTexting
 import me.ywj.cloudpvp.core.model.lobby.LobbyMessageType
@@ -18,21 +12,19 @@ import me.ywj.cloudpvp.core.type.SteamID64
 import me.ywj.cloudpvp.core.utils.LobbyUtils
 import me.ywj.cloudpvp.lobby.entity.Lobby
 import me.ywj.cloudpvp.lobby.entity.LobbyPlayer
+import me.ywj.cloudpvp.lobby.entity.PlayerLobby
 import me.ywj.cloudpvp.lobby.exceptions.LobbyBusyException
 import me.ywj.cloudpvp.lobby.exceptions.LobbyNotExist
+import me.ywj.cloudpvp.lobby.exceptions.PlayerAlreadyInLobbyException
 import me.ywj.cloudpvp.lobby.repository.LobbyRepository
-import org.redisson.api.RFuture
+import me.ywj.cloudpvp.lobby.repository.PlayerLobbyRepository
+import me.ywj.cloudpvp.lobby.utils.RedisLockUtils.withRedisLock
 import org.redisson.api.RedissonClient
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.data.redis.core.RedisTemplate
 import org.springframework.data.redis.listener.PatternTopic
 import org.springframework.data.redis.listener.RedisMessageListenerContainer
 import org.springframework.stereotype.Service
-import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicLong
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
-import kotlin.time.Duration.Companion.seconds
 
 /**
  * LobbyService
@@ -43,29 +35,34 @@ import kotlin.time.Duration.Companion.seconds
 @Service
 class LobbyService @Autowired constructor(
     val lobbyRepository: LobbyRepository,
+    val playerLobbyRepository: PlayerLobbyRepository,
     val redisTemplate: RedisTemplate<String, Any>,
     val redissonClient: RedissonClient,
     val container: RedisMessageListenerContainer,
 ) {
     companion object {
         private const val LOCK_NAME_PREFIX = "LobbyLock:"
-        private const val LOCK_WAIT_MILLIS = 200L
-        private const val LOCK_WATCHDOG_LEASE_MILLIS = -1L
+        private const val PLAYER_LOCK_NAME_PREFIX = "LobbyPlayerLock:"
         private const val LOCK_ATTEMPTS = 5
         private const val CREATE_LOBBY_ATTEMPTS = 8
-        private val LOCK_OWNER_ID = AtomicLong(1)
     }
 
     /**
-     * 创建一个空大厅并返回大厅 ID。
+     * 创建大厅，将创建者加入大厅并返回大厅 ID。
      *
      * @return 新创建大厅的 ID
      * @throws LobbyBusyException 当多次生成 ID 后仍无法获得锁或完成创建时抛出
+     * @throws PlayerAlreadyInLobbyException 当玩家已属于其他大厅时抛出
      */
     suspend fun createLobby(playerId: SteamID64): LobbyId {
         repeat(CREATE_LOBBY_ATTEMPTS) {
             val lobbyId = LobbyUtils.generateLobbyId()
-            val createdLobbyId = withLobbyLock(lobbyId) {
+            val createdLobbyId = withPlayerAndLobbyLock(playerId, lobbyId) {
+                val playerLobbyOption = playerLobbyRepository.findById(playerId)
+                if (playerLobbyOption.isPresent) {
+                    throw PlayerAlreadyInLobbyException(playerId, playerLobbyOption.get().lobbyId)
+                }
+
                 if (lobbyRepository.existsById(lobbyId)) {
                     null
                 } else {
@@ -74,41 +71,15 @@ class LobbyService @Autowired constructor(
                         host = playerId
                         players!!.add(playerId)
                     })
+                    playerLobbyRepository.save(PlayerLobby(playerId, lobbyId))
                     lobbyId
                 }
             }
             if (createdLobbyId != null) {
-                scheduleEmptyLobbyCleanup(createdLobbyId)
                 return createdLobbyId
             }
         }
         throw LobbyBusyException("Unable to create lobby after $CREATE_LOBBY_ATTEMPTS attempts")
-    }
-
-    /**
-     * 安排创建后无人加入的空大厅清理任务。
-     *
-     * @param lobbyId 需要在超时后检查的大厅 ID
-     */
-    private fun scheduleEmptyLobbyCleanup(lobbyId: LobbyId) {
-        //特定时间过后 “创建房间”的玩家未能加入 则清理掉
-        CoroutineScope(Dispatchers.Default).launch {
-            delay((LobbyConstant.CREATE_TIMEOUT).seconds)
-            try {
-                withLobbyLock(lobbyId) {
-                    val lobbyOption = lobbyRepository.findById(lobbyId)
-                    if (!lobbyOption.isPresent) {
-                        return@withLobbyLock
-                    }
-                    val lobby = lobbyOption.get()
-                    if (lobby.players!!.isEmpty()) {
-                        lobbyRepository.deleteById(lobbyId)
-                    }
-                }
-            } catch (_: LobbyBusyException) {
-                return@launch
-            }
-        }
     }
 
     /**
@@ -119,63 +90,99 @@ class LobbyService @Autowired constructor(
      * @return 加入后的玩家 ID 列表
      * @throws LobbyNotExist 当目标大厅不存在时抛出
      * @throws LobbyBusyException 当目标大厅状态正被其他操作长期占用时抛出
+     * @throws PlayerAlreadyInLobbyException 当玩家已属于其他大厅时抛出
      */
     suspend fun joinLobby(playerId: SteamID64, targetLobbyId: LobbyId): Lobby? {
+        var updatedLobby: Lobby? = null
+        // 玩家索引和大厅成员列表必须在同一个组合锁内校验和写入，避免并发加入两个大厅。
+        withPlayerAndLobbyLock(playerId, targetLobbyId) {
+            val playerLobbyOption = playerLobbyRepository.findById(playerId)
+            if (playerLobbyOption.isPresent && playerLobbyOption.get().lobbyId != targetLobbyId) {
+                throw PlayerAlreadyInLobbyException(playerId, playerLobbyOption.get().lobbyId)
+            }
 
-        withLobbyLock(targetLobbyId) {
+            // 目标大厅不存在时不能只写 PlayerLobby，否则会留下指向无效大厅的索引。
             val lobbyOption = lobbyRepository.findById(targetLobbyId)
             if (!lobbyOption.isPresent) {
                 throw LobbyNotExist()
             }
 
+            // 重复加入同一个大厅保持幂等，只补齐缺失的玩家索引，不重复广播 JOIN。
             val lobby = lobbyOption.get()
             val players = lobby.players!!
-            if (players.contains(playerId)) {
-                return@withLobbyLock
+            val alreadyInLobby = players.contains(playerId)
+            if (!alreadyInLobby) {
+                players.add(playerId)
+                lobbyRepository.save(lobby)
+                lobby.sendMsg(LobbyMessage(LobbyMessageType.JOIN).apply {
+                    data = playerId
+                })
             }
-            players.add(playerId)
-            lobbyRepository.save(lobby)
-
-            lobby.sendMsg(LobbyMessage(LobbyMessageType.JOIN).apply {
-                data = playerId
-            })
+            if (!playerLobbyOption.isPresent) {
+                playerLobbyRepository.save(PlayerLobby(playerId, targetLobbyId))
+            }
+            updatedLobby = lobby
         }
-
-        return withContext(Dispatchers.IO) {
-            lobbyRepository.findById(targetLobbyId)
-        }.get()
+        return updatedLobby
     }
 
     /**
-     * 通过 HTTP 将玩家从目标大厅移除，并在大厅为空时删除大厅。
+     * 通过 HTTP 将玩家从当前大厅移除，并在大厅为空时删除大厅。
      *
      * @param playerId 待离开大厅的玩家 ID
-     * @param targetLobbyId 目标大厅 ID
      * @throws LobbyBusyException 当目标大厅状态正被其他操作长期占用时抛出
      */
-    suspend fun leaveLobby(playerId: SteamID64, targetLobbyId: LobbyId) {
-        withLobbyLock(targetLobbyId) {
-            val lobbyOption = lobbyRepository.findById(targetLobbyId)
-            if (!lobbyOption.isPresent) {
-                return@withLobbyLock
+    suspend fun leaveLobby(playerId: SteamID64) {
+        repeat(LOCK_ATTEMPTS) {
+            // 退出接口不再接收 lobbyId，先读取当前索引以确定需要组合加锁的大厅。
+            val playerLobbyOption = playerLobbyRepository.findById(playerId)
+            if (!playerLobbyOption.isPresent) {
+                return
             }
-            val lobby = lobbyOption.get()
-            val removed = lobby.players!!.removeAll { it == playerId }
-            if (!removed) {
-                return@withLobbyLock
+            val targetLobbyId = playerLobbyOption.get().lobbyId
+            val completed = withPlayerAndLobbyLock(playerId, targetLobbyId) {
+                // 加锁后复查索引，防止读取索引和拿锁之间玩家已经切换到其他大厅。
+                val lockedPlayerLobbyOption = playerLobbyRepository.findById(playerId)
+                if (!lockedPlayerLobbyOption.isPresent) {
+                    return@withPlayerAndLobbyLock true
+                }
+                if (lockedPlayerLobbyOption.get().lobbyId != targetLobbyId) {
+                    return@withPlayerAndLobbyLock false
+                }
+
+                // 大厅或成员关系缺失时清理玩家索引，让后续查询不会继续命中脏数据。
+                val lobbyOption = lobbyRepository.findById(targetLobbyId)
+                if (!lobbyOption.isPresent) {
+                    playerLobbyRepository.deleteById(playerId)
+                    return@withPlayerAndLobbyLock true
+                }
+                val lobby = lobbyOption.get()
+                val removed = lobby.players!!.removeAll { it == playerId }
+                if (!removed) {
+                    playerLobbyRepository.deleteById(playerId)
+                    return@withPlayerAndLobbyLock true
+                }
+                // 最后一名玩家离开后直接删除大厅；非空大厅才需要广播离开和更新房主。
+                if (lobby.players!!.isEmpty()) {
+                    lobbyRepository.deleteById(targetLobbyId)
+                    playerLobbyRepository.deleteById(playerId)
+                    return@withPlayerAndLobbyLock true
+                }
+                lobby.sendMsg(LobbyMessage(LobbyMessageType.LEAVE).apply {
+                    data = playerId
+                })
+                if (lobby.host == playerId) {
+                    lobby.updateHost(lobby.players!![0])
+                }
+                lobbyRepository.save(lobby)
+                playerLobbyRepository.deleteById(playerId)
+                true
             }
-            if (lobby.players!!.isEmpty()) {
-                lobbyRepository.deleteById(targetLobbyId)
-                return@withLobbyLock
+            if (completed) {
+                return
             }
-            lobby.sendMsg(LobbyMessage(LobbyMessageType.LEAVE).apply {
-                data = playerId
-            })
-            if (lobby.host == playerId) {
-                lobby.updateHost(lobby.players!![0])
-            }
-            lobbyRepository.save(lobby)
         }
+        throw LobbyBusyException("Player $playerId lobby mapping changed too frequently")
     }
 
     /**
@@ -228,25 +235,33 @@ class LobbyService @Autowired constructor(
      * 通过 HTTP 向玩家所在大厅广播文本消息。
      *
      * @param playerId 发送消息的玩家 ID
-     * @param targetLobbyId 目标大厅 ID
      * @param content 文本消息内容
      * @throws LobbyNotExist 当目标大厅不存在时抛出
-     * @throws LobbyBusyException 当目标大厅状态正被其他操作长期占用时抛出
      */
-    suspend fun sendTextMessage(playerId: SteamID64, targetLobbyId: LobbyId, content: String) {
-        withLobbyLock(targetLobbyId) {
-            val lobbyOption = lobbyRepository.findById(targetLobbyId)
-            if (!lobbyOption.isPresent) {
-                throw LobbyNotExist()
-            }
-            val lobby = lobbyOption.get()
-            if (!lobby.players!!.contains(playerId)) {
-                return@withLobbyLock
-            }
-            lobby.sendMsg(LobbyMessage(LobbyMessageType.TEXTING).apply {
-                data = LobbyMessageDataTexting(playerId, content)
-            })
+    suspend fun sendTextMessage(playerId: SteamID64, content: String) {
+        val playerLobbyOption = withContext(Dispatchers.IO) {
+            playerLobbyRepository.findById(playerId)
         }
+        if (!playerLobbyOption.isPresent) {
+            throw LobbyNotExist()
+        }
+
+        // 发消息是高频只读路径，只校验当前快照，不为了清理脏索引而进入分布式锁。
+        val targetLobbyId = playerLobbyOption.get().lobbyId
+        val lobbyOption = withContext(Dispatchers.IO) {
+            lobbyRepository.findById(targetLobbyId)
+        }
+        if (!lobbyOption.isPresent) {
+            throw LobbyNotExist()
+        }
+
+        val lobby = lobbyOption.get()
+        if (!lobby.players!!.contains(playerId)) {
+            return
+        }
+        lobby.sendMsg(LobbyMessage(LobbyMessageType.TEXTING).apply {
+            data = LobbyMessageDataTexting(playerId, content)
+        })
     }
 
     /**
@@ -270,60 +285,37 @@ class LobbyService @Autowired constructor(
      */
     private suspend fun <T> withLobbyLock(lobbyId: LobbyId, block: suspend () -> T): T {
         val lock = redissonClient.getLock("$LOCK_NAME_PREFIX$lobbyId")
-        repeat(LOCK_ATTEMPTS) {
-            // Redisson 异步锁的 ownerId 必须跨协程恢复保持稳定，不能依赖当前 JVM 线程 ID。
-            val lockOwnerId = LOCK_OWNER_ID.getAndIncrement()
-            val locked = withContext(NonCancellable) {
-                // 锁归属结果必须在不可取消区间内确认；否则取消可能发生在 Redisson 已授权之后、finally 注册之前。
-                lock.tryLockAsync(
-                    LOCK_WAIT_MILLIS,
-                    // 使用 Redisson watchdog 自动续期，避免固定短租约在 Repository 或监听器操作中途过期。
-                    LOCK_WATCHDOG_LEASE_MILLIS,
-                    TimeUnit.MILLISECONDS,
-                    lockOwnerId,
-                ).awaitValue()
-            }
-
-            if (!locked) {
-                currentCoroutineContext().ensureActive()
-                //没上锁成功就进入下一个循环
-                return@repeat
-            }
-
-            return try {
-                currentCoroutineContext().ensureActive()
-                block()
-            } finally {
-                withContext(NonCancellable) {
-                    lock.unlockAsync(lockOwnerId).awaitValue()
-                }
-            }
-
-        }
-        throw LobbyBusyException(lobbyId)
+        return withRedisLock(
+            lock = lock,
+            attempts = LOCK_ATTEMPTS,
+            busyException = { LobbyBusyException(lobbyId) },
+            block = block,
+        )
     }
 
     /**
-     * 挂起等待 Redisson 异步结果完成。
+     * 同时持有玩家级和大厅级 Redis 锁后执行状态变更。
      *
-     * @return 异步操作完成后的结果
+     * @param playerId 用于生成玩家锁名的玩家 ID
+     * @param lobbyId 用于生成大厅锁名的大厅 ID
+     * @param block 获取锁后执行的状态变更逻辑
+     * @return 状态变更逻辑的返回值
+     * @throws LobbyBusyException 当多次尝试仍无法同时获取玩家锁和大厅锁时抛出
      */
-    private suspend fun <T> RFuture<T>.awaitValue(): T {
-        return suspendCancellableCoroutine { continuation ->
-            whenComplete { value, throwable ->
-                if (!continuation.isActive) {
-                    return@whenComplete
-                }
-                if (throwable == null) {
-                    continuation.resume(value)
-                } else {
-                    continuation.resumeWithException(throwable)
-                }
-            }
-            continuation.invokeOnCancellation {
-                cancel(false)
-            }
-        }
+    private suspend fun <T> withPlayerAndLobbyLock(
+        playerId: SteamID64,
+        lobbyId: LobbyId,
+        block: suspend () -> T,
+    ): T {
+        val playerLock = redissonClient.getLock("$PLAYER_LOCK_NAME_PREFIX$playerId")
+        val lobbyLock = redissonClient.getLock("$LOCK_NAME_PREFIX$lobbyId")
+        val lock = redissonClient.getMultiLock(playerLock, lobbyLock)
+        return withRedisLock(
+            lock = lock,
+            attempts = LOCK_ATTEMPTS,
+            busyException = { LobbyBusyException("Player $playerId and lobby $lobbyId are busy") },
+            block = block,
+        )
     }
 
     /**

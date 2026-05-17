@@ -8,8 +8,12 @@ import me.ywj.cloudpvp.core.model.lobby.LobbyMessage
 import me.ywj.cloudpvp.core.model.lobby.LobbyMessageType
 import me.ywj.cloudpvp.lobby.entity.Lobby
 import me.ywj.cloudpvp.lobby.entity.LobbyPlayer
+import me.ywj.cloudpvp.lobby.entity.PlayerLobby
 import me.ywj.cloudpvp.lobby.exceptions.LobbyBusyException
+import me.ywj.cloudpvp.lobby.exceptions.LobbyNotExist
+import me.ywj.cloudpvp.lobby.exceptions.PlayerAlreadyInLobbyException
 import me.ywj.cloudpvp.lobby.repository.LobbyRepository
+import me.ywj.cloudpvp.lobby.repository.PlayerLobbyRepository
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.mockito.ArgumentMatchers.any
@@ -63,6 +67,7 @@ class LobbyServiceTest {
         val lobbyId = fixture.lobbyService.createLobby(playerId)
 
         assertThat(lobbyId).isPositive()
+        verify(fixture.redissonClient).getLock("LobbyPlayerLock:$playerId")
         verify(fixture.redissonClient).getLock("LobbyLock:$lobbyId")
         verify(fixture.lock).tryLockAsync(
             eq(LOCK_WAIT_MILLIS),
@@ -70,12 +75,16 @@ class LobbyServiceTest {
             eq(TimeUnit.MILLISECONDS),
             anyLong(),
         )
+        verify(fixture.playerLobbyRepository).findById(playerId)
         verify(fixture.lobbyRepository).existsById(lobbyId)
         verify(fixture.lobbyRepository).save(argThat { lobby ->
             // 新接口在创建时已经绑定创建者，测试要覆盖这个调用方可见的状态变化。
             lobby.id == lobbyId &&
                 lobby.host == playerId &&
                 lobby.players == arrayListOf(playerId)
+        })
+        verify(fixture.playerLobbyRepository).save(argThat { playerLobby ->
+            playerLobby.playerId == playerId && playerLobby.lobbyId == lobbyId
         })
         verify(fixture.lock).unlockAsync(anyLong())
         verifyNoInteractions(fixture.redisTemplate)
@@ -94,12 +103,15 @@ class LobbyServiceTest {
         val lobbyId = fixture.lobbyService.createLobby(playerId)
 
         assertThat(lobbyId).isPositive()
-        verify(fixture.redissonClient, times(2)).getLock(anyString())
+        verify(fixture.redissonClient, times(4)).getLock(anyString())
         verify(fixture.lobbyRepository, times(2)).existsById(any(Number::class.java))
         verify(fixture.lobbyRepository).save(argThat { lobby ->
             lobby.id == lobbyId &&
                 lobby.host == playerId &&
                 lobby.players == arrayListOf(playerId)
+        })
+        verify(fixture.playerLobbyRepository).save(argThat { playerLobby ->
+            playerLobby.playerId == playerId && playerLobby.lobbyId == lobbyId
         })
         verify(fixture.lock, times(2)).unlockAsync(anyLong())
         verifyNoInteractions(fixture.redisTemplate)
@@ -123,7 +135,27 @@ class LobbyServiceTest {
             anyLong(),
         )
         verify(fixture.lock, never()).unlockAsync(anyLong())
-        verifyNoInteractions(fixture.lobbyRepository, fixture.redisTemplate)
+        verifyNoInteractions(fixture.lobbyRepository, fixture.playerLobbyRepository, fixture.redisTemplate)
+    }
+
+    /**
+     * 验证已有当前大厅索引时不会再创建第二个大厅。
+     */
+    @Test
+    fun createLobbyRejectsWhenPlayerAlreadyHasMembership() = runTest {
+        val fixture = createFixture(true)
+        val playerId = 456L
+        `when`(fixture.playerLobbyRepository.findById(playerId))
+            .thenReturn(Optional.of(PlayerLobby(playerId, 123)))
+
+        assertFailsWith<PlayerAlreadyInLobbyException> {
+            fixture.lobbyService.createLobby(playerId)
+        }
+
+        verify(fixture.redissonClient).getLock("LobbyPlayerLock:$playerId")
+        verify(fixture.playerLobbyRepository).findById(playerId)
+        verify(fixture.lock).unlockAsync(anyLong())
+        verifyNoInteractions(fixture.lobbyRepository, fixture.redisTemplate, fixture.container)
     }
 
     /**
@@ -133,6 +165,7 @@ class LobbyServiceTest {
     @Test
     fun createLobbyUnlocksWhenCancelledAfterAsyncLockIsGranted() = runTest {
         val lobbyRepository = Mockito.mock(LobbyRepository::class.java)
+        val playerLobbyRepository = Mockito.mock(PlayerLobbyRepository::class.java)
         @Suppress("UNCHECKED_CAST")
         val redisTemplate = Mockito.mock(RedisTemplate::class.java) as RedisTemplate<String, Any>
         val redissonClient = Mockito.mock(RedissonClient::class.java)
@@ -145,6 +178,7 @@ class LobbyServiceTest {
         val completion = AtomicReference<BiConsumer<Boolean, Throwable?>>()
 
         `when`(redissonClient.getLock(anyString())).thenReturn(lock)
+        `when`(redissonClient.getMultiLock(any(RLock::class.java), any(RLock::class.java))).thenReturn(lock)
         `when`(
             lock.tryLockAsync(
                 eq(LOCK_WAIT_MILLIS),
@@ -159,7 +193,7 @@ class LobbyServiceTest {
             lockFuture
         }
 
-        val lobbyService = LobbyService(lobbyRepository, redisTemplate, redissonClient, container)
+        val lobbyService = LobbyService(lobbyRepository, playerLobbyRepository, redisTemplate, redissonClient, container)
         val createJob = launch {
             lobbyService.createLobby(456L)
         }
@@ -170,7 +204,7 @@ class LobbyServiceTest {
         createJob.join()
 
         verify(lock).unlockAsync(anyLong())
-        verifyNoInteractions(lobbyRepository, redisTemplate, container)
+        verifyNoInteractions(lobbyRepository, playerLobbyRepository, redisTemplate, container)
     }
 
     /**
@@ -188,11 +222,15 @@ class LobbyServiceTest {
         val updatedLobby = fixture.lobbyService.joinLobby(playerId, 123)
 
         assertThat(updatedLobby).isSameAs(lobby)
+        verify(fixture.redissonClient).getLock("LobbyPlayerLock:$playerId")
         verify(fixture.redissonClient).getLock("LobbyLock:123")
         verify(fixture.lobbyRepository).save(argThat { savedLobby ->
             savedLobby.id == 123 &&
                 savedLobby.host == 111L &&
                 savedLobby.players!!.containsAll(listOf(111L, playerId))
+        })
+        verify(fixture.playerLobbyRepository).save(argThat { playerLobby ->
+            playerLobby.playerId == playerId && playerLobby.lobbyId == 123
         })
         verify(fixture.redisTemplate, timeout(5_000)).convertAndSend(eq("123"), argThat { message ->
             // HTTP 加入只负责写入状态并广播 JOIN，WebSocket 监听注册由 subscribeLobby 单独覆盖。
@@ -205,6 +243,71 @@ class LobbyServiceTest {
     }
 
     /**
+     * 验证玩家已有其他大厅索引时拒绝加入目标大厅，避免存储中出现多大厅成员关系。
+     */
+    @Test
+    fun joinLobbyRejectsWhenPlayerAlreadyBelongsToAnotherLobby() = runTest {
+        val fixture = createFixture(true)
+        val playerId = 456L
+        `when`(fixture.playerLobbyRepository.findById(playerId))
+            .thenReturn(Optional.of(PlayerLobby(playerId, 321)))
+
+        assertFailsWith<PlayerAlreadyInLobbyException> {
+            fixture.lobbyService.joinLobby(playerId, 123)
+        }
+
+        verify(fixture.redissonClient).getLock("LobbyPlayerLock:$playerId")
+        verify(fixture.lock).unlockAsync(anyLong())
+        verifyNoInteractions(fixture.lobbyRepository, fixture.redisTemplate, fixture.container)
+    }
+
+    /**
+     * 验证缺少玩家索引但旧大厅成员列表仍包含玩家时，先补齐索引并拒绝加入其他大厅。
+     */
+    @Test
+    fun joinLobbyBackfillsLegacyMembershipAndRejectsAnotherLobby() = runTest {
+        val fixture = createFixture(true)
+        val playerId = 456L
+        val legacyLobby = Lobby(321, arrayListOf(playerId))
+        legacyLobby.host = playerId
+        `when`(fixture.lobbyRepository.findAll()).thenReturn(listOf(legacyLobby))
+
+        assertFailsWith<PlayerAlreadyInLobbyException> {
+            fixture.lobbyService.joinLobby(playerId, 123)
+        }
+
+        verify(fixture.playerLobbyRepository).save(argThat { playerLobby ->
+            playerLobby.playerId == playerId && playerLobby.lobbyId == 321
+        })
+        verify(fixture.lobbyRepository, never()).findById(123)
+        verify(fixture.lobbyRepository, never()).save(any(Lobby::class.java))
+        verify(fixture.lock).unlockAsync(anyLong())
+        verifyNoInteractions(fixture.redisTemplate, fixture.container)
+    }
+
+    /**
+     * 验证重复加入当前大厅保持幂等，不重复保存大厅或广播加入消息。
+     */
+    @Test
+    fun joinLobbyIsIdempotentWhenMembershipAlreadyTargetsLobby() = runTest {
+        val fixture = createFixture(true)
+        val playerId = 456L
+        val lobby = Lobby(123, arrayListOf(111L, playerId))
+        lobby.host = 111L
+        `when`(fixture.playerLobbyRepository.findById(playerId))
+            .thenReturn(Optional.of(PlayerLobby(playerId, 123)))
+        `when`(fixture.lobbyRepository.findById(123)).thenReturn(Optional.of(lobby))
+
+        val updatedLobby = fixture.lobbyService.joinLobby(playerId, 123)
+
+        assertThat(updatedLobby).isSameAs(lobby)
+        verify(fixture.lobbyRepository, never()).save(any(Lobby::class.java))
+        verify(fixture.playerLobbyRepository, never()).save(any(PlayerLobby::class.java))
+        verifyNoInteractions(fixture.redisTemplate, fixture.container)
+        verify(fixture.lock).unlockAsync(anyLong())
+    }
+
+    /**
      * 验证离开大厅时复用同一把 lobby 锁，避免和加入、清理流程并发覆盖。
      */
     @Test
@@ -213,14 +316,71 @@ class LobbyServiceTest {
         val playerId = 456L
         val lobby = Lobby(123, arrayListOf(456L))
         lobby.host = 456L
+        `when`(fixture.playerLobbyRepository.findById(playerId))
+            .thenReturn(Optional.of(PlayerLobby(playerId, 123)))
         `when`(fixture.lobbyRepository.findById(123)).thenReturn(Optional.of(lobby))
 
-        fixture.lobbyService.leaveLobby(playerId, 123)
+        fixture.lobbyService.leaveLobby(playerId)
 
+        verify(fixture.redissonClient).getLock("LobbyPlayerLock:$playerId")
         verify(fixture.redissonClient).getLock("LobbyLock:123")
         verify(fixture.lobbyRepository).deleteById(123)
+        verify(fixture.playerLobbyRepository).deleteById(playerId)
         verify(fixture.lock).unlockAsync(anyLong())
         verifyNoInteractions(fixture.container, fixture.redisTemplate)
+    }
+
+    /**
+     * 验证缺少玩家索引但旧大厅成员列表仍包含玩家时，退出前会补齐索引并继续清理成员关系。
+     */
+    @Test
+    fun leaveLobbyBackfillsLegacyMembershipBeforeRemovingPlayer() = runTest {
+        val fixture = createFixture(true)
+        val playerId = 456L
+        val lobby = Lobby(123, arrayListOf(playerId))
+        lobby.host = playerId
+        `when`(fixture.playerLobbyRepository.findById(playerId))
+            .thenReturn(Optional.empty(), Optional.of(PlayerLobby(playerId, 123)))
+        `when`(fixture.lobbyRepository.findAll()).thenReturn(listOf(lobby))
+        `when`(fixture.lobbyRepository.findById(123)).thenReturn(Optional.of(lobby))
+
+        fixture.lobbyService.leaveLobby(playerId)
+
+        verify(fixture.playerLobbyRepository).save(argThat { playerLobby ->
+            playerLobby.playerId == playerId && playerLobby.lobbyId == 123
+        })
+        verify(fixture.lobbyRepository).deleteById(123)
+        verify(fixture.playerLobbyRepository).deleteById(playerId)
+        verify(fixture.lock).unlockAsync(anyLong())
+        verifyNoInteractions(fixture.container, fixture.redisTemplate)
+    }
+
+    /**
+     * 验证离开大厅时通过当前大厅索引定位大厅，并在非空大厅中移除玩家和清理索引。
+     */
+    @Test
+    fun leaveLobbyUsesMembershipAndDeletesMembership() = runTest {
+        val fixture = createFixture(true)
+        val playerId = 456L
+        val lobby = Lobby(123, arrayListOf(111L, playerId))
+        lobby.host = 111L
+        `when`(fixture.playerLobbyRepository.findById(playerId))
+            .thenReturn(Optional.of(PlayerLobby(playerId, 123)))
+        `when`(fixture.lobbyRepository.findById(123)).thenReturn(Optional.of(lobby))
+        `when`(fixture.lobbyRepository.save(any(Lobby::class.java))).thenAnswer { it.getArgument(0) }
+
+        fixture.lobbyService.leaveLobby(playerId)
+
+        assertThat(lobby.players!!).containsExactly(111L)
+        verify(fixture.lobbyRepository).save(lobby)
+        verify(fixture.playerLobbyRepository).deleteById(playerId)
+        verify(fixture.redisTemplate, timeout(5_000)).convertAndSend(eq("123"), argThat { message ->
+            message is LobbyMessage &&
+                message.type == LobbyMessageType.LEAVE &&
+                message.data == playerId
+        })
+        verify(fixture.lock).unlockAsync(anyLong())
+        verifyNoInteractions(fixture.container)
     }
 
     /**
@@ -273,6 +433,86 @@ class LobbyServiceTest {
     }
 
     /**
+     * 验证发送文本消息时通过当前大厅索引定位广播频道。
+     */
+    @Test
+    fun sendTextMessageUsesMembershipLobby() = runTest {
+        val fixture = createFixture(true)
+        val playerId = 456L
+        val lobby = Lobby(123, arrayListOf(111L, playerId))
+        lobby.host = 111L
+        `when`(fixture.playerLobbyRepository.findById(playerId))
+            .thenReturn(Optional.of(PlayerLobby(playerId, 123)))
+        `when`(fixture.lobbyRepository.findById(123)).thenReturn(Optional.of(lobby))
+
+        fixture.lobbyService.sendTextMessage(playerId, "hello")
+
+        verify(fixture.redisTemplate, timeout(5_000)).convertAndSend(eq("123"), argThat { message ->
+            message is LobbyMessage &&
+                message.type == LobbyMessageType.TEXTING
+        })
+        verifyNoInteractions(fixture.redissonClient, fixture.lock, fixture.container)
+    }
+
+    /**
+     * 验证缺少玩家索引但旧大厅成员列表仍包含玩家时，发消息会补齐索引并路由到原大厅。
+     */
+    @Test
+    fun sendTextMessageBackfillsLegacyMembershipBeforeRouting() = runTest {
+        val fixture = createFixture(true)
+        val playerId = 456L
+        val lobby = Lobby(123, arrayListOf(111L, playerId))
+        lobby.host = 111L
+        `when`(fixture.lobbyRepository.findAll()).thenReturn(listOf(lobby))
+        `when`(fixture.lobbyRepository.findById(123)).thenReturn(Optional.of(lobby))
+
+        fixture.lobbyService.sendTextMessage(playerId, "hello")
+
+        verify(fixture.playerLobbyRepository).save(argThat { playerLobby ->
+            playerLobby.playerId == playerId && playerLobby.lobbyId == 123
+        })
+        verify(fixture.redisTemplate, timeout(5_000)).convertAndSend(eq("123"), argThat { message ->
+            message is LobbyMessage &&
+                message.type == LobbyMessageType.TEXTING
+        })
+        verifyNoInteractions(fixture.redissonClient, fixture.lock, fixture.container)
+    }
+
+    /**
+     * 验证发送消息时只读取快照，玩家不在大厅成员列表内则不广播也不清理索引。
+     */
+    @Test
+    fun sendTextMessageDoesNotLockOrCleanMembershipWhenPlayerIsNotInLobby() = runTest {
+        val fixture = createFixture(true)
+        val playerId = 456L
+        val lobby = Lobby(123, arrayListOf(111L))
+        lobby.host = 111L
+        `when`(fixture.playerLobbyRepository.findById(playerId))
+            .thenReturn(Optional.of(PlayerLobby(playerId, 123)))
+        `when`(fixture.lobbyRepository.findById(123)).thenReturn(Optional.of(lobby))
+
+        fixture.lobbyService.sendTextMessage(playerId, "hello")
+
+        verify(fixture.playerLobbyRepository, never()).deleteById(playerId)
+        verifyNoInteractions(fixture.redisTemplate, fixture.redissonClient, fixture.lock, fixture.container)
+    }
+
+    /**
+     * 验证没有当前大厅索引时发送消息会按大厅不存在处理。
+     */
+    @Test
+    fun sendTextMessageFailsWithoutMembership() = runTest {
+        val fixture = createFixture(true)
+
+        assertFailsWith<LobbyNotExist> {
+            fixture.lobbyService.sendTextMessage(456L, "hello")
+        }
+
+        verify(fixture.lobbyRepository).findAll()
+        verifyNoInteractions(fixture.redisTemplate, fixture.redissonClient, fixture.lock, fixture.container)
+    }
+
+    /**
      * 创建大厅服务测试夹具并按顺序配置锁获取结果。
      *
      * @param lockResults 每次获取锁时返回的结果
@@ -280,16 +520,21 @@ class LobbyServiceTest {
      */
     private fun createFixture(vararg lockResults: Boolean): Fixture {
         val lobbyRepository = Mockito.mock(LobbyRepository::class.java)
+        val playerLobbyRepository = Mockito.mock(PlayerLobbyRepository::class.java)
         @Suppress("UNCHECKED_CAST")
         val redisTemplate = Mockito.mock(RedisTemplate::class.java) as RedisTemplate<String, Any>
         val redissonClient = Mockito.mock(RedissonClient::class.java)
         val lock = Mockito.mock(RLock::class.java)
         val container = Mockito.mock(RedisMessageListenerContainer::class.java)
         `when`(redissonClient.getLock(anyString())).thenReturn(lock)
+        `when`(redissonClient.getMultiLock(any(RLock::class.java), any(RLock::class.java))).thenReturn(lock)
+        `when`(playerLobbyRepository.findById(any(Number::class.java))).thenReturn(Optional.empty())
+        `when`(lobbyRepository.findAll()).thenReturn(emptyList())
         stubLock(lock, *lockResults)
         return Fixture(
-            LobbyService(lobbyRepository, redisTemplate, redissonClient, container),
+            LobbyService(lobbyRepository, playerLobbyRepository, redisTemplate, redissonClient, container),
             lobbyRepository,
+            playerLobbyRepository,
             redisTemplate,
             redissonClient,
             lock,
@@ -338,6 +583,7 @@ class LobbyServiceTest {
     private data class Fixture(
         val lobbyService: LobbyService,
         val lobbyRepository: LobbyRepository,
+        val playerLobbyRepository: PlayerLobbyRepository,
         val redisTemplate: RedisTemplate<String, Any>,
         val redissonClient: RedissonClient,
         val lock: RLock,
