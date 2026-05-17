@@ -157,8 +157,10 @@ class LobbySocketHandler : AbstractWebSocketHandler,
                 safeSession.attributes[ATTR_LOBBY_PLAYER] = player
                 if (!safeSession.isOpen) {
                     // 订阅完成前连接可能已断开；这里补偿清理，避免 Redis 监听器泄漏。
-                    safeSession.attributes.remove(ATTR_LOBBY_PLAYER)
-                    lobbyService.unsubscribeLobby(player)
+                    val removedPlayer = safeSession.attributes.remove(ATTR_LOBBY_PLAYER) as? LobbyPlayer
+                    if (removedPlayer != null) {
+                        lobbyService.unsubscribeLobby(removedPlayer)
+                    }
                     return@launch
                 }
             } catch (_: LobbyNotExist) {
