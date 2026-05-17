@@ -7,11 +7,15 @@ import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import me.ywj.cloudpvp.core.constant.header.Attributes
+import me.ywj.cloudpvp.core.model.base.ErrorType
 import me.ywj.cloudpvp.core.type.SteamID64
 import me.ywj.cloudpvp.lobby.entity.LobbyPlayer
+import me.ywj.cloudpvp.lobby.exceptions.LobbyBusyException
+import me.ywj.cloudpvp.lobby.exceptions.LobbyNotExist
 import me.ywj.cloudpvp.lobby.service.LobbyService
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import org.mockito.ArgumentCaptor
 import org.mockito.ArgumentMatchers.eq
 import org.mockito.Mockito
 import org.mockito.Mockito.never
@@ -19,6 +23,7 @@ import org.mockito.Mockito.verify
 import org.mockito.Mockito.verifyNoInteractions
 import org.mockito.Mockito.`when`
 import org.springframework.web.socket.CloseStatus
+import org.springframework.web.socket.TextMessage
 import org.springframework.web.socket.WebSocketSession
 import java.net.URI
 import java.util.concurrent.atomic.AtomicBoolean
@@ -116,6 +121,49 @@ class LobbySocketHandlerTest {
         handler.afterConnectionEstablished(session)
         advanceUntilIdle()
 
+        assertSentError(session, ErrorType.PARAM_INVALID)
+        verify(session).close()
+        verify(lobbyService, never()).unsubscribeLobby(anyLobbyPlayer())
+        assertThat(session.attributes.values).noneMatch { it is LobbyPlayer }
+    }
+
+    /**
+     * 验证订阅不存在的大厅时保留大厅不存在错误类型，避免客户端误判为参数错误。
+     */
+    @Test
+    fun afterConnectionEstablishedPreservesLobbyNotExistErrorType() = runTest {
+        val lobbyService = Mockito.mock(LobbyService::class.java)
+        val handler = lobbySocketHandler(lobbyService)
+
+        Mockito.doAnswer { throw LobbyNotExist() }.`when`(lobbyService).subscribeLobby(anyLobbyPlayer(), eq(123))
+
+        val session = lobbySession(VALID_PLAYER_ID, "/ws/123")
+
+        handler.afterConnectionEstablished(session)
+        advanceUntilIdle()
+
+        assertSentError(session, ErrorType.LOBBY_NOT_EXIST)
+        verify(session).close()
+        verify(lobbyService, never()).unsubscribeLobby(anyLobbyPlayer())
+        assertThat(session.attributes.values).noneMatch { it is LobbyPlayer }
+    }
+
+    /**
+     * 验证订阅遇到大厅并发占用时保留繁忙错误类型，供客户端按运行时状态处理。
+     */
+    @Test
+    fun afterConnectionEstablishedPreservesLobbyBusyErrorType() = runTest {
+        val lobbyService = Mockito.mock(LobbyService::class.java)
+        val handler = lobbySocketHandler(lobbyService)
+
+        Mockito.doAnswer { throw LobbyBusyException(123) }.`when`(lobbyService).subscribeLobby(anyLobbyPlayer(), eq(123))
+
+        val session = lobbySession(VALID_PLAYER_ID, "/ws/123")
+
+        handler.afterConnectionEstablished(session)
+        advanceUntilIdle()
+
+        assertSentError(session, ErrorType.LOBBY_BUSY)
         verify(session).close()
         verify(lobbyService, never()).unsubscribeLobby(anyLobbyPlayer())
         assertThat(session.attributes.values).noneMatch { it is LobbyPlayer }
@@ -162,6 +210,7 @@ class LobbySocketHandlerTest {
 
         handler.afterConnectionEstablished(session)
 
+        assertSentError(session, ErrorType.PARAM_INVALID)
         verify(session).close()
         verifyNoInteractions(lobbyService)
     }
@@ -193,6 +242,18 @@ class LobbySocketHandlerTest {
      */
     private fun TestScope.lobbySocketHandler(lobbyService: LobbyService): LobbySocketHandler {
         return LobbySocketHandler(lobbyService, CoroutineScope(StandardTestDispatcher(testScheduler)))
+    }
+
+    /**
+     * 捕获 WebSocket 错误响应，验证协议中的错误类型没有被兜底分支覆盖。
+     *
+     * @param session 已发送错误响应的会话
+     * @param errorType 期望返回给客户端的错误类型
+     */
+    private fun assertSentError(session: WebSocketSession, errorType: ErrorType) {
+        val messageCaptor = ArgumentCaptor.forClass(TextMessage::class.java)
+        verify(session).sendMessage(messageCaptor.capture())
+        assertThat(messageCaptor.value.payload).contains("\"id\":\"$errorType\"")
     }
 
     /**
