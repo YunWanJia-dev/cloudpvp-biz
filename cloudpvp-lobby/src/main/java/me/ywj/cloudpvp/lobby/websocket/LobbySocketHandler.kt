@@ -117,8 +117,7 @@ class LobbySocketHandler : AbstractWebSocketHandler,
      * @param player 当前连接绑定的大厅玩家状态
      */
     private fun closeSubscribedSession(session: WebSocketSession, player: LobbyPlayer) {
-        session.attributes.remove(ATTR_LOBBY_PLAYER)
-        lobbyService.unsubscribeLobby(player)
+        cleanupSubscribedPlayer(session, player)
         if (!session.isOpen) {
             return
         }
@@ -127,6 +126,31 @@ class LobbySocketHandler : AbstractWebSocketHandler,
         } catch (_: Exception) {
             // 关闭失败不能影响订阅清理；连接关闭流程会在容器侧继续收敛。
         }
+    }
+
+    /**
+     * 清理已建立或半建立的大厅订阅状态。
+     *
+     * @param session 当前 WebSocket 会话
+     * @param fallbackPlayer 订阅过程已记录大厅 ID 但尚未写入 session 属性时使用的兜底玩家
+     */
+    private fun cleanupSubscribedPlayer(session: WebSocketSession, fallbackPlayer: LobbyPlayer? = null) {
+        val storedPlayer = session.attributes.remove(ATTR_LOBBY_PLAYER) as? LobbyPlayer
+        val playerToCleanup = storedPlayer ?: fallbackPlayer?.takeIf { it.lobbyId != null } ?: return
+        lobbyService.unsubscribeLobby(playerToCleanup)
+    }
+
+    /**
+     * 向客户端返回订阅阶段错误并关闭连接。
+     *
+     * @param session 当前 WebSocket 会话
+     * @param error 订阅阶段捕获到的异常
+     */
+    private fun closeWithSubscriptionError(session: WebSocketSession, error: Throwable) {
+        // 订阅失败可能是大厅运行时状态，保留具体错误类型供客户端选择正确提示和重试策略。
+        val errorType = (error as? LobbySocketError)?.errorType ?: ErrorType.PARAM_INVALID
+        runCatching { session.sendMessage(ErrorResponse(errorType, error.message ?: "")) }
+        runCatching { session.close() }
     }
 
     /**
@@ -175,26 +199,15 @@ class LobbySocketHandler : AbstractWebSocketHandler,
                 safeSession.attributes[ATTR_LOBBY_PLAYER] = player
                 if (!safeSession.isOpen) {
                     // 订阅完成前连接可能已断开；这里补偿清理，避免 Redis 监听器泄漏。
-                    val removedPlayer = safeSession.attributes.remove(ATTR_LOBBY_PLAYER) as? LobbyPlayer
-                    val playerToCleanup = removedPlayer ?: player.takeIf { it.lobbyId != null }
-                    if (playerToCleanup != null) {
-                        lobbyService.unsubscribeLobby(playerToCleanup)
-                    }
+                    cleanupSubscribedPlayer(safeSession, player)
                     return@launch
                 }
             } catch (e: Throwable) {
                 if (e is CancellationException) {
                     throw e
                 }
-                val removedPlayer = safeSession.attributes.remove(ATTR_LOBBY_PLAYER) as? LobbyPlayer
-                val playerToCleanup = removedPlayer ?: player.takeIf { it.lobbyId != null }
-                if (playerToCleanup != null) {
-                    lobbyService.unsubscribeLobby(playerToCleanup)
-                }
-                // 订阅失败可能是大厅运行时状态，保留具体错误类型供客户端选择正确提示和重试策略。
-                val errorType = (e as? LobbySocketError)?.errorType ?: ErrorType.PARAM_INVALID
-                runCatching { safeSession.sendMessage(ErrorResponse(errorType, e.message ?: "")) }
-                runCatching { safeSession.close() }
+                cleanupSubscribedPlayer(safeSession, player)
+                closeWithSubscriptionError(safeSession, e)
             }
         }
     }
@@ -206,9 +219,9 @@ class LobbySocketHandler : AbstractWebSocketHandler,
      * @param status 连接关闭状态
      */
     override fun afterConnectionClosed(session: WebSocketSession, status: CloseStatus) {
-        val player = session.attributes.remove(ATTR_LOBBY_PLAYER) as? LobbyPlayer ?: return
-        // 允许玩家短暂掉线后重连到大厅，所以不用leaveLobby了，就只用unsubscribe就行了，关于如果潜在的lobby无法被清理，会使用定时任务或者其他方式解决
-        lobbyService.unsubscribeLobby(player)
+        // 允许玩家短暂掉线后重连到大厅，因此这里只取消订阅，不调用 leaveLobby。
+        // 潜在的无效大厅由定时任务或其他清理流程处理。
+        cleanupSubscribedPlayer(session)
     }
 }
 
