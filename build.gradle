@@ -61,6 +61,7 @@ allprojects {
 
 subprojects {
     def isNativeApplicationProject = nativeApplicationProjects.contains(project.name)
+    def bootJarExecutableNameProvider = null
 
     //统一设置plugin
     apply {
@@ -77,6 +78,14 @@ subprojects {
                 plugin(itPlugin.get().pluginId)
             }
         }
+
+        // Native 可执行文件名需要和 BootJar 保持一致，避免两套命名规则偏移。
+        bootJarExecutableNameProvider = tasks.named('bootJar', org.springframework.boot.gradle.tasks.bundling.BootJar)
+                .flatMap { bootJarTask ->
+                    bootJarTask.archiveFileName.map { bootJarFileName ->
+                        bootJarFileName.endsWith('.jar') ? bootJarFileName[0..-5] : bootJarFileName
+                    }
+                }
     }
 
     if (isNativeApplicationProject) {
@@ -91,7 +100,7 @@ subprojects {
             }
             binaries {
                 main {
-                    imageName.set(project.name)
+                    imageName.set(bootJarExecutableNameProvider)
                     buildArgs.add('--no-fallback')
                     buildArgs.add('-H:+ReportExceptionStackTraces')
                     buildArgs.add("--initialize-at-run-time=${nativeRuntimeInitializedPackages.join(',')}")
@@ -119,6 +128,31 @@ subprojects {
     // 覆盖默认的jar任务，指定输出位置
     if (project.name != 'cloudpvp-core') bootJar {
         destinationDirectory = allProjectsOutputDir
+    }
+
+
+
+    if (isNativeApplicationProject) {
+        def nativeCompileTask = tasks.named('nativeCompile')
+
+        // BuildNativeImageTask 会在执行前清空 outputDirectory，所以这里改为编译后复制到根 build。
+        def copyNativeToRootBuild = tasks.register('copyNativeToRootBuild', Copy) {
+            dependsOn(nativeCompileTask)
+
+            def nativeOutputFile = nativeCompileTask.flatMap { it.outputFile }
+            from(nativeOutputFile)
+            into(allProjectsOutputDir)
+            rename { originalName ->
+                def bootJarExecutableName = bootJarExecutableNameProvider.get()
+                def extensionIndex = originalName.lastIndexOf('.')
+                def executableSuffix = extensionIndex >= 0 ? originalName.substring(extensionIndex) : ''
+                return "${bootJarExecutableName}${executableSuffix}"
+            }
+        }
+
+        nativeCompileTask.configure {
+            finalizedBy(copyNativeToRootBuild)
+        }
     }
 //
 //    // 覆盖默认的assemble任务，确保它不会构建到其他目录
