@@ -12,15 +12,6 @@ plugins {
 
 group = 'me.ywj.cloudpvp'
 
-def nativeApplicationProjects = [
-        'cloudpvp-auth',
-        'cloudpvp-gateway',
-        'cloudpvp-lobby',
-        'cloudpvp-play',
-        'cloudpvp-state',
-        'cloudpvp-user-summary',
-]
-
 def nativeAotArguments = [
         '--spring.cloud.refresh.enabled=false',
 ]
@@ -60,14 +51,14 @@ allprojects {
 }
 
 subprojects {
-    def isNativeApplicationProject = nativeApplicationProjects.contains(project.name)
-    def bootJarExecutableNameProvider = null
-
     //统一设置plugin
     apply {
         plugin("java")
         plugin(libs.plugins.kotlin.jvm.get().pluginId)
     }
+
+    //定义非目标产物
+    def excluding = ['cloudpvp-core', 'cloudpvp-beans']
 
     if (project.name != 'cloudpvp-core') {
         [ libs.plugins.kotlin.spring,
@@ -78,41 +69,12 @@ subprojects {
                 plugin(itPlugin.get().pluginId)
             }
         }
-
-        // Native 可执行文件名需要和 BootJar 保持一致，避免两套命名规则偏移。
-        bootJarExecutableNameProvider = tasks.named('bootJar', org.springframework.boot.gradle.tasks.bundling.BootJar)
-                .flatMap { bootJarTask ->
-                    bootJarTask.archiveFileName.map { bootJarFileName ->
-                        bootJarFileName.endsWith('.jar') ? bootJarFileName[0..-5] : bootJarFileName
-                    }
-                }
     }
 
-    if (isNativeApplicationProject) {
+    // 应用native插件
+    if (!excluding.contains(project.name)) {
         apply {
             plugin(libs.plugins.graalvmNative.get().pluginId)
-        }
-
-        graalvmNative {
-            metadataRepository {
-                // GraalVM 21.0.4 无法校验最新 reachability metadata 仓库 schema。
-                enabled.set(false)
-            }
-            binaries {
-                main {
-                    imageName.set(bootJarExecutableNameProvider)
-                    buildArgs.add('--no-fallback')
-                    buildArgs.add('-H:+ReportExceptionStackTraces')
-                    buildArgs.add("--initialize-at-run-time=${nativeRuntimeInitializedPackages.join(',')}")
-                    buildArgs.add("--initialize-at-build-time=${nativeBuildTimeInitializedPackages.join(',')}")
-                }
-            }
-        }
-
-        tasks.matching { it.name in ['processAot', 'processTestAot'] }.configureEach {
-            // Spring Cloud RefreshScope 无法被 Spring AOT 生成代码。
-            args(nativeAotArguments)
-            systemProperties(nativeAotSystemProperties)
         }
     }
 
@@ -126,34 +88,48 @@ subprojects {
     def allProjectsOutputDir = new File(projectDir, '../build')
 
     // 覆盖默认的jar任务，指定输出位置
-    if (project.name != 'cloudpvp-core') bootJar {
+    if (!excluding.contains(project.name)) bootJar {
         destinationDirectory = allProjectsOutputDir
     }
 
-
-
-    if (isNativeApplicationProject) {
-        def nativeCompileTask = tasks.named('nativeCompile')
-
-        // BuildNativeImageTask 会在执行前清空 outputDirectory，所以这里改为编译后复制到根 build。
-        def copyNativeToRootBuild = tasks.register('copyNativeToRootBuild', Copy) {
-            dependsOn(nativeCompileTask)
-
-            def nativeOutputFile = nativeCompileTask.flatMap { it.outputFile }
-            from(nativeOutputFile)
-            into(allProjectsOutputDir)
-            rename { originalName ->
-                def bootJarExecutableName = bootJarExecutableNameProvider.get()
-                def extensionIndex = originalName.lastIndexOf('.')
-                def executableSuffix = extensionIndex >= 0 ? originalName.substring(extensionIndex) : ''
-                return "${bootJarExecutableName}${executableSuffix}"
+    // native build的配置
+    plugins.withId(libs.plugins.graalvmNative.get().pluginId) {
+        graalvmNative {
+            metadataRepository {
+                // GraalVM 21.0.4 无法校验最新 reachability metadata 仓库 schema。
+                enabled.set(false)
+            }
+            binaries {
+                main {
+                    //重命名文件
+                    imageName = "${project.name}-${project.version}"
+                    //不知道干嘛用的
+                    buildArgs.add('--no-fallback')
+                    buildArgs.add('-H:+ReportExceptionStackTraces')
+                    buildArgs.add("--initialize-at-run-time=${nativeRuntimeInitializedPackages.join(',')}")
+                    buildArgs.add("--initialize-at-build-time=${nativeBuildTimeInitializedPackages.join(',')}")
+                }
             }
         }
 
-        nativeCompileTask.configure {
-            finalizedBy(copyNativeToRootBuild)
+        tasks.named("nativeCompile") { nativeCompile ->
+            doLast {
+                copy {
+                    // 复制到根目录build位置
+                    from(nativeCompile.outputs.files)
+                    into(allProjectsOutputDir)
+                }
+            }
+        }
+
+        //不知道干嘛用的
+        tasks.matching { it.name in ['processAot', 'processTestAot'] }.configureEach {
+            // Spring Cloud RefreshScope 无法被 Spring AOT 生成代码。
+            args(nativeAotArguments)
+            systemProperties(nativeAotSystemProperties)
         }
     }
+
 //
 //    // 覆盖默认的assemble任务，确保它不会构建到其他目录
 //    assemble {
@@ -177,13 +153,6 @@ subprojects {
 //        }
 //    }
 }
-
-tasks.register('nativeCompileAll') {
-    group = 'build'
-    description = 'Builds GraalVM native images for all Spring Boot application modules.'
-    dependsOn nativeApplicationProjects.collect { ":${it}:nativeCompile" }
-}
-
 // 在所有项目应用后，重写根项目的 assemble 和 check 任务
 // 以确保它们不会执行子项目的任务
 //assemble {
