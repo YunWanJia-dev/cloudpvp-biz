@@ -7,9 +7,36 @@ plugins {
     alias(libs.plugins.kotlin.spring) apply false
     alias(libs.plugins.springBoot) apply false
     alias(libs.plugins.springDependecyManager) apply false
+    alias(libs.plugins.graalvmNative) apply false
 }
 
 group = 'me.ywj.cloudpvp'
+
+def nativeApplicationProjects = [
+        'cloudpvp-auth',
+        'cloudpvp-gateway',
+        'cloudpvp-lobby',
+        'cloudpvp-play',
+        'cloudpvp-state',
+        'cloudpvp-user-summary',
+]
+
+def nativeAotArguments = [
+        '--spring.cloud.refresh.enabled=false',
+]
+def nativeAotSystemProperties = [
+        'spring.cloud.refresh.enabled': 'false',
+]
+def nativeRuntimeInitializedPackages = [
+        'io.netty.handler.ssl',
+        'org.bouncycastle',
+        'kotlin.jvm.internal.Reflection',
+        'kotlin.reflect.jvm.internal.ReflectionFactoryImpl',
+]
+def nativeBuildTimeInitializedPackages = [
+        'ch.qos.logback',
+        'org.slf4j',
+]
 
 allprojects {
     repositories {
@@ -33,6 +60,8 @@ allprojects {
 }
 
 subprojects {
+    def isNativeApplicationProject = nativeApplicationProjects.contains(project.name)
+
     //统一设置plugin
     apply {
         plugin("java")
@@ -47,6 +76,34 @@ subprojects {
             apply {
                 plugin(itPlugin.get().pluginId)
             }
+        }
+    }
+
+    if (isNativeApplicationProject) {
+        apply {
+            plugin(libs.plugins.graalvmNative.get().pluginId)
+        }
+
+        graalvmNative {
+            metadataRepository {
+                // GraalVM 21.0.4 无法校验最新 reachability metadata 仓库 schema。
+                enabled.set(false)
+            }
+            binaries {
+                main {
+                    imageName.set(project.name)
+                    buildArgs.add('--no-fallback')
+                    buildArgs.add('-H:+ReportExceptionStackTraces')
+                    buildArgs.add("--initialize-at-run-time=${nativeRuntimeInitializedPackages.join(',')}")
+                    buildArgs.add("--initialize-at-build-time=${nativeBuildTimeInitializedPackages.join(',')}")
+                }
+            }
+        }
+
+        tasks.matching { it.name in ['processAot', 'processTestAot'] }.configureEach {
+            // Spring Cloud RefreshScope 无法被 Spring AOT 生成代码。
+            args(nativeAotArguments)
+            systemProperties(nativeAotSystemProperties)
         }
     }
 
@@ -85,6 +142,12 @@ subprojects {
 //            delete allProjectsOutputDir
 //        }
 //    }
+}
+
+tasks.register('nativeCompileAll') {
+    group = 'build'
+    description = 'Builds GraalVM native images for all Spring Boot application modules.'
+    dependsOn nativeApplicationProjects.collect { ":${it}:nativeCompile" }
 }
 
 // 在所有项目应用后，重写根项目的 assemble 和 check 任务

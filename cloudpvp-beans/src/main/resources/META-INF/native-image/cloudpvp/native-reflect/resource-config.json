@@ -1,0 +1,27 @@
+{
+  "resources": {
+    "includes": [
+      {
+        "pattern": ".*\\.kotlin_builtins$"
+      },
+      {
+        "pattern": "META-INF/.*\\.kotlin_module$"
+      },
+      {
+        "pattern": "META-INF/services/kotlin\\.reflect\\.jvm\\.internal\\.impl\\.builtins\\.BuiltInsLoader"
+      },
+      {
+        "pattern": "org/hibernate/validator/internal/util/logging/Log\\.i18n\\.properties"
+      },
+      {
+        "pattern": "org/hibernate/validator/internal/util/logging/Messages\\.i18n\\.properties"
+      },
+      {
+        "pattern": "jakarta/servlet/LocalStrings.*\\.properties"
+      },
+      {
+        "pattern": "jakarta/servlet/http/LocalStrings.*\\.properties"
+      }
+    ]
+  }
+}

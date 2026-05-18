@@ -1,0 +1,290 @@
+[
+  {
+    "name": "java.lang.Integer",
+    "methods": [
+      {
+        "name": "parseInt",
+        "parameterTypes": [
+          "java.lang.String"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "java.lang.Long",
+    "methods": [
+      {
+        "name": "parseLong",
+        "parameterTypes": [
+          "java.lang.String"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "java.lang.Boolean",
+    "methods": [
+      {
+        "name": "parseBoolean",
+        "parameterTypes": [
+          "java.lang.String"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "java.lang.Byte",
+    "methods": [
+      {
+        "name": "parseByte",
+        "parameterTypes": [
+          "java.lang.String"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "java.lang.Short",
+    "methods": [
+      {
+        "name": "parseShort",
+        "parameterTypes": [
+          "java.lang.String"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "java.lang.Float",
+    "methods": [
+      {
+        "name": "parseFloat",
+        "parameterTypes": [
+          "java.lang.String"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "java.lang.Double",
+    "methods": [
+      {
+        "name": "parseDouble",
+        "parameterTypes": [
+          "java.lang.String"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "com.ctrip.framework.apollo.spring.config.ConfigPropertySourceFactory",
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "com.ctrip.framework.apollo.spring.property.PlaceholderHelper",
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "com.ctrip.framework.apollo.spring.property.SpringValueRegistry",
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "com.ctrip.framework.apollo.internals.ConfigServiceLocator",
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "com.ctrip.framework.apollo.internals.DefaultConfigManager",
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "com.ctrip.framework.apollo.internals.RemoteConfigLongPollService",
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "com.ctrip.framework.apollo.monitor.internal.ApolloClientMonitorContext",
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "com.ctrip.framework.apollo.monitor.internal.DefaultConfigMonitor",
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "com.ctrip.framework.apollo.monitor.internal.exporter.impl.DefaultApolloClientMetricsExporterFactory",
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "com.ctrip.framework.apollo.spi.DefaultConfigFactory",
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "com.ctrip.framework.apollo.spi.DefaultConfigFactoryManager",
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "com.ctrip.framework.apollo.spi.DefaultConfigRegistry",
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "com.ctrip.framework.apollo.util.ConfigUtil",
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "com.ctrip.framework.apollo.util.factory.DefaultPropertiesFactory",
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "com.ctrip.framework.apollo.util.http.DefaultHttpClient",
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "com.ctrip.framework.apollo.util.yaml.YamlParser",
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "org.springframework.context.support.PropertySourcesPlaceholderConfigurer",
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "org.springframework.beans.factory.config.PropertyResourceConfigurer",
+    "methods": [
+      {
+        "name": "setOrder",
+        "parameterTypes": [
+          "int"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "kotlin.reflect.jvm.internal.ReflectionFactoryImpl",
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "org.hibernate.validator.internal.util.logging.Log_$logger",
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "org.hibernate.validator.internal.util.logging.Messages_$bundle",
+    "allDeclaredConstructors": true,
+    "allDeclaredFields": true
+  },
+  {
+    "name": "org.eclipse.jetty.util.ClassMatcher$ByClass",
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "org.eclipse.jetty.util.ClassMatcher$ByLocation",
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "org.eclipse.jetty.util.ClassMatcher$ByLocationOrModule",
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "org.eclipse.jetty.util.ClassMatcher$ByModule",
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "org.eclipse.jetty.util.ClassMatcher$ByPackage",
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "org.eclipse.jetty.util.ClassMatcher$ByPackageOrName",
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "io.netty.util.internal.shaded.org.jctools.queues.BaseMpscLinkedArrayQueueColdProducerFields",
+    "allDeclaredFields": true
+  },
+  {
+    "name": "io.netty.util.internal.shaded.org.jctools.queues.BaseMpscLinkedArrayQueueConsumerFields",
+    "allDeclaredFields": true
+  },
+  {
+    "name": "io.netty.util.internal.shaded.org.jctools.queues.BaseMpscLinkedArrayQueueProducerFields",
+    "allDeclaredFields": true
+  },
+  {
+    "name": "io.netty.util.internal.shaded.org.jctools.queues.MpscChunkedArrayQueueColdProducerFields",
+    "allDeclaredFields": true
+  },
+  {
+    "name": "io.netty.util.internal.shaded.org.jctools.queues.atomic.BaseMpscLinkedAtomicArrayQueueColdProducerFields",
+    "allDeclaredFields": true
+  },
+  {
+    "name": "io.netty.util.internal.shaded.org.jctools.queues.atomic.BaseMpscLinkedAtomicArrayQueueConsumerFields",
+    "allDeclaredFields": true
+  },
+  {
+    "name": "io.netty.util.internal.shaded.org.jctools.queues.atomic.BaseMpscLinkedAtomicArrayQueueProducerFields",
+    "allDeclaredFields": true
+  },
+  {
+    "name": "io.netty.util.internal.shaded.org.jctools.queues.atomic.MpscChunkedAtomicArrayQueueColdProducerFields",
+    "allDeclaredFields": true
+  },
+  {
+    "name": "io.netty.buffer.AbstractByteBufAllocator",
+    "methods": [
+      {
+        "name": "toLeakAwareBuffer",
+        "parameterTypes": [
+          "io.netty.buffer.ByteBuf"
+        ]
+      },
+      {
+        "name": "toLeakAwareBuffer",
+        "parameterTypes": [
+          "io.netty.buffer.CompositeByteBuf"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "io.netty.util.ReferenceCountUtil",
+    "methods": [
+      {
+        "name": "touch",
+        "parameterTypes": [
+          "java.lang.Object"
+        ]
+      },
+      {
+        "name": "touch",
+        "parameterTypes": [
+          "java.lang.Object",
+          "java.lang.Object"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "org.eclipse.jetty.ee10.servlet.security.ConstraintSecurityHandler",
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "org.eclipse.jetty.ee10.servlet.ServletHandler",
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "org.eclipse.jetty.ee10.servlet.SessionHandler",
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "org.eclipse.jetty.ee10.servlet.ErrorPageErrorHandler",
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "io.netty.channel.socket.nio.NioDatagramChannel",
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "io.netty.channel.socket.nio.NioSocketChannel",
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "io.netty.channel.socket.nio.NioServerSocketChannel",
+    "allDeclaredConstructors": true
+  }
+]
