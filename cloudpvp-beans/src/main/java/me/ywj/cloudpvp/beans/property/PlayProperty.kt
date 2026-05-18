@@ -18,11 +18,11 @@ import org.springframework.context.annotation.Configuration
  *         description: GAME_DESCRIPTION_HERE
  *         types:
  *           - key: TYPE_KEY_HERE
- *           - name: TYPE_NAME_HERE
- *           - modes:
+ *             name: TYPE_NAME_HERE
+ *             modes:
  *               - key: MODE_KEY_HERE
- *               - name: MODE_NAME_HERE
- *               - description: MODE_DESCRIPTION_HERE
+ *                 name: MODE_NAME_HERE
+ *                 description: MODE_DESCRIPTION_HERE
  *  ```
  */
 @Configuration
