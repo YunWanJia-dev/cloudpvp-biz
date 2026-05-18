@@ -105,6 +105,8 @@ subprojects {
                     imageName = "${project.name}-${project.version}"
                     //GC
                     buildArgs.add('--gc=G1')
+                    // Enable more CPU features with '-march=native' for improved performance.
+                    buildArgs.add('-march=native')
                     //不知道干嘛用的
                     buildArgs.add('--no-fallback')
                     buildArgs.add('-H:+ReportExceptionStackTraces')
