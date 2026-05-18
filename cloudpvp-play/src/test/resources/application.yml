@@ -1,0 +1,28 @@
+# Keep this test context independent from Apollo and its local cache.
+spring:
+  application:
+    name: play
+
+apollo:
+  bootstrap:
+    enabled: false
+    eagerLoad:
+      enabled: false
+
+cloudpvp:
+  play:
+    games:
+      - key: CS2
+        name: Counter-Strike 2
+        description: Test CS2 game configuration
+        types:
+          - key: TEST-CS2
+            name: Test CS2
+            modes:
+              - key: TEST-CS2
+                name: Test CS2
+                description: Test CS2 mode configuration
+      - key: CSGO
+        name: "Counter-Strike: Global Offensive"
+        description: Test CSGO game configuration
+        types: []

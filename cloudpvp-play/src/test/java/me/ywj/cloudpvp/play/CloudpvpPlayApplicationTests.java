@@ -8,6 +8,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest(properties = {
+        "apollo.bootstrap.enabled=false",
+        "apollo.bootstrap.eagerLoad.enabled=false",
         "eureka.client.enabled=false",
         "spring.cloud.discovery.enabled=false"
 })
