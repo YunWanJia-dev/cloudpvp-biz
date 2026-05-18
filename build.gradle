@@ -103,6 +103,8 @@ subprojects {
                 main {
                     //重命名文件
                     imageName = "${project.name}-${project.version}"
+                    //GC
+                    buildArgs.add('--gc=G1')
                     //不知道干嘛用的
                     buildArgs.add('--no-fallback')
                     buildArgs.add('-H:+ReportExceptionStackTraces')
