@@ -83,6 +83,54 @@ class LobbyController @Autowired constructor(
     }
 
     /**
+     * 开始匹配。只有房主可操作。
+     *
+     * @param token 请求头中的授权令牌
+     * @param lobbyId 目标大厅 ID
+     */
+    @PostMapping("/{lobbyId}/match/start")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    suspend fun startMatching(
+        @RequestHeader(HttpHeaders.AUTHORIZATION) token: String,
+        @PathVariable lobbyId: Int,
+    ) {
+        val playerId = tokenAuthUtils.getIDFromToken(token)
+        lobbyService.startMatching(lobbyId, playerId)
+    }
+
+    /**
+     * 停止匹配。只有房主可操作。
+     *
+     * @param token 请求头中的授权令牌
+     * @param lobbyId 目标大厅 ID
+     */
+    @PostMapping("/{lobbyId}/match/stop")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    suspend fun stopMatching(
+        @RequestHeader(HttpHeaders.AUTHORIZATION) token: String,
+        @PathVariable lobbyId: Int,
+    ) {
+        val playerId = tokenAuthUtils.getIDFromToken(token)
+        lobbyService.stopMatching(lobbyId, playerId)
+    }
+
+    /**
+     * 确认比赛。所有玩家需逐个确认，全部确认后进入游戏。
+     *
+     * @param token 请求头中的授权令牌
+     * @param lobbyId 目标大厅 ID
+     */
+    @PostMapping("/{lobbyId}/match/confirm")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    suspend fun confirmMatch(
+        @RequestHeader(HttpHeaders.AUTHORIZATION) token: String,
+        @PathVariable lobbyId: Int,
+    ) {
+        val playerId = tokenAuthUtils.getIDFromToken(token)
+        lobbyService.confirmMatch(lobbyId, playerId)
+    }
+
+    /**
      * 通过 HTTP 向当前玩家所在大厅发送文本消息。
      *
      * @param token 请求头中的授权令牌

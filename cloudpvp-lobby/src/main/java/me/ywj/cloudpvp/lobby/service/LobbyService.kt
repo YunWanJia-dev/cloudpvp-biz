@@ -5,6 +5,7 @@ import kotlinx.coroutines.withContext
 import me.ywj.cloudpvp.core.model.lobby.LobbyMessage
 import me.ywj.cloudpvp.core.model.lobby.LobbyMessageDataTexting
 import me.ywj.cloudpvp.core.model.lobby.LobbyMessageType
+import me.ywj.cloudpvp.core.model.lobby.LobbyStatus
 import me.ywj.cloudpvp.core.type.LobbyId
 import me.ywj.cloudpvp.core.type.SteamID64
 import me.ywj.cloudpvp.core.utils.LobbyUtils
@@ -125,6 +126,10 @@ class LobbyService @Autowired constructor(
 
             // 重复加入同一个大厅保持幂等，不重复广播 JOIN。
             val lobby = lobbyOption.get()
+            // 匹配中或已匹配或游戏中的大厅拒绝新玩家加入。
+            if (lobby.status != LobbyStatus.WAITING) {
+                throw LobbyBusyException("Lobby ${lobby.id} is in status ${lobby.status}, cannot join")
+            }
             val players = lobby.players!!
             val alreadyInLobby = players.contains(playerId)
             if (alreadyInLobby) {
@@ -249,6 +254,98 @@ class LobbyService @Autowired constructor(
         val targetLobbyId = player.lobbyId ?: return
         container.removeMessageListener(player.msgListener, PatternTopic(targetLobbyId.toString()))
         player.lobbyId = null
+    }
+
+    /**
+     * 开始匹配。只有房主可触发，将大厅状态设为 MATCHING 并通知所有玩家。
+     * 匹配队列的加入操作留待后续通过 MQ 实现。
+     *
+     * @param lobbyId 目标大厅 ID
+     * @param playerId 发起请求的玩家 ID
+     * @throws LobbyNotExist 当目标大厅不存在时抛出
+     * @throws LobbyBusyException 当玩家不是房主或大厅状态不正确时抛出
+     */
+    suspend fun startMatching(lobbyId: LobbyId, playerId: SteamID64) {
+        withLobbyLock(lobbyId) {
+            val lobbyOption = lobbyRepository.findById(lobbyId)
+            if (!lobbyOption.isPresent) {
+                throw LobbyNotExist()
+            }
+
+            val lobby = lobbyOption.get()
+            if (lobby.host != playerId) {
+                throw LobbyBusyException("Player $playerId is not the host of lobby $lobbyId")
+            }
+            if (lobby.status != LobbyStatus.WAITING) {
+                throw LobbyBusyException("Lobby $lobbyId is in status ${lobby.status}, cannot start matching")
+            }
+
+            lobby.status = LobbyStatus.MATCHING
+            lobbyRepository.save(lobby)
+            lobby.sendMsg(LobbyMessage(LobbyMessageType.MATCH_START))
+            // TODO: 将玩家加入匹配队列，通过 MQ 发送匹配请求
+        }
+    }
+
+    /**
+     * 停止匹配。只有房主可触发，将大厅状态恢复为 WAITING 并通知所有玩家。
+     * 匹配队列的移除操作留待后续通过 MQ 实现。
+     *
+     * @param lobbyId 目标大厅 ID
+     * @param playerId 发起请求的玩家 ID
+     * @throws LobbyNotExist 当目标大厅不存在时抛出
+     * @throws LobbyBusyException 当玩家不是房主或大厅状态不正确时抛出
+     */
+    suspend fun stopMatching(lobbyId: LobbyId, playerId: SteamID64) {
+        withLobbyLock(lobbyId) {
+            val lobbyOption = lobbyRepository.findById(lobbyId)
+            if (!lobbyOption.isPresent) {
+                throw LobbyNotExist()
+            }
+
+            val lobby = lobbyOption.get()
+            if (lobby.host != playerId) {
+                throw LobbyBusyException("Player $playerId is not the host of lobby $lobbyId")
+            }
+            if (lobby.status != LobbyStatus.MATCHING) {
+                throw LobbyBusyException("Lobby $lobbyId is in status ${lobby.status}, cannot stop matching")
+            }
+
+            lobby.status = LobbyStatus.WAITING
+            lobbyRepository.save(lobby)
+            lobby.sendMsg(LobbyMessage(LobbyMessageType.MATCH_STOP))
+            // TODO: 从匹配队列移除玩家，通过 MQ 发送取消匹配请求
+        }
+    }
+
+    /**
+     * 确认比赛。将确认信息通过 MQ 发送给匹配模块，由匹配模块统计所有玩家确认后通知本服务更新状态。
+     *
+     * @param lobbyId 目标大厅 ID
+     * @param playerId 发起确认的玩家 ID
+     * @throws LobbyNotExist 当目标大厅不存在时抛出
+     * @throws LobbyBusyException 当大厅状态不正确或玩家不在大厅中时抛出
+     */
+    suspend fun confirmMatch(lobbyId: LobbyId, playerId: SteamID64) {
+        withLobbyLock(lobbyId) {
+            val lobbyOption = lobbyRepository.findById(lobbyId)
+            if (!lobbyOption.isPresent) {
+                throw LobbyNotExist()
+            }
+
+            val lobby = lobbyOption.get()
+            if (lobby.status != LobbyStatus.MATCHED) {
+                throw LobbyBusyException("Lobby $lobbyId is in status ${lobby.status}, cannot confirm match")
+            }
+            if (!lobby.players!!.contains(playerId)) {
+                throw LobbyBusyException("Player $playerId is not in lobby $lobbyId")
+            }
+
+            lobby.sendMsg(LobbyMessage(LobbyMessageType.MATCH_CONFIRM).apply {
+                data = playerId
+            })
+            // TODO: 通过 MQ 发送玩家确认消息给匹配模块，由匹配模块统计并下发确认结果
+        }
     }
 
     /**
