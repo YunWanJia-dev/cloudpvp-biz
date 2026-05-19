@@ -90,6 +90,9 @@ class LobbyMatchService @Autowired constructor(
             if (lobby.status != LobbyStatus.WAITING) {
                 throw LobbyBusyException("Lobby $lobbyId is in status ${lobby.status}, cannot start matching")
             }
+            if (lobby.gameKey == null || lobby.typeKey == null || lobby.modeKey == null) {
+                throw LobbyBusyException("Lobby $lobbyId has no game mode selected, cannot start matching")
+            }
 
             lobby.status = LobbyStatus.MATCHING
             lobbyRepository.save(lobby)
