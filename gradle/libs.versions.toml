@@ -5,6 +5,7 @@ kotlinx-coroutines = "1.10.2"
 redisson = "4.3.1"
 springCloudVersion = "2025.0.0"
 lombok = "1.18.46"
+graalvmNative = "1.1.0"
 
 [libraries]
 # https://mvnrepository.com/artifact/org.projectlombok/lombok
@@ -37,3 +38,5 @@ kotlin-spring = { id = "org.jetbrains.kotlin.plugin.spring", version.ref = "kotl
 springBoot = { id = "org.springframework.boot", version = "3.5.8" }
 # https://plugins.gradle.org/plugin/io.spring.dependency-management
 springDependecyManager = { id = 'io.spring.dependency-management', version = '1.1.7' }
+# https://mvnrepository.com/artifact/org.graalvm.buildtools.native/org.graalvm.buildtools.native.gradle.plugin
+graalvmNative = { id = "org.graalvm.buildtools.native", version.ref = "graalvmNative" }

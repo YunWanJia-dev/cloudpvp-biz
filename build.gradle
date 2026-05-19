@@ -7,9 +7,27 @@ plugins {
     alias(libs.plugins.kotlin.spring) apply false
     alias(libs.plugins.springBoot) apply false
     alias(libs.plugins.springDependecyManager) apply false
+    alias(libs.plugins.graalvmNative) apply false
 }
 
 group = 'me.ywj.cloudpvp'
+
+def nativeAotArguments = [
+        '--spring.cloud.refresh.enabled=false',
+]
+def nativeAotSystemProperties = [
+        'spring.cloud.refresh.enabled': 'false',
+]
+def nativeRuntimeInitializedPackages = [
+        'io.netty.handler.ssl',
+        'org.bouncycastle',
+        'kotlin.jvm.internal.Reflection',
+        'kotlin.reflect.jvm.internal.ReflectionFactoryImpl',
+]
+def nativeBuildTimeInitializedPackages = [
+        'ch.qos.logback',
+        'org.slf4j',
+]
 
 allprojects {
     repositories {
@@ -39,6 +57,9 @@ subprojects {
         plugin(libs.plugins.kotlin.jvm.get().pluginId)
     }
 
+    //定义非目标产物
+    def excluding = ['cloudpvp-core', 'cloudpvp-beans']
+
     if (project.name != 'cloudpvp-core') {
         [ libs.plugins.kotlin.spring,
           libs.plugins.springBoot,
@@ -47,6 +68,13 @@ subprojects {
             apply {
                 plugin(itPlugin.get().pluginId)
             }
+        }
+    }
+
+    // 应用native插件
+    if (!excluding.contains(project.name)) {
+        apply {
+            plugin(libs.plugins.graalvmNative.get().pluginId)
         }
     }
 
@@ -60,9 +88,54 @@ subprojects {
     def allProjectsOutputDir = new File(projectDir, '../build')
 
     // 覆盖默认的jar任务，指定输出位置
-    if (project.name != 'cloudpvp-core') bootJar {
+    if (!excluding.contains(project.name)) bootJar {
         destinationDirectory = allProjectsOutputDir
     }
+
+    // native build的配置
+    plugins.withId(libs.plugins.graalvmNative.get().pluginId) {
+        graalvmNative {
+            metadataRepository {
+                // GraalVM 21.0.4 无法校验最新 reachability metadata 仓库 schema。
+                enabled.set(false)
+            }
+            binaries {
+                main {
+                    //重命名文件
+                    imageName = "${project.name}-${project.version}"
+                    //GC
+                    buildArgs.add('--gc=G1')
+                    // Enable more CPU features with '-march=native' for improved performance.
+                    buildArgs.add('-march=native')
+                    // O3编译
+                    buildArgs.add('-O3')
+                    //不知道干嘛用的
+                    buildArgs.add('--no-fallback')
+                    buildArgs.add('-H:+ReportExceptionStackTraces')
+                    buildArgs.add("--initialize-at-run-time=${nativeRuntimeInitializedPackages.join(',')}")
+                    buildArgs.add("--initialize-at-build-time=${nativeBuildTimeInitializedPackages.join(',')}")
+                }
+            }
+        }
+
+        tasks.named("nativeCompile") { nativeCompile ->
+            doLast {
+                copy {
+                    // 复制到根目录build位置
+                    from(nativeCompile.outputs.files)
+                    into(allProjectsOutputDir)
+                }
+            }
+        }
+
+        //不知道干嘛用的
+        tasks.matching { it.name in ['processAot', 'processTestAot'] }.configureEach {
+            // Spring Cloud RefreshScope 无法被 Spring AOT 生成代码。
+            args(nativeAotArguments)
+            systemProperties(nativeAotSystemProperties)
+        }
+    }
+
 //
 //    // 覆盖默认的assemble任务，确保它不会构建到其他目录
 //    assemble {
@@ -86,7 +159,6 @@ subprojects {
 //        }
 //    }
 }
-
 // 在所有项目应用后，重写根项目的 assemble 和 check 任务
 // 以确保它们不会执行子项目的任务
 //assemble {
