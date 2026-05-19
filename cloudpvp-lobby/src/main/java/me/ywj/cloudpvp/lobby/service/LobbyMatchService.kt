@@ -67,6 +67,9 @@ class LobbyMatchService @Autowired constructor(
             lobby.typeKey = request.typeKey
             lobby.modeKey = request.modeKey
             lobbyRepository.save(lobby)
+            lobby.sendMsg(LobbyMessage(LobbyMessageType.LOBBY_SNAPSHOT).apply {
+                data = lobby
+            })
         }
     }
 
