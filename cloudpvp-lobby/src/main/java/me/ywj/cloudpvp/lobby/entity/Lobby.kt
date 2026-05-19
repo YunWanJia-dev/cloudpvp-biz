@@ -18,6 +18,9 @@ data class Lobby(
 ) {
     var host: SteamID64 = 0
     var status: LobbyStatus = LobbyStatus.WAITING
+    var gameKey: String? = null
+    var typeKey: String? = null
+    var modeKey: String? = null
 
     constructor(id: Int) : this(id, ArrayList<Long>())
 
