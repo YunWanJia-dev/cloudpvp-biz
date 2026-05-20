@@ -94,6 +94,14 @@ subprojects {
 
     // native build的配置
     plugins.withId(libs.plugins.graalvmNative.get().pluginId) {
+        // Pass extra native-image args via Gradle project property:
+        //   ./gradlew nativeCompile -PnativeImageArgs="--static,--libc=musl,-march=x86-64"
+        // Comma-separated for easy parsing across shells/CI.
+        def nativeImageArgsProp = providers.gradleProperty("nativeImageArgs").orNull
+        def extraNativeImageArgs = (nativeImageArgsProp == null || nativeImageArgsProp.isBlank())
+                ? []
+                : nativeImageArgsProp.split(',').collect { it.trim() }.findAll { !it.isBlank() }
+
         graalvmNative {
             metadataRepository {
                 // GraalVM 21.0.4 无法校验最新 reachability metadata 仓库 schema。
@@ -103,12 +111,7 @@ subprojects {
                 main {
                     //重命名文件
                     imageName = "${project.name}-${project.version}"
-                    //GC
-                    buildArgs.add('--gc=G1')
-                    // Enable more CPU features with '-march=native' for improved performance.
-                    buildArgs.add('-march=native')
-                    // O3编译
-                    buildArgs.add('-O3')
+                    buildArgs.addAll(extraNativeImageArgs)
                     //不知道干嘛用的
                     buildArgs.add('--no-fallback')
                     buildArgs.add('-H:+ReportExceptionStackTraces')

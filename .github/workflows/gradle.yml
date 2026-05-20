@@ -57,7 +57,7 @@ jobs:
       - name: Build Native Images
         id: build
         run: |
-          chmod a+x ./gradlew && ./gradlew nativeCompile
+          chmod a+x ./gradlew && ./gradlew nativeCompile "-PnativeImageArgs=-march=x86-64,--gc=G1,-O2"
           echo "status=success" >> $GITHUB_OUTPUT
           echo "FILE_DATE=$(date +"%Y%m%d%H%M")" >> $GITHUB_ENV
       - name: Upload build directory
