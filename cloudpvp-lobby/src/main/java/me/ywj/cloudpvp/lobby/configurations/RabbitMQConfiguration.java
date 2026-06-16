@@ -1,5 +1,6 @@
 package me.ywj.cloudpvp.lobby.configurations;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import me.ywj.cloudpvp.lobby.constant.queue.MatchmakingQueue;
 import me.ywj.cloudpvp.lobby.constant.routingkey.MatchmakingKey;
 import org.springframework.amqp.core.Binding;
@@ -8,6 +9,8 @@ import org.springframework.amqp.core.ExchangeBuilder;
 import org.springframework.amqp.core.Queue;
 import org.springframework.amqp.core.QueueBuilder;
 import org.springframework.amqp.core.TopicExchange;
+import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
+import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -31,6 +34,17 @@ public class RabbitMQConfiguration {
     @Bean
     public TopicExchange matchmakingExchange() {
         return ExchangeBuilder.topicExchange(MATCHMAKING_EXCHANGE_NAME).durable(true).build();
+    }
+
+    /**
+     * 使用项目统一的 ObjectMapper 序列化 RabbitMQ 消息。
+     *
+     * @param objectMapper 项目统一的 JSON 序列化器
+     * @return RabbitMQ JSON 消息转换器
+     */
+    @Bean
+    public MessageConverter rabbitMessageConverter(ObjectMapper objectMapper) {
+        return new Jackson2JsonMessageConverter(objectMapper);
     }
 
     /**

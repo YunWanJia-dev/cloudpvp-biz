@@ -6,15 +6,18 @@ import me.ywj.cloudpvp.beans.property.PlayProperty
 import me.ywj.cloudpvp.core.model.lobby.LobbyMessage
 import me.ywj.cloudpvp.core.model.lobby.LobbyMessageType
 import me.ywj.cloudpvp.core.model.lobby.LobbyStatus
-import me.ywj.cloudpvp.lobby.model.SelectModeDTO
 import me.ywj.cloudpvp.core.type.LobbyId
 import me.ywj.cloudpvp.core.type.SteamID64
+import me.ywj.cloudpvp.lobby.configurations.RabbitMQConfiguration
+import me.ywj.cloudpvp.lobby.constant.routingkey.MatchmakingKey
 import me.ywj.cloudpvp.lobby.entity.Lobby
 import me.ywj.cloudpvp.lobby.exceptions.LobbyBusyException
 import me.ywj.cloudpvp.lobby.exceptions.LobbyNotExist
+import me.ywj.cloudpvp.lobby.model.SelectModeDTO
 import me.ywj.cloudpvp.lobby.repository.LobbyRepository
 import me.ywj.cloudpvp.lobby.utils.RedisLockUtils.withLobbyLock
 import org.redisson.api.RedissonClient
+import org.springframework.amqp.rabbit.core.RabbitTemplate
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.data.redis.core.RedisTemplate
 import org.springframework.stereotype.Service
@@ -32,6 +35,7 @@ class LobbyMatchService @Autowired constructor(
     val redisTemplate: RedisTemplate<String, Any>,
     val redissonClient: RedissonClient,
     val playProperty: PlayProperty,
+    val rabbitTemplate: RabbitTemplate,
 ) {
     /**
      * 选择游戏模式。只有房主可在 WAITING 状态下修改。
@@ -97,7 +101,13 @@ class LobbyMatchService @Autowired constructor(
             lobby.status = LobbyStatus.MATCHING
             lobbyRepository.save(lobby)
             lobby.sendMsg(LobbyMessage(LobbyMessageType.MATCH_START))
-            // TODO: 将玩家加入匹配队列，通过 MQ 发送匹配请求
+            withContext(Dispatchers.IO) {
+                rabbitTemplate.convertAndSend(
+                    RabbitMQConfiguration.MATCHMAKING_EXCHANGE_NAME,
+                    MatchmakingKey.Submit.routingKey,
+                    lobby,
+                )
+            }
         }
     }
 
@@ -122,7 +132,13 @@ class LobbyMatchService @Autowired constructor(
             lobby.status = LobbyStatus.WAITING
             lobbyRepository.save(lobby)
             lobby.sendMsg(LobbyMessage(LobbyMessageType.MATCH_STOP))
-            // TODO: 从匹配队列移除玩家，通过 MQ 发送取消匹配请求
+            withContext(Dispatchers.IO) {
+                rabbitTemplate.convertAndSend(
+                    RabbitMQConfiguration.MATCHMAKING_EXCHANGE_NAME,
+                    MatchmakingKey.Cancel.routingKey,
+                    lobbyId,
+                )
+            }
         }
     }
 
