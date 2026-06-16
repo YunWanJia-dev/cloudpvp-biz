@@ -1,5 +1,6 @@
 package me.ywj.cloudpvp.lobby.entity
 
+import me.ywj.cloudpvp.core.model.lobby.LobbyStatus
 import me.ywj.cloudpvp.core.type.SteamID64
 import org.springframework.data.annotation.Id
 import org.springframework.data.redis.core.RedisHash
@@ -16,6 +17,10 @@ data class Lobby(
     var players: ArrayList<Long>?,
 ) {
     var host: SteamID64 = 0
+    var status: LobbyStatus = LobbyStatus.WAITING
+    var gameKey: String? = null
+    var typeKey: String? = null
+    var modeKey: String? = null
 
     constructor(id: Int) : this(id, ArrayList<Long>())
 

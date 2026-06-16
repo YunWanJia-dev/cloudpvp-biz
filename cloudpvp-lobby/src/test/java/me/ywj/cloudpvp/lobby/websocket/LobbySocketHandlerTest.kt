@@ -15,7 +15,7 @@ import me.ywj.cloudpvp.lobby.entity.Lobby
 import me.ywj.cloudpvp.lobby.entity.LobbyPlayer
 import me.ywj.cloudpvp.lobby.exceptions.LobbyBusyException
 import me.ywj.cloudpvp.lobby.exceptions.LobbyNotExist
-import me.ywj.cloudpvp.lobby.service.LobbyService
+import me.ywj.cloudpvp.lobby.service.LobbyLifecycleService
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.mockito.ArgumentCaptor
@@ -52,7 +52,7 @@ class LobbySocketHandlerTest {
      */
     @Test
     fun afterConnectionEstablishedSubscribesAndStoresPlayerForDisconnect() = runTest {
-        val lobbyService = Mockito.mock(LobbyService::class.java)
+        val lobbyService = Mockito.mock(LobbyLifecycleService::class.java)
         val handler = lobbySocketHandler(lobbyService)
         val subscribedPlayer = AtomicReference<LobbyPlayer>()
         val lobby = Lobby(123, arrayListOf(VALID_PLAYER_ID))
@@ -90,7 +90,7 @@ class LobbySocketHandlerTest {
      */
     @Test
     fun playerCloseConnectionUnsubscribesAndClosesSession() = runTest {
-        val lobbyService = Mockito.mock(LobbyService::class.java)
+        val lobbyService = Mockito.mock(LobbyLifecycleService::class.java)
         val handler = lobbySocketHandler(lobbyService)
         val subscribedPlayer = AtomicReference<LobbyPlayer>()
 
@@ -121,7 +121,7 @@ class LobbySocketHandlerTest {
      */
     @Test
     fun afterConnectionEstablishedClosesWhenSubscribeReturnsFalse() = runTest {
-        val lobbyService = Mockito.mock(LobbyService::class.java)
+        val lobbyService = Mockito.mock(LobbyLifecycleService::class.java)
         val handler = lobbySocketHandler(lobbyService)
 
         Mockito.doReturn(false).`when`(lobbyService).subscribeLobby(anyLobbyPlayer(), eq(123))
@@ -142,7 +142,7 @@ class LobbySocketHandlerTest {
      */
     @Test
     fun afterConnectionEstablishedPreservesLobbyNotExistErrorType() = runTest {
-        val lobbyService = Mockito.mock(LobbyService::class.java)
+        val lobbyService = Mockito.mock(LobbyLifecycleService::class.java)
         val handler = lobbySocketHandler(lobbyService)
 
         Mockito.doAnswer { throw LobbyNotExist() }.`when`(lobbyService).subscribeLobby(anyLobbyPlayer(), eq(123))
@@ -163,7 +163,7 @@ class LobbySocketHandlerTest {
      */
     @Test
     fun afterConnectionEstablishedPreservesLobbyBusyErrorType() = runTest {
-        val lobbyService = Mockito.mock(LobbyService::class.java)
+        val lobbyService = Mockito.mock(LobbyLifecycleService::class.java)
         val handler = lobbySocketHandler(lobbyService)
 
         Mockito.doAnswer { throw LobbyBusyException(123) }.`when`(lobbyService).subscribeLobby(anyLobbyPlayer(), eq(123))
@@ -184,7 +184,7 @@ class LobbySocketHandlerTest {
      */
     @Test
     fun afterConnectionEstablishedUnsubscribesWhenSessionClosedBeforeSubscribeCompletes() = runTest {
-        val lobbyService = Mockito.mock(LobbyService::class.java)
+        val lobbyService = Mockito.mock(LobbyLifecycleService::class.java)
         val handler = lobbySocketHandler(lobbyService)
         val sessionOpen = AtomicBoolean(true)
         val subscribedPlayer = AtomicReference<LobbyPlayer>()
@@ -214,7 +214,7 @@ class LobbySocketHandlerTest {
      */
     @Test
     fun afterConnectionEstablishedUnsubscribesWhenSnapshotSendFails() = runTest {
-        val lobbyService = Mockito.mock(LobbyService::class.java)
+        val lobbyService = Mockito.mock(LobbyLifecycleService::class.java)
         val handler = lobbySocketHandler(lobbyService)
         val subscribedPlayer = AtomicReference<LobbyPlayer>()
         val lobby = Lobby(123, arrayListOf(VALID_PLAYER_ID))
@@ -248,7 +248,7 @@ class LobbySocketHandlerTest {
      */
     @Test
     fun afterConnectionEstablishedUnsubscribesWhenSubscribeFailsAfterLobbyIdRecorded() = runTest {
-        val lobbyService = Mockito.mock(LobbyService::class.java)
+        val lobbyService = Mockito.mock(LobbyLifecycleService::class.java)
         val handler = lobbySocketHandler(lobbyService)
         val subscribedPlayer = AtomicReference<LobbyPlayer>()
 
@@ -276,7 +276,7 @@ class LobbySocketHandlerTest {
      */
     @Test
     fun invalidSessionClosesWithoutSubscribing() {
-        val lobbyService = Mockito.mock(LobbyService::class.java)
+        val lobbyService = Mockito.mock(LobbyLifecycleService::class.java)
         val handler = LobbySocketHandler(lobbyService)
         val session = lobbySession(VALID_PLAYER_ID, "/ws/not-a-lobby")
 
@@ -312,7 +312,7 @@ class LobbySocketHandlerTest {
      * @param lobbyService 大厅服务 mock
      * @return 使用测试协程作用域的处理器
      */
-    private fun TestScope.lobbySocketHandler(lobbyService: LobbyService): LobbySocketHandler {
+    private fun TestScope.lobbySocketHandler(lobbyService: LobbyLifecycleService): LobbySocketHandler {
         return LobbySocketHandler(lobbyService, CoroutineScope(StandardTestDispatcher(testScheduler)))
     }
 

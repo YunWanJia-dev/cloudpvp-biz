@@ -30,7 +30,12 @@ enum class LobbyMessageType {
     UPDATE_HOST,
     LOBBY_DESTROYED,
     LOBBY_SNAPSHOT,
-    PLAYER_LIST
+    PLAYER_LIST,
+    MATCH_START,
+    MATCH_STOP,
+    MATCH_SUCCESS,
+    MATCH_CONFIRM,
+    GAME_CONFIRMED,
 }
 
 data class LobbyMessageDataTexting(val playerID64: SteamID64, val content: String)

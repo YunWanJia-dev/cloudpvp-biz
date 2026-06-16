@@ -236,7 +236,7 @@ class LobbyServiceTest {
             lockFuture
         }
 
-        val lobbyService = LobbyService(lobbyRepository, playerLobbyRepository, redisTemplate, redissonClient, container)
+        val lobbyService = LobbyLifecycleService(lobbyRepository, playerLobbyRepository, redisTemplate, redissonClient, container)
         val createJob = launch {
             lobbyService.createLobby(456L)
         }
@@ -759,7 +759,7 @@ class LobbyServiceTest {
         `when`(playerLobbyRepository.findById(any(Number::class.java))).thenReturn(Optional.empty())
         stubLock(lock, *lockResults)
         return Fixture(
-            LobbyService(lobbyRepository, playerLobbyRepository, redisTemplate, redissonClient, container),
+            LobbyLifecycleService(lobbyRepository, playerLobbyRepository, redisTemplate, redissonClient, container),
             lobbyRepository,
             playerLobbyRepository,
             redisTemplate,
@@ -835,7 +835,7 @@ class LobbyServiceTest {
     }
 
     private data class Fixture(
-        val lobbyService: LobbyService,
+        val lobbyService: LobbyLifecycleService,
         val lobbyRepository: LobbyRepository,
         val playerLobbyRepository: PlayerLobbyRepository,
         val redisTemplate: RedisTemplate<String, Any>,

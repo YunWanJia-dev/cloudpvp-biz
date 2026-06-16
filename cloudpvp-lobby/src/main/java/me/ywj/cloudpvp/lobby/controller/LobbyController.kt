@@ -2,13 +2,16 @@ package me.ywj.cloudpvp.lobby.controller
 
 import me.ywj.cloudpvp.beans.utils.TokenAuthUtils
 import me.ywj.cloudpvp.core.model.base.CreatedResponse
+import me.ywj.cloudpvp.lobby.model.SelectModeDTO
 import me.ywj.cloudpvp.lobby.entity.Lobby
-import me.ywj.cloudpvp.lobby.service.LobbyService
+import me.ywj.cloudpvp.lobby.service.LobbyLifecycleService
+import me.ywj.cloudpvp.lobby.service.LobbyMatchService
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PatchMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
@@ -26,38 +29,30 @@ import org.springframework.web.bind.annotation.RestController
 @RestController
 @RequestMapping
 class LobbyController @Autowired constructor(
-    val lobbyService: LobbyService,
+    val lobbyLifecycleService: LobbyLifecycleService,
+    val lobbyMatchService: LobbyMatchService,
     val tokenAuthUtils: TokenAuthUtils,
 ) {
     /**
      * 创建新大厅。
-     *
-     * @return 创建成功后的大厅 ID 响应
      */
     @PostMapping
     suspend fun createLobby(@RequestHeader(HttpHeaders.AUTHORIZATION) token: String): CreatedResponse {
         val playerId = tokenAuthUtils.getIDFromToken(token)
-        return CreatedResponse(lobbyService.createLobby(playerId))
+        return CreatedResponse(lobbyLifecycleService.createLobby(playerId))
     }
 
     /**
      * 查询当前玩家所在的大厅。
-     *
-     * @param token 请求头中的授权令牌
-     * @return 当前玩家所在大厅；未加入大厅时返回 null
      */
     @GetMapping("/players/self/lobby")
     suspend fun getCurrentLobby(@RequestHeader(HttpHeaders.AUTHORIZATION) token: String): Lobby? {
         val playerId = tokenAuthUtils.getIDFromToken(token)
-        return lobbyService.getCurrentLobby(playerId)
+        return lobbyLifecycleService.getCurrentLobby(playerId)
     }
 
     /**
      * 通过 HTTP 将当前玩家加入指定大厅。
-     *
-     * @param token 请求头中的授权令牌
-     * @param lobbyId 目标大厅 ID
-     * @return 加入后的玩家 ID 列表
      */
     @PostMapping("/{lobbyId}/players/self")
     suspend fun joinLobby(
@@ -65,13 +60,11 @@ class LobbyController @Autowired constructor(
         @PathVariable lobbyId: Int,
     ): Lobby {
         val playerId = tokenAuthUtils.getIDFromToken(token)
-        return lobbyService.joinLobby(playerId, lobbyId)
+        return lobbyLifecycleService.joinLobby(playerId, lobbyId)
     }
 
     /**
      * 通过 HTTP 将当前玩家从所在大厅移除。
-     *
-     * @param token 请求头中的授权令牌
      */
     @DeleteMapping("/players/self")
     @ResponseStatus(HttpStatus.NO_CONTENT)
@@ -79,14 +72,64 @@ class LobbyController @Autowired constructor(
         @RequestHeader(HttpHeaders.AUTHORIZATION) token: String,
     ) {
         val playerId = tokenAuthUtils.getIDFromToken(token)
-        lobbyService.leaveLobby(playerId)
+        lobbyLifecycleService.leaveLobby(playerId)
+    }
+
+    /**
+     * 选择游戏模式。只有房主可在 WAITING 状态下修改。
+     */
+    @PatchMapping("/{lobbyId}/mode")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    suspend fun selectMode(
+        @RequestHeader(HttpHeaders.AUTHORIZATION) token: String,
+        @PathVariable lobbyId: Int,
+        @RequestBody body: SelectModeDTO,
+    ) {
+        val playerId = tokenAuthUtils.getIDFromToken(token)
+        lobbyMatchService.selectMode(lobbyId, playerId, body)
+    }
+
+    /**
+     * 开始匹配。只有房主可操作。
+     */
+    @PostMapping("/{lobbyId}/match/start")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    suspend fun startMatching(
+        @RequestHeader(HttpHeaders.AUTHORIZATION) token: String,
+        @PathVariable lobbyId: Int,
+    ) {
+        val playerId = tokenAuthUtils.getIDFromToken(token)
+        lobbyMatchService.startMatching(lobbyId, playerId)
+    }
+
+    /**
+     * 停止匹配。只有房主可操作。
+     */
+    @PostMapping("/{lobbyId}/match/stop")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    suspend fun stopMatching(
+        @RequestHeader(HttpHeaders.AUTHORIZATION) token: String,
+        @PathVariable lobbyId: Int,
+    ) {
+        val playerId = tokenAuthUtils.getIDFromToken(token)
+        lobbyMatchService.stopMatching(lobbyId, playerId)
+    }
+
+    /**
+     * 确认比赛。
+     */
+    @PostMapping("/{lobbyId}/match/confirm")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    suspend fun confirmMatch(
+        @RequestHeader(HttpHeaders.AUTHORIZATION) token: String,
+        @PathVariable lobbyId: Int,
+    ) {
+        val playerId = tokenAuthUtils.getIDFromToken(token)
+        lobbyMatchService.confirmMatch(lobbyId, playerId)
     }
 
     /**
      * 通过 HTTP 向当前玩家所在大厅发送文本消息。
-     *
-     * @param token 请求头中的授权令牌
-     * @param body 请求体，使用 content 字段传递文本内容
      */
     @PostMapping("/messages/text")
     @ResponseStatus(HttpStatus.NO_CONTENT)
@@ -95,6 +138,6 @@ class LobbyController @Autowired constructor(
         @RequestBody body: Map<String, String>,
     ) {
         val playerId = tokenAuthUtils.getIDFromToken(token)
-        lobbyService.sendTextMessage(playerId, body["content"].orEmpty())
+        lobbyLifecycleService.sendTextMessage(playerId, body["content"].orEmpty())
     }
 }
