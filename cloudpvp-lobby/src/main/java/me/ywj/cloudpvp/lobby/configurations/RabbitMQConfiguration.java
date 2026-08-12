@@ -48,13 +48,13 @@ public class RabbitMQConfiguration {
     }
 
     /**
-     * 声明接收匹配提交消息的队列。
+     * 声明接收匹配请求消息的队列。
      *
-     * @return 匹配提交队列
+     * @return 匹配请求队列
      */
     @Bean
-    public Queue matchmakingSubmitQueue() {
-        return QueueBuilder.durable(MatchmakingQueue.Submit.queueName).build();
+    public Queue matchmakingRequestQueue() {
+        return QueueBuilder.durable(MatchmakingQueue.Request.queueName).build();
     }
 
     /**
@@ -68,18 +68,18 @@ public class RabbitMQConfiguration {
     }
 
     /**
-     * 将匹配提交队列绑定到提交路由键。
+     * 将匹配请求队列绑定到请求路由键。
      *
-     * @param matchmakingSubmitQueue 匹配提交队列
+     * @param matchmakingRequestQueue 匹配请求队列
      * @param matchmakingExchange 匹配系统交换机
-     * @return 匹配提交队列绑定关系
+     * @return 匹配请求队列绑定关系
      */
     @Bean
-    public Binding matchmakingSubmitBinding(@Qualifier("matchmakingSubmitQueue") Queue matchmakingSubmitQueue,
-                                            TopicExchange matchmakingExchange) {
-        return BindingBuilder.bind(matchmakingSubmitQueue)
+    public Binding matchmakingRequestBinding(@Qualifier("matchmakingRequestQueue") Queue matchmakingRequestQueue,
+                                             TopicExchange matchmakingExchange) {
+        return BindingBuilder.bind(matchmakingRequestQueue)
                 .to(matchmakingExchange)
-                .with(MatchmakingKey.Submit.routingKey);
+                .with(MatchmakingKey.Request.routingKey);
     }
 
     /**

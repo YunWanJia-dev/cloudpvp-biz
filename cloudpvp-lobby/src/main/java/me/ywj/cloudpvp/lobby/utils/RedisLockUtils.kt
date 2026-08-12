@@ -1,5 +1,6 @@
 package me.ywj.cloudpvp.lobby.utils
 
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
@@ -118,9 +119,12 @@ object RedisLockUtils {
 
             return try {
                 currentCoroutineContext().ensureActive()
-                block()
+                withContext(Dispatchers.IO) {
+                    // Redisson future 可能在 Netty 线程完成，业务切到 IO 后再执行同步 Repository 调用。
+                    block()
+                }
             } finally {
-                withContext(NonCancellable) {
+                withContext(Dispatchers.IO + NonCancellable) {
                     lock.unlockAsync(lockOwnerId).awaitValue()
                 }
             }

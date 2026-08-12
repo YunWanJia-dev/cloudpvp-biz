@@ -8,7 +8,7 @@ package me.ywj.cloudpvp.lobby.constant.routingkey;
  * @since 2026/6/16
  **/
 public enum MatchmakingKey {
-    Submit("matchmaking.submit"),
+    Request("matchmaking.request"),
     Cancel("matchmaking.cancel"),
     ;
 

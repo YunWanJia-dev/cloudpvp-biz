@@ -8,7 +8,7 @@ package me.ywj.cloudpvp.lobby.constant.queue;
  * @since 2026/6/16 13:54
  */
 public enum MatchmakingQueue {
-    Submit("matchmaking.submit.queue"),
+    Request("matchmaking.request.queue"),
     Cancel("matchmaking.cancel.queue"),
     ;
 

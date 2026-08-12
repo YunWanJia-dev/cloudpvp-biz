@@ -1,3 +1,6 @@
+plugins {
+    id "org.jetbrains.kotlin.plugin.lombok"
+}
 apply from: rootProject.file('buildSrc/shared.gradle')
 
 dependencies {
@@ -16,6 +19,7 @@ dependencies {
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.amqp:spring-rabbit-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    testImplementation 'org.jetbrains.kotlin:kotlin-test'
 }
 
 dependencyManagement {
@@ -26,4 +30,7 @@ dependencyManagement {
 
 tasks.named('test') {
     useJUnitPlatform()
+}
+repositories {
+    mavenCentral()
 }

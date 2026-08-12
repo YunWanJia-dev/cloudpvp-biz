@@ -13,10 +13,12 @@ import me.ywj.cloudpvp.lobby.constant.routingkey.MatchmakingKey
 import me.ywj.cloudpvp.lobby.entity.Lobby
 import me.ywj.cloudpvp.lobby.exceptions.LobbyBusyException
 import me.ywj.cloudpvp.lobby.exceptions.LobbyNotExist
+import me.ywj.cloudpvp.lobby.model.MatchmakingLobbyMessage
 import me.ywj.cloudpvp.lobby.model.SelectModeDTO
 import me.ywj.cloudpvp.lobby.repository.LobbyRepository
 import me.ywj.cloudpvp.lobby.utils.RedisLockUtils.withLobbyLock
 import org.redisson.api.RedissonClient
+import org.slf4j.LoggerFactory
 import org.springframework.amqp.rabbit.core.RabbitTemplate
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.data.redis.core.RedisTemplate
@@ -37,6 +39,8 @@ class LobbyMatchService @Autowired constructor(
     val playProperty: PlayProperty,
     val rabbitTemplate: RabbitTemplate,
 ) {
+    private val logger = LoggerFactory.getLogger(LobbyMatchService::class.java)
+
     /**
      * 选择游戏模式。只有房主可在 WAITING 状态下修改。
      *
@@ -101,13 +105,23 @@ class LobbyMatchService @Autowired constructor(
             lobby.status = LobbyStatus.MATCHING
             lobbyRepository.save(lobby)
             lobby.sendMsg(LobbyMessage(LobbyMessageType.MATCH_START))
+            val message = MatchmakingLobbyMessage.from(lobby)
+            logger.info(
+                "准备发送匹配请求: exchange={}, routingKey={}, lobbyId={}, gameMode={}, memberCount={}",
+                RabbitMQConfiguration.MATCHMAKING_EXCHANGE_NAME,
+                MatchmakingKey.Request.routingKey,
+                message.lobbyId,
+                message.gameMode,
+                message.members.size,
+            )
             withContext(Dispatchers.IO) {
                 rabbitTemplate.convertAndSend(
                     RabbitMQConfiguration.MATCHMAKING_EXCHANGE_NAME,
-                    MatchmakingKey.Submit.routingKey,
-                    lobby,
+                    MatchmakingKey.Request.routingKey,
+                    message,
                 )
             }
+            logger.info("匹配请求已发送: lobbyId={}", message.lobbyId)
         }
     }
 
@@ -132,13 +146,21 @@ class LobbyMatchService @Autowired constructor(
             lobby.status = LobbyStatus.WAITING
             lobbyRepository.save(lobby)
             lobby.sendMsg(LobbyMessage(LobbyMessageType.MATCH_STOP))
+            val message = MatchmakingLobbyMessage.from(lobby)
+            logger.info(
+                "准备发送取消匹配请求: exchange={}, routingKey={}, lobbyId={}",
+                RabbitMQConfiguration.MATCHMAKING_EXCHANGE_NAME,
+                MatchmakingKey.Cancel.routingKey,
+                message.lobbyId,
+            )
             withContext(Dispatchers.IO) {
                 rabbitTemplate.convertAndSend(
                     RabbitMQConfiguration.MATCHMAKING_EXCHANGE_NAME,
                     MatchmakingKey.Cancel.routingKey,
-                    lobbyId,
+                    message,
                 )
             }
+            logger.info("取消匹配请求已发送: lobbyId={}", message.lobbyId)
         }
     }
 
