@@ -1,0 +1,10 @@
+apollo:
+  app_id: "server-allocator"
+  backup_config_path: ""
+  cluster: "default"
+  is_backup_config: false
+  meta_addr: "http://127.0.0.1:8080"
+  must_start: true
+  namespace: "cloudpvp.mq"
+  secret: ""
+  sync_server_timeout: 10
