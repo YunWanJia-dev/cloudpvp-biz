@@ -68,6 +68,26 @@ public class RabbitMQConfiguration {
     }
 
     /**
+     * 声明接收大厅状态回传消息的队列。
+     *
+     * @return 大厅状态回传队列
+     */
+    @Bean
+    public Queue matchmakingLobbyQueue() {
+        return QueueBuilder.durable(MatchmakingQueue.Lobby.queueName).build();
+    }
+
+    /**
+     * 声明 Biz 独占的完整比赛生命周期队列。
+     *
+     * @return Biz 比赛生命周期队列
+     */
+    @Bean
+    public Queue matchmakingBizQueue() {
+        return QueueBuilder.durable(MatchmakingQueue.MatchBiz.queueName).build();
+    }
+
+    /**
      * 将匹配请求队列绑定到请求路由键。
      *
      * @param matchmakingRequestQueue 匹配请求队列
@@ -95,5 +115,50 @@ public class RabbitMQConfiguration {
         return BindingBuilder.bind(matchmakingCancelQueue)
                 .to(matchmakingExchange)
                 .with(MatchmakingKey.Cancel.routingKey);
+    }
+
+    /**
+     * 将大厅状态回传队列绑定到大厅路由键。
+     *
+     * @param matchmakingLobbyQueue 大厅状态回传队列
+     * @param matchmakingExchange 匹配系统交换机
+     * @return 大厅状态回传队列绑定关系
+     */
+    @Bean
+    public Binding matchmakingLobbyBinding(@Qualifier("matchmakingLobbyQueue") Queue matchmakingLobbyQueue,
+                                           TopicExchange matchmakingExchange) {
+        return BindingBuilder.bind(matchmakingLobbyQueue)
+                .to(matchmakingExchange)
+                .with(MatchmakingKey.Lobby.routingKey);
+    }
+
+    /**
+     * 将 Biz 比赛队列绑定到比赛创建路由键。
+     *
+     * @param matchmakingBizQueue Biz 比赛生命周期队列
+     * @param matchmakingExchange 匹配系统交换机
+     * @return 比赛创建消息绑定关系
+     */
+    @Bean
+    public Binding matchmakingMatchCreateBinding(@Qualifier("matchmakingBizQueue") Queue matchmakingBizQueue,
+                                                 TopicExchange matchmakingExchange) {
+        return BindingBuilder.bind(matchmakingBizQueue)
+                .to(matchmakingExchange)
+                .with(MatchmakingKey.MatchCreate.routingKey);
+    }
+
+    /**
+     * 将 Biz 比赛队列绑定到比赛更新路由键。
+     *
+     * @param matchmakingBizQueue Biz 比赛生命周期队列
+     * @param matchmakingExchange 匹配系统交换机
+     * @return 比赛更新消息绑定关系
+     */
+    @Bean
+    public Binding matchmakingMatchUpdateBinding(@Qualifier("matchmakingBizQueue") Queue matchmakingBizQueue,
+                                                 TopicExchange matchmakingExchange) {
+        return BindingBuilder.bind(matchmakingBizQueue)
+                .to(matchmakingExchange)
+                .with(MatchmakingKey.MatchUpdate.routingKey);
     }
 }

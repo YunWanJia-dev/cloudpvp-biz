@@ -103,6 +103,10 @@ class LobbyMatchService @Autowired constructor(
             }
 
             lobby.status = LobbyStatus.MATCHING
+            lobby.matchId = null
+            lobby.matchMessageId = null
+            lobby.matchMessageStatus = null
+            lobby.matchMessageUpdatedAt = null
             lobbyRepository.save(lobby)
             lobby.sendMsg(LobbyMessage(LobbyMessageType.MATCH_START))
             val message = MatchmakingLobbyMessage.from(lobby)
@@ -144,6 +148,10 @@ class LobbyMatchService @Autowired constructor(
             }
 
             lobby.status = LobbyStatus.WAITING
+            lobby.matchId = null
+            lobby.matchMessageId = null
+            lobby.matchMessageStatus = null
+            lobby.matchMessageUpdatedAt = null
             lobbyRepository.save(lobby)
             lobby.sendMsg(LobbyMessage(LobbyMessageType.MATCH_STOP))
             val message = MatchmakingLobbyMessage.from(lobby)

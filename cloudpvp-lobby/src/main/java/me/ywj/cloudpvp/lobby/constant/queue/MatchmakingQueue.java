@@ -10,6 +10,8 @@ package me.ywj.cloudpvp.lobby.constant.queue;
 public enum MatchmakingQueue {
     Request("matchmaking.request.queue"),
     Cancel("matchmaking.cancel.queue"),
+    Lobby("matchmaking.lobby.queue"),
+    MatchBiz("match.biz.queue"),
     ;
 
     public final String queueName;
