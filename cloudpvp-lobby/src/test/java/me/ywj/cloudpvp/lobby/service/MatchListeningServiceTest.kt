@@ -4,7 +4,6 @@ import me.ywj.cloudpvp.core.model.lobby.LobbyMessage
 import me.ywj.cloudpvp.core.model.lobby.LobbyMessageType
 import me.ywj.cloudpvp.core.model.lobby.LobbyStatus
 import me.ywj.cloudpvp.lobby.entity.Lobby
-import me.ywj.cloudpvp.lobby.model.messaging.LobbyUpdateMessage
 import me.ywj.cloudpvp.lobby.model.messaging.MatchMessage
 import me.ywj.cloudpvp.lobby.model.messaging.MatchmakingMatchStatus
 import me.ywj.cloudpvp.lobby.model.messaging.MatchmakingMember
@@ -31,29 +30,13 @@ import java.util.Optional
 import java.util.concurrent.TimeUnit
 
 /**
- * MatchmakingReturnServiceTest
+ * MatchListeningServiceTest
  * 校验完整 Match 生命周期对大厅状态与客户端广播的影响。
  *
  * @author sheip9
- * @since 2026/8/13 16:27
+ * @since 2026/8/14 17:49
  */
-class MatchmakingReturnServiceTest {
-    /**
-     * 验证旧的退出匹配状态回传仍会恢复大厅并广播快照。
-     */
-    @Test
-    fun waitingStatusUpdatesLobbyAndBroadcastsSnapshot() {
-        val fixture = createFixture(LobbyStatus.MATCHING)
-
-        fixture.service.consumeLobbyStatus(
-            LobbyUpdateMessage("123", LobbyStatus.WAITING, "cancelled"),
-        )
-
-        assertThat(fixture.lobby.status).isEqualTo(LobbyStatus.WAITING)
-        verify(fixture.lobbyRepository).save(fixture.lobby)
-        verifyPublished(fixture, LobbyMessageType.LOBBY_SNAPSHOT, fixture.lobby)
-    }
-
+class MatchListeningServiceTest {
     /**
      * 验证 WAITING_FOR_SERVER 关联比赛后仍保持 MATCHING 并回传完整 Match。
      */
@@ -68,24 +51,6 @@ class MatchmakingReturnServiceTest {
         assertThat(fixture.lobby.matchId).isEqualTo("match-1")
         verify(fixture.lobbyRepository).save(fixture.lobby)
         verifyPublished(fixture, LobbyMessageType.MATCH_SUCCESS, match)
-    }
-
-    /**
-     * 验证完整 Match 已关联后，迟到的 WAITING 不会清掉当前比赛。
-     */
-    @Test
-    fun staleWaitingStatusDoesNotClearAssignedMatch() {
-        val fixture = waitingForServerFixture()
-        clearInvocations(fixture.lobbyRepository, fixture.redisTemplate)
-
-        fixture.service.consumeLobbyStatus(
-            LobbyUpdateMessage("123", LobbyStatus.WAITING, "stale"),
-        )
-
-        assertThat(fixture.lobby.status).isEqualTo(LobbyStatus.MATCHING)
-        assertThat(fixture.lobby.matchId).isEqualTo("match-1")
-        verify(fixture.lobbyRepository, never()).save(any(Lobby::class.java))
-        verify(fixture.redisTemplate, never()).convertAndSend(any(String::class.java), any())
     }
 
     /**
@@ -237,7 +202,7 @@ class MatchmakingReturnServiceTest {
         `when`(lock.unlockAsync(anyLong())).thenReturn(unlockFuture)
 
         return Fixture(
-            service = MatchmakingReturnService(lobbyRepository, redisTemplate, redissonClient),
+            service = MatchListeningService(lobbyRepository, redisTemplate, redissonClient),
             lobbyRepository = lobbyRepository,
             redisTemplate = redisTemplate,
             lobby = lobby,
@@ -262,7 +227,7 @@ class MatchmakingReturnServiceTest {
     }
 
     private data class Fixture(
-        val service: MatchmakingReturnService,
+        val service: MatchListeningService,
         val lobbyRepository: LobbyRepository,
         val redisTemplate: RedisTemplate<String, Any>,
         val lobby: Lobby,

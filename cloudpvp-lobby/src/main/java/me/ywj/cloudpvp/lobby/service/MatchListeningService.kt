@@ -7,7 +7,6 @@ import me.ywj.cloudpvp.core.model.lobby.LobbyMessage
 import me.ywj.cloudpvp.core.model.lobby.LobbyMessageType
 import me.ywj.cloudpvp.core.model.lobby.LobbyStatus
 import me.ywj.cloudpvp.lobby.entity.Lobby
-import me.ywj.cloudpvp.lobby.model.messaging.LobbyUpdateMessage
 import me.ywj.cloudpvp.lobby.model.messaging.MatchMessage
 import me.ywj.cloudpvp.lobby.model.messaging.MatchmakingMatchStatus
 import me.ywj.cloudpvp.lobby.repository.LobbyRepository
@@ -19,73 +18,19 @@ import org.springframework.data.redis.core.RedisTemplate
 import org.springframework.stereotype.Service
 
 /**
- * MatchmakingReturnService
- * 消费 Matcher 与 Allocator 回传并同步大厅的匹配生命周期。
+ * MatchListeningService
+ * 监听完整比赛生命周期更新并同步关联大厅。
  *
  * @author sheip9
- * @since 2026/8/13 16:27
+ * @since 2026/8/14 17:49
  */
 @Service
-class MatchmakingReturnService(
+class MatchListeningService(
     private val lobbyRepository: LobbyRepository,
     private val redisTemplate: RedisTemplate<String, Any>,
     private val redissonClient: RedissonClient,
 ) {
-    private val logger = LoggerFactory.getLogger(MatchmakingReturnService::class.java)
-
-    /**
-     * 消费 Matcher 的单大厅状态更新并广播最新大厅快照。
-     *
-     * @param message 大厅状态更新消息
-     */
-    @RabbitListener(queues = ["#{T(me.ywj.cloudpvp.lobby.constant.queue.MatchmakingQueue).Lobby.queueName}"])
-    fun consumeLobbyStatus(message: LobbyUpdateMessage) = runBlocking {
-        val lobbyId = message.lobbyId.toIntOrNull()
-        if (lobbyId == null) {
-            logger.error("忽略 Matcher 的无效大厅状态消息: lobbyId={}, status={}", message.lobbyId, message.status)
-            return@runBlocking
-        }
-        logger.info(
-            "收到 Matcher 大厅状态: lobbyId={}, status={}, reason={}",
-            lobbyId,
-            message.status,
-            message.reason,
-        )
-        withLobbyLock(redissonClient, lobbyId) {
-            val lobby = findLobby(lobbyId)
-            if (lobby == null) {
-                logger.warn("忽略不存在大厅的 Matcher 状态: lobbyId={}, status={}", lobbyId, message.status)
-                return@withLobbyLock
-            }
-            val targetStatus = message.status
-            if (!canApplyLobbyStatus(lobby, targetStatus)) {
-                logger.warn(
-                    "忽略过期的 Matcher 大厅状态: lobbyId={}, currentStatus={}, targetStatus={}",
-                    lobbyId,
-                    lobby.status,
-                    targetStatus,
-                )
-                return@withLobbyLock
-            }
-            val stateChanged = lobby.status != targetStatus ||
-                (targetStatus == LobbyStatus.WAITING && lobby.matchId != null)
-            lobby.status = targetStatus
-            if (targetStatus == LobbyStatus.WAITING) {
-                // 单大厅状态事件没有时间戳，不能清掉完整 Match 游标，否则旧消息可能回退比赛状态。
-                lobby.matchId = null
-            }
-            withContext(Dispatchers.IO) {
-                if (stateChanged) lobbyRepository.save(lobby)
-                publish(lobby, LobbyMessageType.LOBBY_SNAPSHOT, lobby)
-            }
-            logger.info(
-                "Matcher 大厅状态已同步: lobbyId={}, status={}, stateChanged={}",
-                lobbyId,
-                lobby.status,
-                stateChanged,
-            )
-        }
-    }
+    private val logger = LoggerFactory.getLogger(MatchListeningService::class.java)
 
     /**
      * 消费完整比赛生命周期消息；match.create 与 match.update 共用同一个 Biz 队列和模型。
@@ -102,7 +47,7 @@ class MatchmakingReturnService(
         val distinctLobbyIds = rawLobbyIds.distinct()
         logger.info(
             "收到完整比赛消息: matchId={}, status={}, gameMode={}, teamCount={}, lobbyCount={}, " +
-            "memberCount={}, serverIp={}",
+                "memberCount={}, serverIp={}",
             message.matchId,
             message.status,
             message.gameMode,
@@ -270,15 +215,5 @@ class MatchmakingReturnService(
             lobby.id.toString(),
             LobbyMessage(type).apply { this.data = data },
         )
-    }
-
-    private fun canApplyLobbyStatus(lobby: Lobby, targetStatus: LobbyStatus): Boolean {
-        return when (targetStatus) {
-            // 完整 Match 消息已经关联比赛后，迟到的单大厅状态不得覆盖比赛生命周期。
-            LobbyStatus.MATCHING -> lobby.status == LobbyStatus.MATCHING && lobby.matchId == null
-            LobbyStatus.WAITING ->
-                (lobby.status == LobbyStatus.MATCHING || lobby.status == LobbyStatus.WAITING) && lobby.matchId == null
-            LobbyStatus.IN_MATCH -> false
-        }
     }
 }
