@@ -13,7 +13,7 @@ import me.ywj.cloudpvp.lobby.constant.routingkey.MatchmakingKey
 import me.ywj.cloudpvp.lobby.entity.Lobby
 import me.ywj.cloudpvp.lobby.exceptions.LobbyBusyException
 import me.ywj.cloudpvp.lobby.exceptions.LobbyNotExist
-import me.ywj.cloudpvp.lobby.model.MatchmakingLobbyMessage
+import me.ywj.cloudpvp.lobby.model.LobbyEnqueueMessage
 import me.ywj.cloudpvp.lobby.model.SelectModeDTO
 import me.ywj.cloudpvp.lobby.repository.LobbyRepository
 import me.ywj.cloudpvp.lobby.utils.RedisLockUtils.withLobbyLock
@@ -106,14 +106,14 @@ class LobbyMatchService @Autowired constructor(
             lobby.matchId = null
             lobbyRepository.save(lobby)
             lobby.sendMsg(LobbyMessage(LobbyMessageType.MATCH_START))
-            val message = MatchmakingLobbyMessage.from(lobby)
+            val message = LobbyEnqueueMessage.from(lobby)
             logger.info(
-                "准备发送匹配请求: exchange={}, routingKey={}, lobbyId={}, gameMode={}, memberCount={}",
+                "准备发送匹配请求: exchange={}, routingKey={}, lobbyId={}, gameMode={}, playerCount={}",
                 RabbitMQConfiguration.MATCHMAKING_EXCHANGE_NAME,
                 MatchmakingKey.Request.routingKey,
                 message.lobbyId,
                 message.gameMode,
-                message.members.size,
+                message.playerCount,
             )
             withContext(Dispatchers.IO) {
                 rabbitTemplate.convertAndSend(
@@ -148,7 +148,7 @@ class LobbyMatchService @Autowired constructor(
             lobby.matchId = null
             lobbyRepository.save(lobby)
             lobby.sendMsg(LobbyMessage(LobbyMessageType.MATCH_STOP))
-            val message = MatchmakingLobbyMessage.from(lobby)
+            val message = LobbyEnqueueMessage.from(lobby)
             logger.info(
                 "准备发送取消匹配请求: exchange={}, routingKey={}, lobbyId={}",
                 RabbitMQConfiguration.MATCHMAKING_EXCHANGE_NAME,

@@ -3,6 +3,7 @@ package me.ywj.cloudpvp.lobby.entity
 import me.ywj.cloudpvp.core.model.lobby.LobbyStatus
 import me.ywj.cloudpvp.core.type.SteamID64
 import org.springframework.data.annotation.Id
+import org.springframework.data.annotation.Transient
 import org.springframework.data.redis.core.RedisHash
 
 /**
@@ -22,6 +23,15 @@ data class Lobby(
     var typeKey: String? = null
     var modeKey: String? = null
     var matchId: String? = null
+
+    /**
+     * 获取当前选择的完整游戏模式标识。
+     *
+     * @return 格式为 `gameKey/typeKey/modeKey` 的标识；模式未完整选择时返回 null
+     */
+    @get:Transient
+    val gameMode: String
+        get() = "$gameKey/$typeKey/$modeKey"
 
     constructor(id: Int) : this(id, ArrayList<Long>())
 
