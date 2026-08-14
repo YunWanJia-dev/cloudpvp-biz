@@ -1,3 +1,6 @@
+plugins {
+    id "org.jetbrains.kotlin.plugin.lombok"
+}
 dependencies {
     api "com.fasterxml.jackson.module:jackson-module-kotlin:2.21.3"
     implementation 'com.auth0:java-jwt:4.5.1'
@@ -5,8 +8,12 @@ dependencies {
     annotationProcessor libs.lombok
     testImplementation 'org.junit.jupiter:junit-jupiter:5.12.2'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.12.2'
+    testImplementation 'org.jetbrains.kotlin:kotlin-test'
 }
 
 tasks.named('test') {
     useJUnitPlatform()
+}
+repositories {
+    mavenCentral()
 }
