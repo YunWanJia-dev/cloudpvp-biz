@@ -18,8 +18,6 @@ import org.slf4j.LoggerFactory
 import org.springframework.amqp.rabbit.annotation.RabbitListener
 import org.springframework.data.redis.core.RedisTemplate
 import org.springframework.stereotype.Service
-import java.time.DateTimeException
-import java.time.Instant
 
 /**
  * MatchmakingReturnService
@@ -61,7 +59,7 @@ class MatchmakingReturnService(
                 return@withLobbyLock
             }
             val targetStatus = message.status.toLobbyStatus()
-            if (!canApplyLobbyStatus(lobby.status, targetStatus)) {
+            if (!canApplyLobbyStatus(lobby, targetStatus)) {
                 logger.warn(
                     "忽略过期的 Matcher 大厅状态: lobbyId={}, currentStatus={}, targetStatus={}",
                     lobbyId,
@@ -101,12 +99,11 @@ class MatchmakingReturnService(
         concurrency = "1",
     )
     fun consumeMatch(message: MatchmakingMatchMessage) = runBlocking {
-        val updatedAt = parseUpdatedAt(message) ?: return@runBlocking
         val rawLobbyIds = message.teams.flatMap { it.lobbyIds }
         val distinctLobbyIds = rawLobbyIds.distinct()
         logger.info(
             "收到完整比赛消息: matchId={}, status={}, gameMode={}, teamCount={}, lobbyCount={}, " +
-                "memberCount={}, serverIp={}, updatedAt={}",
+            "memberCount={}, serverIp={}",
             message.matchId,
             message.status,
             message.gameMode,
@@ -114,7 +111,6 @@ class MatchmakingReturnService(
             distinctLobbyIds.size,
             message.teams.sumOf { it.members.size },
             message.server?.ip,
-            updatedAt,
         )
         if (message.matchId.isBlank() || distinctLobbyIds.isEmpty()) {
             logger.error(
@@ -156,7 +152,7 @@ class MatchmakingReturnService(
                     )
                     return@withLobbyLock
                 }
-                applyMatch(message, updatedAt, lobby)
+                applyMatch(message, lobby)
             }
         }
         logger.info(
@@ -167,62 +163,14 @@ class MatchmakingReturnService(
         )
     }
 
-    private suspend fun applyMatch(message: MatchmakingMatchMessage, updatedAt: Instant, lobby: Lobby) {
-        val existingUpdatedAt = lobby.matchMessageUpdatedAt
-        val advancesSameMatch = lobby.matchMessageId == message.matchId &&
-            lobby.matchMessageStatus == MatchmakingMatchStatus.WAITING_FOR_SERVER &&
-            message.status == MatchmakingMatchStatus.IN_PROGRESS
-        // 跨服务时钟可能轻微漂移；同一比赛的生命周期前进优先于 updated_at 的墙钟顺序。
-        if (!advancesSameMatch && existingUpdatedAt != null && updatedAt.isBefore(existingUpdatedAt)) {
-            logger.warn(
-                "忽略过期比赛消息: lobbyId={}, incomingMatchId={}, incomingStatus={}, incomingUpdatedAt={}, " +
-                    "currentMatchId={}, currentStatus={}, currentUpdatedAt={}",
-                lobby.id,
-                message.matchId,
-                message.status,
-                updatedAt,
-                lobby.matchMessageId,
-                lobby.matchMessageStatus,
-                existingUpdatedAt,
-            )
-            return
-        }
-        if (existingUpdatedAt != null && updatedAt == existingUpdatedAt &&
-            (lobby.matchMessageId != message.matchId || lobby.matchMessageStatus != message.status)
-        ) {
-            logger.error(
-                "忽略相同 updatedAt 的冲突比赛消息: lobbyId={}, incomingMatchId={}, incomingStatus={}, " +
-                    "currentMatchId={}, currentStatus={}, updatedAt={}",
-                lobby.id,
-                message.matchId,
-                message.status,
-                lobby.matchMessageId,
-                lobby.matchMessageStatus,
-                updatedAt,
-            )
-            return
-        }
-        if (!canApplyMatchStatus(lobby, message)) {
-            logger.warn(
-                "忽略比赛生命周期倒退消息: lobbyId={}, matchId={}, currentStatus={}, incomingStatus={}, " +
-                    "currentUpdatedAt={}, incomingUpdatedAt={}",
-                lobby.id,
-                message.matchId,
-                lobby.matchMessageStatus,
-                message.status,
-                existingUpdatedAt,
-                updatedAt,
-            )
-            return
-        }
-
+    private suspend fun applyMatch(message: MatchmakingMatchMessage, lobby: Lobby) {
         when (message.status) {
-            MatchmakingMatchStatus.WAITING_FOR_SERVER -> applyWaitingForServer(message, updatedAt, lobby)
-            MatchmakingMatchStatus.IN_PROGRESS -> applyInProgress(message, updatedAt, lobby)
+            MatchmakingMatchStatus.WAITING_FOR_SERVER -> applyWaitingForServer(message, lobby)
+            MatchmakingMatchStatus.IN_PROGRESS -> applyInProgress(message, lobby)
         }
     }
 
-    private suspend fun applyWaitingForServer(message: MatchmakingMatchMessage, updatedAt: Instant, lobby: Lobby) {
+    private suspend fun applyWaitingForServer(message: MatchmakingMatchMessage, lobby: Lobby) {
         if (message.server != null) {
             logger.warn(
                 "WAITING_FOR_SERVER 比赛意外携带 server，Biz 仍按等待服务器处理: matchId={}, lobbyId={}, serverIp={}",
@@ -240,7 +188,7 @@ class MatchmakingReturnService(
             )
             return
         }
-        if (lobby.status != LobbyStatus.MATCHING && lobby.status != LobbyStatus.MATCHED) {
+        if (lobby.status != LobbyStatus.MATCHING) {
             logger.warn(
                 "忽略当前大厅状态不允许的 WAITING_FOR_SERVER 消息: lobbyId={}, matchId={}, currentStatus={}",
                 lobby.id,
@@ -250,22 +198,18 @@ class MatchmakingReturnService(
             return
         }
 
-        val stateChanged = lobby.status != LobbyStatus.MATCHED ||
-            lobby.matchId != message.matchId || !sameCursor(lobby, message, updatedAt)
-        lobby.status = LobbyStatus.MATCHED
+        val stateChanged = lobby.matchId != message.matchId
         lobby.matchId = message.matchId
-        updateCursor(lobby, message, updatedAt)
         persistThenPublishIfNeeded(lobby, stateChanged, LobbyMessageType.MATCH_SUCCESS, message)
         logger.info(
-            "等待服务器的比赛已同步到大厅: matchId={}, lobbyId={}, stateChanged={}, updatedAt={}",
+            "等待服务器的比赛已同步到大厅: matchId={}, lobbyId={}, stateChanged={}",
             message.matchId,
             lobby.id,
             stateChanged,
-            updatedAt,
         )
     }
 
-    private suspend fun applyInProgress(message: MatchmakingMatchMessage, updatedAt: Instant, lobby: Lobby) {
+    private suspend fun applyInProgress(message: MatchmakingMatchMessage, lobby: Lobby) {
         val server = message.server
         if (server == null || server.ip.isBlank()) {
             logger.error(
@@ -285,7 +229,7 @@ class MatchmakingReturnService(
             )
             return
         }
-        if (lobby.status != LobbyStatus.MATCHED) {
+        if (lobby.status != LobbyStatus.MATCHING && lobby.status != LobbyStatus.IN_MATCH) {
             logger.warn(
                 "忽略当前大厅状态不允许的 IN_PROGRESS 消息: lobbyId={}, matchId={}, currentStatus={}",
                 lobby.id,
@@ -295,18 +239,15 @@ class MatchmakingReturnService(
             return
         }
 
-        val stateChanged = !sameCursor(lobby, message, updatedAt)
-        updateCursor(lobby, message, updatedAt)
-        // 服务器就绪不等价于玩家已经进入游戏；Lobby 保持 MATCHED，交由后续玩家确认流程推进。
+        val stateChanged = lobby.status != LobbyStatus.IN_MATCH
+        lobby.status = LobbyStatus.IN_MATCH
         persistThenPublishIfNeeded(lobby, stateChanged, LobbyMessageType.GAME_CONFIRMED, message)
         logger.info(
-            "比赛服务器已同步到大厅: matchId={}, lobbyId={}, serverIp={}, " +
-                "stateChanged={}, updatedAt={}",
+            "比赛服务器已同步到大厅: matchId={}, lobbyId={}, serverIp={}, stateChanged={}",
             message.matchId,
             lobby.id,
             server.ip,
             stateChanged,
-            updatedAt,
         )
     }
 
@@ -321,21 +262,6 @@ class MatchmakingReturnService(
         publish(lobby, type, message)
     }
 
-    private fun parseUpdatedAt(message: MatchmakingMatchMessage): Instant? {
-        return try {
-            Instant.parse(message.updatedAt)
-        } catch (exception: DateTimeException) {
-            logger.error(
-                "忽略 updated_at 非 RFC3339 时间的比赛消息: matchId={}, status={}, updatedAt={}",
-                message.matchId,
-                message.status,
-                message.updatedAt,
-                exception,
-            )
-            null
-        }
-    }
-
     private suspend fun findLobby(lobbyId: Int): Lobby? = withContext(Dispatchers.IO) {
         lobbyRepository.findById(lobbyId).orElse(null)
     }
@@ -347,44 +273,20 @@ class MatchmakingReturnService(
         )
     }
 
-    private fun sameCursor(lobby: Lobby, message: MatchmakingMatchMessage, updatedAt: Instant): Boolean {
-        return lobby.matchMessageId == message.matchId &&
-            lobby.matchMessageStatus == message.status &&
-            lobby.matchMessageUpdatedAt == updatedAt
-    }
-
-    /**
-     * 限制同一比赛只能向前推进；IN_PROGRESS 不能被迟到的 WAITING_FOR_SERVER 覆盖。
-     */
-    private fun canApplyMatchStatus(lobby: Lobby, message: MatchmakingMatchMessage): Boolean {
-        if (lobby.matchMessageId != message.matchId) return true
-        return when (lobby.matchMessageStatus) {
-            null -> true
-            MatchmakingMatchStatus.WAITING_FOR_SERVER -> true
-            MatchmakingMatchStatus.IN_PROGRESS -> message.status == MatchmakingMatchStatus.IN_PROGRESS
-        }
-    }
-
-    private fun updateCursor(lobby: Lobby, message: MatchmakingMatchMessage, updatedAt: Instant) {
-        lobby.matchMessageId = message.matchId
-        lobby.matchMessageStatus = message.status
-        lobby.matchMessageUpdatedAt = updatedAt
-    }
-
     private fun MatchmakingLobbyStatus.toLobbyStatus(): LobbyStatus {
         return when (this) {
             MatchmakingLobbyStatus.WAITING -> LobbyStatus.WAITING
             MatchmakingLobbyStatus.MATCHING -> LobbyStatus.MATCHING
-            MatchmakingLobbyStatus.MATCHED -> LobbyStatus.MATCHED
         }
     }
 
-    private fun canApplyLobbyStatus(currentStatus: LobbyStatus, targetStatus: LobbyStatus): Boolean {
+    private fun canApplyLobbyStatus(lobby: Lobby, targetStatus: LobbyStatus): Boolean {
         return when (targetStatus) {
-            LobbyStatus.MATCHING -> currentStatus == LobbyStatus.MATCHING
-            LobbyStatus.WAITING -> currentStatus == LobbyStatus.MATCHING || currentStatus == LobbyStatus.WAITING
-            LobbyStatus.MATCHED -> currentStatus == LobbyStatus.MATCHING || currentStatus == LobbyStatus.MATCHED
-            LobbyStatus.IN_GAME -> currentStatus == LobbyStatus.MATCHED || currentStatus == LobbyStatus.IN_GAME
+            // 完整 Match 消息已经关联比赛后，迟到的单大厅状态不得覆盖比赛生命周期。
+            LobbyStatus.MATCHING -> lobby.status == LobbyStatus.MATCHING && lobby.matchId == null
+            LobbyStatus.WAITING ->
+                (lobby.status == LobbyStatus.MATCHING || lobby.status == LobbyStatus.WAITING) && lobby.matchId == null
+            LobbyStatus.IN_MATCH -> false
         }
     }
 }

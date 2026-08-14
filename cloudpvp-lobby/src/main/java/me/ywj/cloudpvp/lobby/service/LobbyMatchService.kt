@@ -104,9 +104,6 @@ class LobbyMatchService @Autowired constructor(
 
             lobby.status = LobbyStatus.MATCHING
             lobby.matchId = null
-            lobby.matchMessageId = null
-            lobby.matchMessageStatus = null
-            lobby.matchMessageUpdatedAt = null
             lobbyRepository.save(lobby)
             lobby.sendMsg(LobbyMessage(LobbyMessageType.MATCH_START))
             val message = MatchmakingLobbyMessage.from(lobby)
@@ -143,15 +140,12 @@ class LobbyMatchService @Autowired constructor(
             if (lobby.host != playerId) {
                 throw LobbyBusyException("Player $playerId is not the host of lobby $lobbyId")
             }
-            if (lobby.status != LobbyStatus.MATCHING) {
+            if (lobby.status != LobbyStatus.MATCHING || lobby.matchId != null) {
                 throw LobbyBusyException("Lobby $lobbyId is in status ${lobby.status}, cannot stop matching")
             }
 
             lobby.status = LobbyStatus.WAITING
             lobby.matchId = null
-            lobby.matchMessageId = null
-            lobby.matchMessageStatus = null
-            lobby.matchMessageUpdatedAt = null
             lobbyRepository.save(lobby)
             lobby.sendMsg(LobbyMessage(LobbyMessageType.MATCH_STOP))
             val message = MatchmakingLobbyMessage.from(lobby)
@@ -183,7 +177,7 @@ class LobbyMatchService @Autowired constructor(
     suspend fun confirmMatch(lobbyId: LobbyId, playerId: SteamID64) {
         withLobbyLock(redissonClient, lobbyId) {
             val lobby = getLobbyOrThrow(lobbyId)
-            if (lobby.status != LobbyStatus.MATCHED) {
+            if (lobby.status != LobbyStatus.MATCHING || lobby.matchId == null) {
                 throw LobbyBusyException("Lobby $lobbyId is in status ${lobby.status}, cannot confirm match")
             }
             if (!lobby.players!!.contains(playerId)) {

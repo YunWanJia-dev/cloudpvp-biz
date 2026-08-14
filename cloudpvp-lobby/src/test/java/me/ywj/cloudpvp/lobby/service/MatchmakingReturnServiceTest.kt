@@ -28,13 +28,12 @@ import org.redisson.api.RFuture
 import org.redisson.api.RLock
 import org.redisson.api.RedissonClient
 import org.springframework.data.redis.core.RedisTemplate
-import java.time.Instant
 import java.util.Optional
 import java.util.concurrent.TimeUnit
 
 /**
  * MatchmakingReturnServiceTest
- * 校验完整 Match 生命周期对大厅状态、幂等游标与客户端广播的影响。
+ * 校验完整 Match 生命周期对大厅状态与客户端广播的影响。
  *
  * @author sheip9
  * @since 2026/8/13 16:27
@@ -57,7 +56,7 @@ class MatchmakingReturnServiceTest {
     }
 
     /**
-     * 验证 WAITING_FOR_SERVER 将 MATCHING 大厅更新为 MATCHED 并回传完整 Match。
+     * 验证 WAITING_FOR_SERVER 关联比赛后仍保持 MATCHING 并回传完整 Match。
      */
     @Test
     fun waitingForServerUpdatesLobbyAndBroadcastsMatchSuccess() {
@@ -66,32 +65,46 @@ class MatchmakingReturnServiceTest {
 
         fixture.service.consumeMatch(match)
 
-        assertThat(fixture.lobby.status).isEqualTo(LobbyStatus.MATCHED)
+        assertThat(fixture.lobby.status).isEqualTo(LobbyStatus.MATCHING)
         assertThat(fixture.lobby.matchId).isEqualTo("match-1")
-        assertThat(fixture.lobby.matchMessageStatus).isEqualTo(MatchmakingMatchStatus.WAITING_FOR_SERVER)
-        assertThat(fixture.lobby.matchMessageUpdatedAt).isEqualTo(Instant.parse(match.updatedAt))
         verify(fixture.lobbyRepository).save(fixture.lobby)
         verifyPublished(fixture, LobbyMessageType.MATCH_SUCCESS, match)
     }
 
     /**
-     * 验证 IN_PROGRESS 保持 MATCHED 状态并广播服务器就绪事件。
+     * 验证完整 Match 已关联后，迟到的 WAITING 不会清掉当前比赛。
      */
     @Test
-    fun inProgressBroadcastsGameConfirmedWithoutEnteringGame() {
+    fun staleWaitingStatusDoesNotClearAssignedMatch() {
+        val fixture = waitingForServerFixture()
+        clearInvocations(fixture.lobbyRepository, fixture.redisTemplate)
+
+        fixture.service.consumeLobbyStatus(
+            MatchmakingLobbyStatusMessage("123", MatchmakingLobbyStatus.WAITING, "stale"),
+        )
+
+        assertThat(fixture.lobby.status).isEqualTo(LobbyStatus.MATCHING)
+        assertThat(fixture.lobby.matchId).isEqualTo("match-1")
+        verify(fixture.lobbyRepository, never()).save(any(Lobby::class.java))
+        verify(fixture.redisTemplate, never()).convertAndSend(any(String::class.java), any())
+    }
+
+    /**
+     * 验证 IN_PROGRESS 将大厅推进为 IN_MATCH 并广播服务器就绪事件。
+     */
+    @Test
+    fun inProgressUpdatesLobbyToInMatch() {
         val fixture = waitingForServerFixture()
         clearInvocations(fixture.lobbyRepository, fixture.redisTemplate)
         val match = matchMessage(
             status = MatchmakingMatchStatus.IN_PROGRESS,
-            updatedAt = "2026-08-13T08:00:10Z",
             server = MatchmakingServer("127.0.0.1"),
         )
 
         fixture.service.consumeMatch(match)
 
-        assertThat(fixture.lobby.status).isEqualTo(LobbyStatus.MATCHED)
+        assertThat(fixture.lobby.status).isEqualTo(LobbyStatus.IN_MATCH)
         assertThat(fixture.lobby.matchId).isEqualTo("match-1")
-        assertThat(fixture.lobby.matchMessageStatus).isEqualTo(MatchmakingMatchStatus.IN_PROGRESS)
         verify(fixture.lobbyRepository).save(fixture.lobby)
         verifyPublished(fixture, LobbyMessageType.GAME_CONFIRMED, match)
     }
@@ -104,7 +117,6 @@ class MatchmakingReturnServiceTest {
         val fixture = waitingForServerFixture()
         val match = matchMessage(
             status = MatchmakingMatchStatus.IN_PROGRESS,
-            updatedAt = "2026-08-13T08:00:10Z",
             server = MatchmakingServer("127.0.0.1"),
         )
         fixture.service.consumeMatch(match)
@@ -125,7 +137,6 @@ class MatchmakingReturnServiceTest {
         fixture.service.consumeMatch(
             matchMessage(
                 status = MatchmakingMatchStatus.IN_PROGRESS,
-                updatedAt = "2026-08-13T08:00:10Z",
                 server = MatchmakingServer("127.0.0.1"),
             ),
         )
@@ -133,59 +144,14 @@ class MatchmakingReturnServiceTest {
 
         fixture.service.consumeMatch(matchMessage(MatchmakingMatchStatus.WAITING_FOR_SERVER))
 
-        assertThat(fixture.lobby.matchMessageStatus).isEqualTo(MatchmakingMatchStatus.IN_PROGRESS)
+        assertThat(fixture.lobby.status).isEqualTo(LobbyStatus.IN_MATCH)
+        assertThat(fixture.lobby.matchId).isEqualTo("match-1")
         verify(fixture.lobbyRepository, never()).save(any(Lobby::class.java))
         verify(fixture.redisTemplate, never()).convertAndSend(any(String::class.java), any())
     }
 
     /**
-     * 验证即便时间更晚，WAITING_FOR_SERVER 也不能覆盖同一比赛的 IN_PROGRESS。
-     */
-    @Test
-    fun newerWaitingForServerDoesNotRegressInProgressMatch() {
-        val fixture = waitingForServerFixture()
-        fixture.service.consumeMatch(
-            matchMessage(
-                status = MatchmakingMatchStatus.IN_PROGRESS,
-                updatedAt = "2026-08-13T08:00:10Z",
-                server = MatchmakingServer("127.0.0.1"),
-            ),
-        )
-        clearInvocations(fixture.lobbyRepository, fixture.redisTemplate)
-
-        fixture.service.consumeMatch(
-            matchMessage(MatchmakingMatchStatus.WAITING_FOR_SERVER, updatedAt = "2026-08-13T08:00:20Z"),
-        )
-
-        assertThat(fixture.lobby.matchMessageStatus).isEqualTo(MatchmakingMatchStatus.IN_PROGRESS)
-        assertThat(fixture.lobby.matchMessageUpdatedAt).isEqualTo(Instant.parse("2026-08-13T08:00:10Z"))
-        verify(fixture.lobbyRepository, never()).save(any(Lobby::class.java))
-        verify(fixture.redisTemplate, never()).convertAndSend(any(String::class.java), any())
-    }
-
-    /**
-     * 验证 Allocator 时钟略落后时，同一比赛的 IN_PROGRESS 仍按生命周期顺序推进。
-     */
-    @Test
-    fun inProgressAdvancesEvenWhenAllocatorClockIsBehind() {
-        val fixture = waitingForServerFixture()
-        clearInvocations(fixture.lobbyRepository, fixture.redisTemplate)
-        val match = matchMessage(
-            status = MatchmakingMatchStatus.IN_PROGRESS,
-            updatedAt = "2026-08-13T07:59:59Z",
-            server = MatchmakingServer("127.0.0.1"),
-        )
-
-        fixture.service.consumeMatch(match)
-
-        assertThat(fixture.lobby.matchMessageStatus).isEqualTo(MatchmakingMatchStatus.IN_PROGRESS)
-        assertThat(fixture.lobby.matchMessageUpdatedAt).isEqualTo(Instant.parse(match.updatedAt))
-        verify(fixture.lobbyRepository).save(fixture.lobby)
-        verifyPublished(fixture, LobbyMessageType.GAME_CONFIRMED, match)
-    }
-
-    /**
-     * 验证 IN_PROGRESS 缺少服务器地址时不会推进游标或广播。
+     * 验证 IN_PROGRESS 缺少服务器地址时不会推进状态或广播。
      */
     @Test
     fun inProgressWithoutServerIsIgnored() {
@@ -193,10 +159,11 @@ class MatchmakingReturnServiceTest {
         clearInvocations(fixture.lobbyRepository, fixture.redisTemplate)
 
         fixture.service.consumeMatch(
-            matchMessage(MatchmakingMatchStatus.IN_PROGRESS, updatedAt = "2026-08-13T08:00:10Z"),
+            matchMessage(MatchmakingMatchStatus.IN_PROGRESS),
         )
 
-        assertThat(fixture.lobby.matchMessageStatus).isEqualTo(MatchmakingMatchStatus.WAITING_FOR_SERVER)
+        assertThat(fixture.lobby.status).isEqualTo(LobbyStatus.MATCHING)
+        assertThat(fixture.lobby.matchId).isEqualTo("match-1")
         verify(fixture.lobbyRepository, never()).save(any(Lobby::class.java))
         verify(fixture.redisTemplate, never()).convertAndSend(any(String::class.java), any())
     }
@@ -229,7 +196,6 @@ class MatchmakingReturnServiceTest {
 
     private fun matchMessage(
         status: MatchmakingMatchStatus,
-        updatedAt: String = "2026-08-13T08:00:00Z",
         server: MatchmakingServer? = null,
     ): MatchmakingMatchMessage {
         return MatchmakingMatchMessage(
@@ -244,7 +210,7 @@ class MatchmakingReturnServiceTest {
             ),
             server = server,
             createdAt = "2026-08-13T08:00:00Z",
-            updatedAt = updatedAt,
+            updatedAt = "2026-08-13T08:00:00Z",
         )
     }
 

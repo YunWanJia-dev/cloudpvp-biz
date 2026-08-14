@@ -26,7 +26,6 @@ data class MatchmakingLobbyStatusMessage(
 enum class MatchmakingLobbyStatus {
     WAITING,
     MATCHING,
-    MATCHED,
 }
 
 /**
