@@ -7,10 +7,9 @@ import me.ywj.cloudpvp.core.model.lobby.LobbyMessage
 import me.ywj.cloudpvp.core.model.lobby.LobbyMessageType
 import me.ywj.cloudpvp.core.model.lobby.LobbyStatus
 import me.ywj.cloudpvp.lobby.entity.Lobby
-import me.ywj.cloudpvp.lobby.model.MatchmakingLobbyStatus
-import me.ywj.cloudpvp.lobby.model.MatchmakingLobbyStatusMessage
-import me.ywj.cloudpvp.lobby.model.MatchmakingMatchMessage
-import me.ywj.cloudpvp.lobby.model.MatchmakingMatchStatus
+import me.ywj.cloudpvp.lobby.model.messaging.LobbyUpdateMessage
+import me.ywj.cloudpvp.lobby.model.messaging.MatchMessage
+import me.ywj.cloudpvp.lobby.model.messaging.MatchmakingMatchStatus
 import me.ywj.cloudpvp.lobby.repository.LobbyRepository
 import me.ywj.cloudpvp.lobby.utils.RedisLockUtils.withLobbyLock
 import org.redisson.api.RedissonClient
@@ -40,7 +39,7 @@ class MatchmakingReturnService(
      * @param message 大厅状态更新消息
      */
     @RabbitListener(queues = ["#{T(me.ywj.cloudpvp.lobby.constant.queue.MatchmakingQueue).Lobby.queueName}"])
-    fun consumeLobbyStatus(message: MatchmakingLobbyStatusMessage) = runBlocking {
+    fun consumeLobbyStatus(message: LobbyUpdateMessage) = runBlocking {
         val lobbyId = message.lobbyId.toIntOrNull()
         if (lobbyId == null) {
             logger.error("忽略 Matcher 的无效大厅状态消息: lobbyId={}, status={}", message.lobbyId, message.status)
@@ -58,7 +57,7 @@ class MatchmakingReturnService(
                 logger.warn("忽略不存在大厅的 Matcher 状态: lobbyId={}, status={}", lobbyId, message.status)
                 return@withLobbyLock
             }
-            val targetStatus = message.status.toLobbyStatus()
+            val targetStatus = message.status
             if (!canApplyLobbyStatus(lobby, targetStatus)) {
                 logger.warn(
                     "忽略过期的 Matcher 大厅状态: lobbyId={}, currentStatus={}, targetStatus={}",
@@ -98,7 +97,7 @@ class MatchmakingReturnService(
         exclusive = true,
         concurrency = "1",
     )
-    fun consumeMatch(message: MatchmakingMatchMessage) = runBlocking {
+    fun consumeMatch(message: MatchMessage) = runBlocking {
         val rawLobbyIds = message.teams.flatMap { it.lobbyIds }
         val distinctLobbyIds = rawLobbyIds.distinct()
         logger.info(
@@ -163,14 +162,14 @@ class MatchmakingReturnService(
         )
     }
 
-    private suspend fun applyMatch(message: MatchmakingMatchMessage, lobby: Lobby) {
+    private suspend fun applyMatch(message: MatchMessage, lobby: Lobby) {
         when (message.status) {
             MatchmakingMatchStatus.WAITING_FOR_SERVER -> applyWaitingForServer(message, lobby)
             MatchmakingMatchStatus.IN_PROGRESS -> applyInProgress(message, lobby)
         }
     }
 
-    private suspend fun applyWaitingForServer(message: MatchmakingMatchMessage, lobby: Lobby) {
+    private suspend fun applyWaitingForServer(message: MatchMessage, lobby: Lobby) {
         if (message.server != null) {
             logger.warn(
                 "WAITING_FOR_SERVER 比赛意外携带 server，Biz 仍按等待服务器处理: matchId={}, lobbyId={}, serverIp={}",
@@ -209,7 +208,7 @@ class MatchmakingReturnService(
         )
     }
 
-    private suspend fun applyInProgress(message: MatchmakingMatchMessage, lobby: Lobby) {
+    private suspend fun applyInProgress(message: MatchMessage, lobby: Lobby) {
         val server = message.server
         if (server == null || server.ip.isBlank()) {
             logger.error(
@@ -255,7 +254,7 @@ class MatchmakingReturnService(
         lobby: Lobby,
         stateChanged: Boolean,
         type: LobbyMessageType,
-        message: MatchmakingMatchMessage,
+        message: MatchMessage,
     ) = withContext(Dispatchers.IO) {
         if (stateChanged) lobbyRepository.save(lobby)
         // 同一状态重投不重复保存，但仍重播事件，覆盖 save 成功而 Redis 发布失败的场景。
@@ -271,13 +270,6 @@ class MatchmakingReturnService(
             lobby.id.toString(),
             LobbyMessage(type).apply { this.data = data },
         )
-    }
-
-    private fun MatchmakingLobbyStatus.toLobbyStatus(): LobbyStatus {
-        return when (this) {
-            MatchmakingLobbyStatus.WAITING -> LobbyStatus.WAITING
-            MatchmakingLobbyStatus.MATCHING -> LobbyStatus.MATCHING
-        }
     }
 
     private fun canApplyLobbyStatus(lobby: Lobby, targetStatus: LobbyStatus): Boolean {

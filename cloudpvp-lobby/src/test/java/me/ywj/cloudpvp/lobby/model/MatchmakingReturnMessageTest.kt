@@ -1,6 +1,10 @@
 package me.ywj.cloudpvp.lobby.model
 
 import me.ywj.cloudpvp.core.utils.JacksonUtils
+import me.ywj.cloudpvp.core.model.lobby.LobbyStatus
+import me.ywj.cloudpvp.lobby.model.messaging.LobbyUpdateMessage
+import me.ywj.cloudpvp.lobby.model.messaging.MatchMessage
+import me.ywj.cloudpvp.lobby.model.messaging.MatchmakingMatchStatus
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
@@ -21,11 +25,11 @@ class MatchmakingReturnMessageTest {
     fun readsLobbyStatusMessage() {
         val message = objectMapper.readValue(
             """{"lobby_id":"123","status":"WAITING","reason":"cancelled"}""",
-            MatchmakingLobbyStatusMessage::class.java,
+            LobbyUpdateMessage::class.java,
         )
 
         assertThat(message.lobbyId).isEqualTo("123")
-        assertThat(message.status).isEqualTo(MatchmakingLobbyStatus.WAITING)
+        assertThat(message.status).isEqualTo(LobbyStatus.WAITING)
         assertThat(message.reason).isEqualTo("cancelled")
     }
 
@@ -38,7 +42,7 @@ class MatchmakingReturnMessageTest {
             """
                 {
                   "match_id":"match-1",
-                  "game_mode":"matchmaker/5v5/competitive",
+                  "game_mode":"CS2/5v5/competitive",
                   "status":"WAITING_FOR_SERVER",
                   "teams":[{"lobby_ids":["123"],"members":[{"player_id":"76561198999990001"}]}],
                   "server":null,
@@ -46,7 +50,7 @@ class MatchmakingReturnMessageTest {
                   "updated_at":"2026-08-13T08:00:00Z"
                 }
             """.trimIndent(),
-            MatchmakingMatchMessage::class.java,
+            MatchMessage::class.java,
         )
 
         assertThat(message.matchId).isEqualTo("match-1")
@@ -65,7 +69,7 @@ class MatchmakingReturnMessageTest {
             """
                 {
                   "match_id":"match-1",
-                  "game_mode":"matchmaker/5v5/competitive",
+                  "game_mode":"CS2/5v5/competitive",
                   "status":"IN_PROGRESS",
                   "teams":[{"lobby_ids":["123"],"members":[{"player_id":"456"}]}],
                   "server":{"ip":"127.0.0.1"},
@@ -73,7 +77,7 @@ class MatchmakingReturnMessageTest {
                   "updated_at":"2026-08-13T08:00:10Z"
                 }
             """.trimIndent(),
-            MatchmakingMatchMessage::class.java,
+            MatchMessage::class.java,
         )
 
         assertThat(message.status).isEqualTo(MatchmakingMatchStatus.IN_PROGRESS)

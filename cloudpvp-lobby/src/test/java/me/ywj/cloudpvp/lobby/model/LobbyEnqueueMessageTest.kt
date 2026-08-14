@@ -3,6 +3,7 @@ package me.ywj.cloudpvp.lobby.model
 import me.ywj.cloudpvp.core.utils.JacksonUtils
 import me.ywj.cloudpvp.lobby.configurations.RabbitMQConfiguration
 import me.ywj.cloudpvp.lobby.entity.Lobby
+import me.ywj.cloudpvp.lobby.model.messaging.LobbyEnqueueMessage
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.amqp.core.MessageProperties

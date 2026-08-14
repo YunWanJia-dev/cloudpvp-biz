@@ -1,4 +1,4 @@
-package me.ywj.cloudpvp.lobby.model
+package me.ywj.cloudpvp.lobby.model.messaging
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import me.ywj.cloudpvp.lobby.entity.Lobby

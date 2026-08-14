@@ -4,13 +4,12 @@ import me.ywj.cloudpvp.core.model.lobby.LobbyMessage
 import me.ywj.cloudpvp.core.model.lobby.LobbyMessageType
 import me.ywj.cloudpvp.core.model.lobby.LobbyStatus
 import me.ywj.cloudpvp.lobby.entity.Lobby
-import me.ywj.cloudpvp.lobby.model.MatchmakingLobbyStatus
-import me.ywj.cloudpvp.lobby.model.MatchmakingLobbyStatusMessage
-import me.ywj.cloudpvp.lobby.model.MatchmakingMatchMessage
-import me.ywj.cloudpvp.lobby.model.MatchmakingMatchStatus
-import me.ywj.cloudpvp.lobby.model.MatchmakingMember
-import me.ywj.cloudpvp.lobby.model.MatchmakingServer
-import me.ywj.cloudpvp.lobby.model.MatchmakingTeam
+import me.ywj.cloudpvp.lobby.model.messaging.LobbyUpdateMessage
+import me.ywj.cloudpvp.lobby.model.messaging.MatchMessage
+import me.ywj.cloudpvp.lobby.model.messaging.MatchmakingMatchStatus
+import me.ywj.cloudpvp.lobby.model.messaging.MatchmakingMember
+import me.ywj.cloudpvp.lobby.model.messaging.MatchmakingServer
+import me.ywj.cloudpvp.lobby.model.messaging.MatchmakingTeam
 import me.ywj.cloudpvp.lobby.repository.LobbyRepository
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -47,7 +46,7 @@ class MatchmakingReturnServiceTest {
         val fixture = createFixture(LobbyStatus.MATCHING)
 
         fixture.service.consumeLobbyStatus(
-            MatchmakingLobbyStatusMessage("123", MatchmakingLobbyStatus.WAITING, "cancelled"),
+            LobbyUpdateMessage("123", LobbyStatus.WAITING, "cancelled"),
         )
 
         assertThat(fixture.lobby.status).isEqualTo(LobbyStatus.WAITING)
@@ -80,7 +79,7 @@ class MatchmakingReturnServiceTest {
         clearInvocations(fixture.lobbyRepository, fixture.redisTemplate)
 
         fixture.service.consumeLobbyStatus(
-            MatchmakingLobbyStatusMessage("123", MatchmakingLobbyStatus.WAITING, "stale"),
+            LobbyUpdateMessage("123", LobbyStatus.WAITING, "stale"),
         )
 
         assertThat(fixture.lobby.status).isEqualTo(LobbyStatus.MATCHING)
@@ -197,10 +196,10 @@ class MatchmakingReturnServiceTest {
     private fun matchMessage(
         status: MatchmakingMatchStatus,
         server: MatchmakingServer? = null,
-    ): MatchmakingMatchMessage {
-        return MatchmakingMatchMessage(
+    ): MatchMessage {
+        return MatchMessage(
             matchId = "match-1",
-            gameMode = "matchmaker/5v5/competitive",
+            gameMode = "CS2/5v5/competitive",
             status = status,
             teams = listOf(
                 MatchmakingTeam(

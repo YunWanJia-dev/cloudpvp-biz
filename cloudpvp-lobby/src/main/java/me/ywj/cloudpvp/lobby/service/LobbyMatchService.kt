@@ -13,7 +13,7 @@ import me.ywj.cloudpvp.lobby.constant.routingkey.MatchmakingKey
 import me.ywj.cloudpvp.lobby.entity.Lobby
 import me.ywj.cloudpvp.lobby.exceptions.LobbyBusyException
 import me.ywj.cloudpvp.lobby.exceptions.LobbyNotExist
-import me.ywj.cloudpvp.lobby.model.LobbyEnqueueMessage
+import me.ywj.cloudpvp.lobby.model.messaging.LobbyEnqueueMessage
 import me.ywj.cloudpvp.lobby.model.SelectModeDTO
 import me.ywj.cloudpvp.lobby.repository.LobbyRepository
 import me.ywj.cloudpvp.lobby.utils.RedisLockUtils.withLobbyLock
