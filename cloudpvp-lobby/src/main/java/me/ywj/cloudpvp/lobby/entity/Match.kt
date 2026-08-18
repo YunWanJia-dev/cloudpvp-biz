@@ -1,6 +1,8 @@
 package me.ywj.cloudpvp.lobby.entity
 
 import com.fasterxml.jackson.annotation.JsonProperty
+import com.fasterxml.jackson.annotation.JsonSetter
+import com.fasterxml.jackson.annotation.Nulls
 import org.springframework.data.annotation.Id
 import org.springframework.data.redis.core.RedisHash
 
@@ -58,7 +60,9 @@ enum class MatchStatus {
 data class MatchTeam(
     @field:JsonProperty("lobby_ids")
     val lobbyIds: List<String>,
-    val members: List<MatchMember>,
+    // Spring Data Redis 会省略空嵌套集合，缺失字段必须恢复为空列表。
+    @param:JsonSetter(nulls = Nulls.AS_EMPTY)
+    val members: List<MatchMember> = emptyList(),
 )
 
 /**

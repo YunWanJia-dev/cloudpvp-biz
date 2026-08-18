@@ -108,12 +108,12 @@ class LobbyMatchService @Autowired constructor(
             lobby.sendMsg(LobbyMessage(LobbyMessageType.MATCH_START))
             val message = LobbyEnqueueMessage.from(lobby)
             logger.info(
-                "准备发送匹配请求: exchange={}, routingKey={}, lobbyId={}, gameMode={}, playerCount={}",
+                "准备发送匹配请求: exchange={}, routingKey={}, lobbyId={}, gameMode={}, players={}",
                 RabbitMQConfiguration.MATCHMAKING_EXCHANGE_NAME,
                 MatchmakingKey.Enqueue.routingKey,
                 message.lobbyId,
                 message.gameMode,
-                message.playerCount,
+                message.players,
             )
             withContext(Dispatchers.IO) {
                 rabbitTemplate.convertAndSend(

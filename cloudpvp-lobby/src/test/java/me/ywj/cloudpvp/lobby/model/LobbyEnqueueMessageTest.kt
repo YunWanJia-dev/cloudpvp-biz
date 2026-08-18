@@ -30,10 +30,13 @@ class LobbyEnqueueMessageTest {
 
         assertThat(json["lobby_id"].asText()).isEqualTo("123")
         assertThat(json["game_mode"].asText()).isEqualTo("CS2/5v5/competitive")
-        assertThat(json["player_count"].asInt()).isEqualTo(2)
+        assertThat(json["players"].map { it.asLong() }).containsExactly(
+            76561198000000001L,
+            76561198000000002L,
+        )
         assertThat(json.has("members")).isFalse()
         assertThat(json.has("id")).isFalse()
-        assertThat(json.has("players")).isFalse()
+        assertThat(json.has("player_count")).isFalse()
     }
 
     /**
@@ -50,7 +53,7 @@ class LobbyEnqueueMessageTest {
 
         assertThat(message.messageProperties.contentType).isEqualTo("application/json")
         assertThat(json["lobby_id"].asText()).isEqualTo("456")
-        assertThat(json["player_count"].asInt()).isEqualTo(1)
+        assertThat(json["players"].map { it.asLong() }).containsExactly(76561198000000003L)
     }
 
     /**

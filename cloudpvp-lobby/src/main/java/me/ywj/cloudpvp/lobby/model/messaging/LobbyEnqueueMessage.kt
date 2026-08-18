@@ -15,8 +15,8 @@ data class LobbyEnqueueMessage(
     val lobbyId: String,
     @field:JsonProperty("game_mode")
     val gameMode: String,
-    @field:JsonProperty("player_count")
-    val playerCount: Int,
+    @field:JsonProperty("players")
+    val players: List<Long>,
 ) {
     companion object {
         /**
@@ -28,7 +28,7 @@ data class LobbyEnqueueMessage(
         fun from(lobby: Lobby) = LobbyEnqueueMessage(
             lobbyId = lobby.id.toString(),
             gameMode = lobby.gameMode,
-            playerCount = lobby.players.orEmpty().size,
+            players = lobby.players.orEmpty().toList(),
         )
     }
 }

@@ -1,6 +1,8 @@
 package me.ywj.cloudpvp.lobby.model.messaging
 
 import com.fasterxml.jackson.annotation.JsonProperty
+import com.fasterxml.jackson.annotation.JsonSetter
+import com.fasterxml.jackson.annotation.Nulls
 import me.ywj.cloudpvp.lobby.entity.Match
 import me.ywj.cloudpvp.lobby.entity.MatchMember
 import me.ywj.cloudpvp.lobby.entity.MatchServer
@@ -50,7 +52,9 @@ enum class MatchmakingMatchStatus {
 data class MatchmakingTeam(
     @field:JsonProperty("lobby_ids")
     val lobbyIds: List<String>,
-    val members: List<MatchmakingMember>,
+    // 兼容上游显式发送 null，并将缺失成员统一为空列表。
+    @param:JsonSetter(nulls = Nulls.AS_EMPTY)
+    val members: List<MatchmakingMember> = emptyList(),
 )
 
 /**
