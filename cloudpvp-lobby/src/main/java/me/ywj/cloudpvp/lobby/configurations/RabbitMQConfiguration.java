@@ -99,7 +99,7 @@ public class RabbitMQConfiguration {
                                              TopicExchange matchmakingExchange) {
         return BindingBuilder.bind(matchmakingRequestQueue)
                 .to(matchmakingExchange)
-                .with(MatchmakingKey.Request.routingKey);
+                .with(MatchmakingKey.Enqueue.routingKey);
     }
 
     /**
@@ -117,48 +117,4 @@ public class RabbitMQConfiguration {
                 .with(MatchmakingKey.Cancel.routingKey);
     }
 
-    /**
-     * 将大厅状态回传队列绑定到大厅路由键。
-     *
-     * @param matchmakingLobbyQueue 大厅状态回传队列
-     * @param matchmakingExchange 匹配系统交换机
-     * @return 大厅状态回传队列绑定关系
-     */
-    @Bean
-    public Binding matchmakingLobbyBinding(@Qualifier("matchmakingLobbyQueue") Queue matchmakingLobbyQueue,
-                                           TopicExchange matchmakingExchange) {
-        return BindingBuilder.bind(matchmakingLobbyQueue)
-                .to(matchmakingExchange)
-                .with(MatchmakingKey.Lobby.routingKey);
-    }
-
-    /**
-     * 将 Biz 比赛队列绑定到比赛创建路由键。
-     *
-     * @param matchmakingBizQueue Biz 比赛生命周期队列
-     * @param matchmakingExchange 匹配系统交换机
-     * @return 比赛创建消息绑定关系
-     */
-    @Bean
-    public Binding matchmakingMatchCreateBinding(@Qualifier("matchmakingBizQueue") Queue matchmakingBizQueue,
-                                                 TopicExchange matchmakingExchange) {
-        return BindingBuilder.bind(matchmakingBizQueue)
-                .to(matchmakingExchange)
-                .with(MatchmakingKey.MatchCreate.routingKey);
-    }
-
-    /**
-     * 将 Biz 比赛队列绑定到比赛更新路由键。
-     *
-     * @param matchmakingBizQueue Biz 比赛生命周期队列
-     * @param matchmakingExchange 匹配系统交换机
-     * @return 比赛更新消息绑定关系
-     */
-    @Bean
-    public Binding matchmakingMatchUpdateBinding(@Qualifier("matchmakingBizQueue") Queue matchmakingBizQueue,
-                                                 TopicExchange matchmakingExchange) {
-        return BindingBuilder.bind(matchmakingBizQueue)
-                .to(matchmakingExchange)
-                .with(MatchmakingKey.MatchUpdate.routingKey);
-    }
 }

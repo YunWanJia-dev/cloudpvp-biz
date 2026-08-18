@@ -110,7 +110,7 @@ class LobbyMatchService @Autowired constructor(
             logger.info(
                 "准备发送匹配请求: exchange={}, routingKey={}, lobbyId={}, gameMode={}, playerCount={}",
                 RabbitMQConfiguration.MATCHMAKING_EXCHANGE_NAME,
-                MatchmakingKey.Request.routingKey,
+                MatchmakingKey.Enqueue.routingKey,
                 message.lobbyId,
                 message.gameMode,
                 message.playerCount,
@@ -118,7 +118,7 @@ class LobbyMatchService @Autowired constructor(
             withContext(Dispatchers.IO) {
                 rabbitTemplate.convertAndSend(
                     RabbitMQConfiguration.MATCHMAKING_EXCHANGE_NAME,
-                    MatchmakingKey.Request.routingKey,
+                    MatchmakingKey.Enqueue.routingKey,
                     message,
                 )
             }
