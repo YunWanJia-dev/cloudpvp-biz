@@ -13,7 +13,7 @@ const (
 	// MatchUpdateRoutingKey is published after allocation changes the complete match.
 	MatchUpdateRoutingKey = "match.update"
 	// AllocatorQueue is the shared competing-consumer queue for server allocation.
-	AllocatorQueue = "match.server-allocator.queue"
+	AllocatorQueue = "allocator.match.create"
 )
 
 // DeclareTopology declares the allocator-owned queue on the shared topic exchange.

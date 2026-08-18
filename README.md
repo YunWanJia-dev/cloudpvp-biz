@@ -4,7 +4,7 @@
 
 ## 当前测试链路
 
-- 消费队列：`match.server-allocator.queue`
+- 消费队列：`allocator.match.create`
 - 绑定路由键：`match.create`
 - 发布路由键：`match.update`
 - `match.create` 状态：`WAITING_FOR_SERVER`
