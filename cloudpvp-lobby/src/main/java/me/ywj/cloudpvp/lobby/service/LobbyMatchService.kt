@@ -16,6 +16,7 @@ import me.ywj.cloudpvp.lobby.exceptions.LobbyNotExist
 import me.ywj.cloudpvp.lobby.model.messaging.LobbyEnqueueMessage
 import me.ywj.cloudpvp.lobby.model.SelectModeDTO
 import me.ywj.cloudpvp.lobby.repository.LobbyRepository
+import me.ywj.cloudpvp.lobby.repository.PlayerLobbyRepository
 import me.ywj.cloudpvp.lobby.utils.RedisLockUtils.withLobbyLock
 import org.redisson.api.RedissonClient
 import org.slf4j.LoggerFactory
@@ -34,6 +35,7 @@ import org.springframework.stereotype.Service
 @Service
 class LobbyMatchService @Autowired constructor(
     val lobbyRepository: LobbyRepository,
+    val playerLobbyRepository: PlayerLobbyRepository,
     val redisTemplate: RedisTemplate<String, Any>,
     val redissonClient: RedissonClient,
     val playProperty: PlayProperty,
@@ -44,13 +46,13 @@ class LobbyMatchService @Autowired constructor(
     /**
      * 选择游戏模式。只有房主可在 WAITING 状态下修改。
      *
-     * @param lobbyId 目标大厅 ID
      * @param playerId 发起请求的玩家 ID
      * @param request 选择模式请求体
-     * @throws LobbyNotExist 当目标大厅不存在时抛出
+     * @throws LobbyNotExist 当玩家没有大厅索引或目标大厅不存在时抛出
      * @throws LobbyBusyException 当玩家不是房主、大厅状态不正确或模式 key 无效时抛出
      */
-    suspend fun selectMode(lobbyId: LobbyId, playerId: SteamID64, request: SelectModeDTO) {
+    suspend fun selectMode(playerId: SteamID64, request: SelectModeDTO) {
+        val lobbyId = getCurrentLobbyIdOrThrow(playerId)
         withLobbyLock(redissonClient, lobbyId) {
             val lobby = getLobbyOrThrow(lobbyId)
             if (lobby.host != playerId) {
@@ -84,12 +86,12 @@ class LobbyMatchService @Autowired constructor(
     /**
      * 开始匹配。只有房主可触发，将大厅状态设为 MATCHING 并通知所有玩家。
      *
-     * @param lobbyId 目标大厅 ID
      * @param playerId 发起请求的玩家 ID
-     * @throws LobbyNotExist 当目标大厅不存在时抛出
+     * @throws LobbyNotExist 当玩家没有大厅索引或目标大厅不存在时抛出
      * @throws LobbyBusyException 当玩家不是房主或大厅状态不正确时抛出
      */
-    suspend fun startMatching(lobbyId: LobbyId, playerId: SteamID64) {
+    suspend fun startMatching(playerId: SteamID64) {
+        val lobbyId = getCurrentLobbyIdOrThrow(playerId)
         withLobbyLock(redissonClient, lobbyId) {
             val lobby = getLobbyOrThrow(lobbyId)
             if (lobby.host != playerId) {
@@ -129,12 +131,12 @@ class LobbyMatchService @Autowired constructor(
     /**
      * 停止匹配。只有房主可触发，将大厅状态恢复为 WAITING 并通知所有玩家。
      *
-     * @param lobbyId 目标大厅 ID
      * @param playerId 发起请求的玩家 ID
-     * @throws LobbyNotExist 当目标大厅不存在时抛出
+     * @throws LobbyNotExist 当玩家没有大厅索引或目标大厅不存在时抛出
      * @throws LobbyBusyException 当玩家不是房主或大厅状态不正确时抛出
      */
-    suspend fun stopMatching(lobbyId: LobbyId, playerId: SteamID64) {
+    suspend fun stopMatching(playerId: SteamID64) {
+        val lobbyId = getCurrentLobbyIdOrThrow(playerId)
         withLobbyLock(redissonClient, lobbyId) {
             val lobby = getLobbyOrThrow(lobbyId)
             if (lobby.host != playerId) {
@@ -169,12 +171,12 @@ class LobbyMatchService @Autowired constructor(
     /**
      * 确认比赛。将确认信息通过 MQ 发送给匹配模块，由匹配模块统计所有玩家确认后通知本服务更新状态。
      *
-     * @param lobbyId 目标大厅 ID
      * @param playerId 发起确认的玩家 ID
-     * @throws LobbyNotExist 当目标大厅不存在时抛出
+     * @throws LobbyNotExist 当玩家没有大厅索引或目标大厅不存在时抛出
      * @throws LobbyBusyException 当大厅状态不正确或玩家不在大厅中时抛出
      */
-    suspend fun confirmMatch(lobbyId: LobbyId, playerId: SteamID64) {
+    suspend fun confirmMatch(playerId: SteamID64) {
+        val lobbyId = getCurrentLobbyIdOrThrow(playerId)
         withLobbyLock(redissonClient, lobbyId) {
             val lobby = getLobbyOrThrow(lobbyId)
             if (lobby.status != LobbyStatus.MATCHING || lobby.matchId == null) {
@@ -189,6 +191,23 @@ class LobbyMatchService @Autowired constructor(
             })
             // TODO: 通过 MQ 发送玩家确认消息给匹配模块，由匹配模块统计并下发确认结果
         }
+    }
+
+    /**
+     * 从 Redis 玩家大厅索引中解析当前大厅 ID。
+     *
+     * @param playerId 玩家 ID
+     * @return 玩家当前所在大厅 ID
+     * @throws LobbyNotExist 当玩家没有大厅索引时抛出
+     */
+    private suspend fun getCurrentLobbyIdOrThrow(playerId: SteamID64): LobbyId {
+        val playerLobbyOption = withContext(Dispatchers.IO) {
+            playerLobbyRepository.findById(playerId)
+        }
+        if (!playerLobbyOption.isPresent) {
+            throw LobbyNotExist()
+        }
+        return playerLobbyOption.get().lobbyId
     }
 
     private suspend fun getLobbyOrThrow(lobbyId: LobbyId): Lobby {

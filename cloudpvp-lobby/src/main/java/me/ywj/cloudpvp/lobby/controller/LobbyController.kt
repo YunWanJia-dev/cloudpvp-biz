@@ -45,7 +45,7 @@ class LobbyController @Autowired constructor(
     /**
      * 查询当前玩家所在的大厅。
      */
-    @GetMapping("/players/self/lobby")
+    @GetMapping
     suspend fun getCurrentLobby(@RequestHeader(HttpHeaders.AUTHORIZATION) token: String): Lobby? {
         val playerId = tokenAuthUtils.getIDFromToken(token)
         return lobbyLifecycleService.getCurrentLobby(playerId)
@@ -54,7 +54,7 @@ class LobbyController @Autowired constructor(
     /**
      * 通过 HTTP 将当前玩家加入指定大厅。
      */
-    @PostMapping("/{lobbyId}/players/self")
+    @PostMapping("/{lobbyId}/join")
     suspend fun joinLobby(
         @RequestHeader(HttpHeaders.AUTHORIZATION) token: String,
         @PathVariable lobbyId: Int,
@@ -66,7 +66,7 @@ class LobbyController @Autowired constructor(
     /**
      * 通过 HTTP 将当前玩家从所在大厅移除。
      */
-    @DeleteMapping("/players/self")
+    @DeleteMapping
     @ResponseStatus(HttpStatus.NO_CONTENT)
     suspend fun leaveLobby(
         @RequestHeader(HttpHeaders.AUTHORIZATION) token: String,
@@ -78,54 +78,50 @@ class LobbyController @Autowired constructor(
     /**
      * 选择游戏模式。只有房主可在 WAITING 状态下修改。
      */
-    @PatchMapping("/{lobbyId}/mode")
+    @PatchMapping("/mode")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     suspend fun selectMode(
         @RequestHeader(HttpHeaders.AUTHORIZATION) token: String,
-        @PathVariable lobbyId: Int,
         @RequestBody body: SelectModeDTO,
     ) {
         val playerId = tokenAuthUtils.getIDFromToken(token)
-        lobbyMatchService.selectMode(lobbyId, playerId, body)
+        lobbyMatchService.selectMode(playerId, body)
     }
 
     /**
      * 开始匹配。只有房主可操作。
      */
-    @PostMapping("/{lobbyId}/match/start")
+    @PostMapping("/match/start")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     suspend fun startMatching(
         @RequestHeader(HttpHeaders.AUTHORIZATION) token: String,
-        @PathVariable lobbyId: Int,
     ) {
         val playerId = tokenAuthUtils.getIDFromToken(token)
-        lobbyMatchService.startMatching(lobbyId, playerId)
+        lobbyMatchService.startMatching(playerId)
     }
 
     /**
      * 停止匹配。只有房主可操作。
      */
-    @PostMapping("/{lobbyId}/match/stop")
+    @PostMapping("/match/stop")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     suspend fun stopMatching(
         @RequestHeader(HttpHeaders.AUTHORIZATION) token: String,
-        @PathVariable lobbyId: Int,
     ) {
         val playerId = tokenAuthUtils.getIDFromToken(token)
-        lobbyMatchService.stopMatching(lobbyId, playerId)
+        lobbyMatchService.stopMatching(playerId)
     }
 
     /**
      * 确认比赛。
      */
-    @PostMapping("/{lobbyId}/match/confirm")
+    @PostMapping("/match/confirm")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     suspend fun confirmMatch(
         @RequestHeader(HttpHeaders.AUTHORIZATION) token: String,
-        @PathVariable lobbyId: Int,
     ) {
         val playerId = tokenAuthUtils.getIDFromToken(token)
-        lobbyMatchService.confirmMatch(lobbyId, playerId)
+        lobbyMatchService.confirmMatch(playerId)
     }
 
     /**
