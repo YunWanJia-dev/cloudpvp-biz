@@ -1,6 +1,11 @@
 package me.ywj.cloudpvp.lobby.model.messaging
 
 import com.fasterxml.jackson.annotation.JsonProperty
+import me.ywj.cloudpvp.lobby.entity.Match
+import me.ywj.cloudpvp.lobby.entity.MatchMember
+import me.ywj.cloudpvp.lobby.entity.MatchServer
+import me.ywj.cloudpvp.lobby.entity.MatchStatus
+import me.ywj.cloudpvp.lobby.entity.MatchTeam
 
 /**
  * MatchMessage
@@ -70,3 +75,28 @@ data class MatchmakingMember(
 data class MatchmakingServer(
     val ip: String,
 )
+
+/**
+ * 将完整比赛生命周期消息转换为大厅模块的比赛实体。
+ *
+ * @return 字段完整映射后的比赛实体
+ */
+fun MatchMessage.toEntity(): Match {
+    return Match(
+        matchId = matchId,
+        gameMode = gameMode,
+        status = when (status) {
+            MatchmakingMatchStatus.WAITING_FOR_SERVER -> MatchStatus.WAITING_FOR_SERVER
+            MatchmakingMatchStatus.IN_PROGRESS -> MatchStatus.IN_PROGRESS
+        },
+        teams = teams.map { team ->
+            MatchTeam(
+                lobbyIds = team.lobbyIds.toList(),
+                members = team.members.map { member -> MatchMember(member.playerId) },
+            )
+        },
+        server = server?.let { MatchServer(it.ip) },
+        createdAt = createdAt,
+        updatedAt = updatedAt,
+    )
+}

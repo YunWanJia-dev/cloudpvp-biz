@@ -1,219 +1,159 @@
 package me.ywj.cloudpvp.lobby.service
 
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withContext
-import me.ywj.cloudpvp.core.model.lobby.LobbyMessage
-import me.ywj.cloudpvp.core.model.lobby.LobbyMessageType
-import me.ywj.cloudpvp.core.model.lobby.LobbyStatus
-import me.ywj.cloudpvp.lobby.entity.Lobby
+import me.ywj.cloudpvp.lobby.entity.Match
+import me.ywj.cloudpvp.lobby.entity.MatchStatus
 import me.ywj.cloudpvp.lobby.model.messaging.MatchMessage
-import me.ywj.cloudpvp.lobby.model.messaging.MatchmakingMatchStatus
-import me.ywj.cloudpvp.lobby.repository.LobbyRepository
-import me.ywj.cloudpvp.lobby.utils.RedisLockUtils.withLobbyLock
-import org.redisson.api.RedissonClient
+import me.ywj.cloudpvp.lobby.model.messaging.toEntity
+import me.ywj.cloudpvp.lobby.repository.MatchRepository
 import org.slf4j.LoggerFactory
 import org.springframework.amqp.rabbit.annotation.RabbitListener
 import org.springframework.data.redis.core.RedisTemplate
 import org.springframework.stereotype.Service
+import java.time.DateTimeException
+import java.time.Instant
 
 /**
  * MatchListeningService
- * 监听完整比赛生命周期更新并同步关联大厅。
+ * 接收完整比赛生命周期消息，并将最新比赛快照保存和发布到 Redis。
  *
  * @author sheip9
  * @since 2026/8/14 17:49
  */
 @Service
 class MatchListeningService(
-    private val lobbyRepository: LobbyRepository,
+    private val matchRepository: MatchRepository,
     private val redisTemplate: RedisTemplate<String, Any>,
-    private val redissonClient: RedissonClient,
+    private val lobbyListeningService: LobbyListeningService,
 ) {
     private val logger = LoggerFactory.getLogger(MatchListeningService::class.java)
 
     /**
-     * 消费完整比赛生命周期消息；match.create 与 match.update 共用同一个 Biz 队列和模型。
+     * 消费完整比赛生命周期消息，将合法的新快照保存后发布到对应 Match ID 频道。
      *
-     * @param message 完整比赛消息
+     * @param message Matcher 或 Allocator 发布的完整比赛消息
      */
     @RabbitListener(
         queues = ["#{T(me.ywj.cloudpvp.lobby.constant.queue.MatchmakingQueue).MatchBiz.queueName}"],
         exclusive = true,
         concurrency = "1",
     )
-    fun consumeMatch(message: MatchMessage) = runBlocking {
-        val rawLobbyIds = message.teams.flatMap { it.lobbyIds }
-        val distinctLobbyIds = rawLobbyIds.distinct()
+    fun consumeMatch(message: MatchMessage) {
+        val match = message.toEntity()
+        val lobbyIds = match.teams.flatMap { it.lobbyIds }.distinct()
         logger.info(
             "收到完整比赛消息: matchId={}, status={}, gameMode={}, teamCount={}, lobbyCount={}, " +
                 "memberCount={}, serverIp={}",
-            message.matchId,
-            message.status,
-            message.gameMode,
-            message.teams.size,
-            distinctLobbyIds.size,
-            message.teams.sumOf { it.members.size },
-            message.server?.ip,
+            match.matchId,
+            match.status,
+            match.gameMode,
+            match.teams.size,
+            lobbyIds.size,
+            match.teams.sumOf { it.members.size },
+            match.server?.ip,
         )
-        if (message.matchId.isBlank() || distinctLobbyIds.isEmpty()) {
+        if (match.matchId.isBlank() || lobbyIds.isEmpty()) {
             logger.error(
                 "忽略字段不完整的比赛消息: matchId={}, status={}, lobbyCount={}",
-                message.matchId,
-                message.status,
-                distinctLobbyIds.size,
+                match.matchId,
+                match.status,
+                lobbyIds.size,
             )
-            return@runBlocking
+            return
         }
-        if (rawLobbyIds.size != distinctLobbyIds.size) {
-            logger.warn(
-                "比赛消息包含重复 lobbyId，将按大厅去重消费: matchId={}, rawCount={}, distinctCount={}",
-                message.matchId,
-                rawLobbyIds.size,
-                distinctLobbyIds.size,
-            )
-        }
-
-        for (rawLobbyId in distinctLobbyIds) {
-            val lobbyId = rawLobbyId.toIntOrNull()
-            if (lobbyId == null) {
-                logger.error(
-                    "忽略比赛消息中的无效 lobbyId: matchId={}, status={}, lobbyId={}",
-                    message.matchId,
-                    message.status,
-                    rawLobbyId,
-                )
-                continue
-            }
-            withLobbyLock(redissonClient, lobbyId) {
-                val lobby = findLobby(lobbyId)
-                if (lobby == null) {
-                    logger.warn(
-                        "忽略不存在大厅的比赛消息: matchId={}, status={}, lobbyId={}",
-                        message.matchId,
-                        message.status,
-                        lobbyId,
-                    )
-                    return@withLobbyLock
-                }
-                applyMatch(message, lobby)
-            }
-        }
-        logger.info(
-            "完整比赛消息消费结束: matchId={}, status={}, requestedLobbyCount={}",
-            message.matchId,
-            message.status,
-            distinctLobbyIds.size,
-        )
-    }
-
-    private suspend fun applyMatch(message: MatchMessage, lobby: Lobby) {
-        when (message.status) {
-            MatchmakingMatchStatus.WAITING_FOR_SERVER -> applyWaitingForServer(message, lobby)
-            MatchmakingMatchStatus.IN_PROGRESS -> applyInProgress(message, lobby)
-        }
-    }
-
-    private suspend fun applyWaitingForServer(message: MatchMessage, lobby: Lobby) {
-        if (message.server != null) {
-            logger.warn(
-                "WAITING_FOR_SERVER 比赛意外携带 server，Biz 仍按等待服务器处理: matchId={}, lobbyId={}, serverIp={}",
-                message.matchId,
-                lobby.id,
-                message.server.ip,
-            )
-        }
-        if (lobby.matchId != null && lobby.matchId != message.matchId) {
+        if (match.status == MatchStatus.IN_PROGRESS && match.server?.ip.isNullOrBlank()) {
             logger.error(
-                "忽略与现有比赛冲突的 WAITING_FOR_SERVER 消息: lobbyId={}, currentMatchId={}, incomingMatchId={}",
-                lobby.id,
-                lobby.matchId,
-                message.matchId,
-            )
-            return
-        }
-        if (lobby.status != LobbyStatus.MATCHING) {
-            logger.warn(
-                "忽略当前大厅状态不允许的 WAITING_FOR_SERVER 消息: lobbyId={}, matchId={}, currentStatus={}",
-                lobby.id,
-                message.matchId,
-                lobby.status,
+                "忽略缺少有效服务器地址的 IN_PROGRESS 消息: matchId={}, server={}",
+                match.matchId,
+                match.server,
             )
             return
         }
 
-        val stateChanged = lobby.matchId != message.matchId
-        lobby.matchId = message.matchId
-        persistThenPublishIfNeeded(lobby, stateChanged, LobbyMessageType.MATCH_SUCCESS, message)
+        val incomingUpdatedAt = parseUpdatedAt(match) ?: return
+        val existing = matchRepository.findById(match.matchId).orElse(null)
+        if (existing != null && !canApplyMatch(existing, match, incomingUpdatedAt)) {
+            return
+        }
+
+        if (existing != match) {
+            matchRepository.save(match)
+        }
+        // 订阅后同步持久化快照，确保 RabbitMQ ACK 前大厅已经看到本次比赛状态。
+        lobbyListeningService.ensureMatchSubscription(match.matchId)
+        redisTemplate.convertAndSend(match.matchId, match)
         logger.info(
-            "等待服务器的比赛已同步到大厅: matchId={}, lobbyId={}, stateChanged={}",
-            message.matchId,
-            lobby.id,
-            stateChanged,
+            "比赛快照已保存并发布: matchId={}, status={}, updatedAt={}",
+            match.matchId,
+            match.status,
+            match.updatedAt,
         )
     }
 
-    private suspend fun applyInProgress(message: MatchMessage, lobby: Lobby) {
-        val server = message.server
-        if (server == null || server.ip.isBlank()) {
+    private fun canApplyMatch(existing: Match, incoming: Match, incomingUpdatedAt: Instant): Boolean {
+        if (existing.status == MatchStatus.IN_PROGRESS && incoming.status == MatchStatus.WAITING_FOR_SERVER) {
+            logger.warn(
+                "忽略比赛生命周期倒退消息: matchId={}, currentStatus={}, incomingStatus={}, incomingUpdatedAt={}",
+                incoming.matchId,
+                existing.status,
+                incoming.status,
+                incoming.updatedAt,
+            )
+            return false
+        }
+        val existingUpdatedAt = parseStoredUpdatedAt(existing) ?: return true
+        if (incomingUpdatedAt.isBefore(existingUpdatedAt)) {
+            logger.warn(
+                "忽略过期比赛消息: matchId={}, incomingStatus={}, incomingUpdatedAt={}, " +
+                    "currentStatus={}, currentUpdatedAt={}",
+                incoming.matchId,
+                incoming.status,
+                incoming.updatedAt,
+                existing.status,
+                existing.updatedAt,
+            )
+            return false
+        }
+        if (incomingUpdatedAt == existingUpdatedAt && incoming != existing) {
             logger.error(
-                "忽略缺少有效服务器地址的 IN_PROGRESS 消息: matchId={}, lobbyId={}, server={}",
-                message.matchId,
-                lobby.id,
-                server,
+                "忽略相同 updatedAt 的冲突比赛消息: matchId={}, incomingStatus={}, currentStatus={}, updatedAt={}",
+                incoming.matchId,
+                incoming.status,
+                existing.status,
+                incoming.updatedAt,
             )
-            return
+            return false
         }
-        if (lobby.matchId != message.matchId) {
-            logger.warn(
-                "忽略无法关联到大厅当前比赛的 IN_PROGRESS 消息: lobbyId={}, currentMatchId={}, incomingMatchId={}",
-                lobby.id,
-                lobby.matchId,
-                message.matchId,
-            )
-            return
-        }
-        if (lobby.status != LobbyStatus.MATCHING && lobby.status != LobbyStatus.IN_MATCH) {
-            logger.warn(
-                "忽略当前大厅状态不允许的 IN_PROGRESS 消息: lobbyId={}, matchId={}, currentStatus={}",
-                lobby.id,
-                message.matchId,
-                lobby.status,
-            )
-            return
-        }
-
-        val stateChanged = lobby.status != LobbyStatus.IN_MATCH
-        lobby.status = LobbyStatus.IN_MATCH
-        persistThenPublishIfNeeded(lobby, stateChanged, LobbyMessageType.GAME_CONFIRMED, message)
-        logger.info(
-            "比赛服务器已同步到大厅: matchId={}, lobbyId={}, serverIp={}, stateChanged={}",
-            message.matchId,
-            lobby.id,
-            server.ip,
-            stateChanged,
-        )
+        return true
     }
 
-    private suspend fun persistThenPublishIfNeeded(
-        lobby: Lobby,
-        stateChanged: Boolean,
-        type: LobbyMessageType,
-        message: MatchMessage,
-    ) = withContext(Dispatchers.IO) {
-        if (stateChanged) lobbyRepository.save(lobby)
-        // 同一状态重投不重复保存，但仍重播事件，覆盖 save 成功而 Redis 发布失败的场景。
-        publish(lobby, type, message)
+    private fun parseUpdatedAt(match: Match): Instant? {
+        return try {
+            Instant.parse(match.updatedAt)
+        } catch (exception: DateTimeException) {
+            logger.error(
+                "忽略 updated_at 非 RFC3339 时间的比赛消息: matchId={}, status={}, updatedAt={}",
+                match.matchId,
+                match.status,
+                match.updatedAt,
+                exception,
+            )
+            null
+        }
     }
 
-    private suspend fun findLobby(lobbyId: Int): Lobby? = withContext(Dispatchers.IO) {
-        lobbyRepository.findById(lobbyId).orElse(null)
-    }
-
-    private fun publish(lobby: Lobby, type: LobbyMessageType, data: Any) {
-        redisTemplate.convertAndSend(
-            lobby.id.toString(),
-            LobbyMessage(type).apply { this.data = data },
-        )
+    private fun parseStoredUpdatedAt(match: Match): Instant? {
+        return try {
+            Instant.parse(match.updatedAt)
+        } catch (exception: DateTimeException) {
+            // 旧缓存无法参与版本比较时允许新消息修复它，避免坏数据永久阻塞比赛推进。
+            logger.error(
+                "已存比赛 updatedAt 无效，将使用新消息修复: matchId={}, status={}, updatedAt={}",
+                match.matchId,
+                match.status,
+                match.updatedAt,
+                exception,
+            )
+            null
+        }
     }
 }
