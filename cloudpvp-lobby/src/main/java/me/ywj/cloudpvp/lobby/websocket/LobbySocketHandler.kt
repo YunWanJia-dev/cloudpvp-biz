@@ -9,7 +9,6 @@ import me.ywj.cloudpvp.core.utils.LobbyUtils
 import me.ywj.cloudpvp.core.utils.PlayerUtils
 import me.ywj.cloudpvp.lobby.model.publishing.LobbyMessage
 import me.ywj.cloudpvp.lobby.model.publishing.LobbyMessageType
-import me.ywj.cloudpvp.lobby.service.LobbyService
 import me.ywj.cloudpvp.lobby.service.LobbySessionService
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Controller
@@ -30,7 +29,6 @@ import org.springframework.web.util.UriTemplate
  */
 @Controller
 class LobbySocketHandler @Autowired constructor(
-    private val lobbyService: LobbyService,
     private val lobbySessionService: LobbySessionService
 ) : AbstractWebSocketHandler(), WebSocketHandler {
     companion object {
@@ -137,8 +135,9 @@ class LobbySocketHandler @Autowired constructor(
      * @param status 连接关闭状态
      */
     override fun afterConnectionClosed(session: WebSocketSession, status: CloseStatus) {
-        val playerId = session.getPlayerId()!!
-        lobbySessionService.unsubscribe(playerId)
+        session.getPlayerId()?.let {
+            lobbySessionService.unsubscribe(it)
+        }
     }
 }
 
