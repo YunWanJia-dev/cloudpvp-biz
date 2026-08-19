@@ -11,7 +11,7 @@ import me.ywj.cloudpvp.core.utils.LobbyUtils
 import me.ywj.cloudpvp.core.utils.PlayerUtils
 import me.ywj.cloudpvp.lobby.entity.LobbyPlayer
 import me.ywj.cloudpvp.lobby.exceptions.LobbySocketError
-import me.ywj.cloudpvp.lobby.service.LobbyLifecycleService
+import me.ywj.cloudpvp.lobby.service.LobbyService
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Controller
 import org.springframework.web.socket.CloseStatus
@@ -32,7 +32,7 @@ import org.springframework.web.util.UriTemplate
 @Controller
 class LobbySocketHandler : AbstractWebSocketHandler,
     WebSocketHandler {
-    private val lobbyLifecycleService: LobbyLifecycleService
+    private val lobbyService: LobbyService
 
     /**
      * 大厅订阅任务使用处理器自有协程作用域，避免在 WebSocket 容器线程中等待 Redis 锁和仓储 I/O。
@@ -40,13 +40,13 @@ class LobbySocketHandler : AbstractWebSocketHandler,
     private val subscriptionScope: CoroutineScope
 
     @Autowired
-    constructor(lobbyLifecycleService: LobbyLifecycleService) : this(
-        lobbyLifecycleService,
+    constructor(lobbyService: LobbyService) : this(
+        lobbyService,
         CoroutineScope(SupervisorJob() + Dispatchers.IO),
     )
 
-    internal constructor(lobbyLifecycleService: LobbyLifecycleService, subscriptionScope: CoroutineScope) : super() {
-        this.lobbyLifecycleService = lobbyLifecycleService
+    internal constructor(lobbyService: LobbyService, subscriptionScope: CoroutineScope) : super() {
+        this.lobbyService = lobbyService
         this.subscriptionScope = subscriptionScope
     }
 
@@ -137,7 +137,7 @@ class LobbySocketHandler : AbstractWebSocketHandler,
     private fun cleanupSubscribedPlayer(session: WebSocketSession, fallbackPlayer: LobbyPlayer? = null) {
         val storedPlayer = session.attributes.remove(ATTR_LOBBY_PLAYER) as? LobbyPlayer
         val playerToCleanup = storedPlayer ?: fallbackPlayer?.takeIf { it.lobbyId != null } ?: return
-        lobbyLifecycleService.unsubscribeLobby(playerToCleanup)
+        lobbyService.unsubscribeLobby(playerToCleanup)
     }
 
     /**
@@ -190,7 +190,7 @@ class LobbySocketHandler : AbstractWebSocketHandler,
 
         subscriptionScope.launch {
             try {
-                val subscribed = lobbyLifecycleService.subscribeLobby(player, targetLobbyId)
+                val subscribed = lobbyService.subscribeLobby(player, targetLobbyId)
                 if (!subscribed) {
                     safeSession.sendMessage(ErrorResponse(ErrorType.PARAM_INVALID, ""))
                     safeSession.close()

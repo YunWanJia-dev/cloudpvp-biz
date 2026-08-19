@@ -4,7 +4,7 @@ import me.ywj.cloudpvp.beans.utils.TokenAuthUtils
 import me.ywj.cloudpvp.core.model.base.CreatedResponse
 import me.ywj.cloudpvp.lobby.model.SelectModeDTO
 import me.ywj.cloudpvp.lobby.entity.Lobby
-import me.ywj.cloudpvp.lobby.service.LobbyLifecycleService
+import me.ywj.cloudpvp.lobby.service.LobbyService
 import me.ywj.cloudpvp.lobby.service.LobbyMatchService
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.HttpHeaders
@@ -29,7 +29,7 @@ import org.springframework.web.bind.annotation.RestController
 @RestController
 @RequestMapping
 class LobbyController @Autowired constructor(
-    val lobbyLifecycleService: LobbyLifecycleService,
+    val lobbyService: LobbyService,
     val lobbyMatchService: LobbyMatchService,
     val tokenAuthUtils: TokenAuthUtils,
 ) {
@@ -39,16 +39,16 @@ class LobbyController @Autowired constructor(
     @PostMapping
     suspend fun createLobby(@RequestHeader(HttpHeaders.AUTHORIZATION) token: String): CreatedResponse {
         val playerId = tokenAuthUtils.getIDFromToken(token)
-        return CreatedResponse(lobbyLifecycleService.createLobby(playerId))
+        return CreatedResponse(lobbyService.createLobby(playerId))
     }
 
     /**
      * 查询当前玩家所在的大厅。
      */
     @GetMapping
-    suspend fun getCurrentLobby(@RequestHeader(HttpHeaders.AUTHORIZATION) token: String): Lobby? {
+    suspend fun getCurrentLobby(@RequestHeader(HttpHeaders.AUTHORIZATION) token: String): Lobby {
         val playerId = tokenAuthUtils.getIDFromToken(token)
-        return lobbyLifecycleService.getCurrentLobby(playerId)
+        return lobbyService.getCurrentLobby(playerId)
     }
 
     /**
@@ -60,7 +60,7 @@ class LobbyController @Autowired constructor(
         @PathVariable lobbyId: Int,
     ): Lobby {
         val playerId = tokenAuthUtils.getIDFromToken(token)
-        return lobbyLifecycleService.joinLobby(playerId, lobbyId)
+        return lobbyService.joinLobby(playerId, lobbyId)
     }
 
     /**
@@ -72,7 +72,7 @@ class LobbyController @Autowired constructor(
         @RequestHeader(HttpHeaders.AUTHORIZATION) token: String,
     ) {
         val playerId = tokenAuthUtils.getIDFromToken(token)
-        lobbyLifecycleService.leaveLobby(playerId)
+        lobbyService.leaveLobby(playerId)
     }
 
     /**
@@ -134,6 +134,6 @@ class LobbyController @Autowired constructor(
         @RequestBody body: Map<String, String>,
     ) {
         val playerId = tokenAuthUtils.getIDFromToken(token)
-        lobbyLifecycleService.sendTextMessage(playerId, body["content"].orEmpty())
+        lobbyService.sendTextMessage(playerId, body["content"].orEmpty())
     }
 }

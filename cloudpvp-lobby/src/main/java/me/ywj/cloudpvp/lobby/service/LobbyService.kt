@@ -1,6 +1,9 @@
 package me.ywj.cloudpvp.lobby.service
 
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import me.ywj.cloudpvp.core.model.lobby.LobbyMessage
 import me.ywj.cloudpvp.core.model.lobby.LobbyMessageDataTexting
@@ -34,7 +37,7 @@ import org.springframework.stereotype.Service
  * @since 2024/10/20 16:35
  */
 @Service
-class LobbyLifecycleService @Autowired constructor(
+class LobbyService @Autowired constructor(
     val lobbyRepository: LobbyRepository,
     val playerLobbyRepository: PlayerLobbyRepository,
     val redisTemplate: RedisTemplate<String, Any>,
@@ -43,6 +46,7 @@ class LobbyLifecycleService @Autowired constructor(
 ) {
     companion object {
         private const val CREATE_LOBBY_ATTEMPTS = 8
+        private val publishingScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     }
 
     /**
@@ -85,17 +89,10 @@ class LobbyLifecycleService @Autowired constructor(
      * @param playerId 玩家 ID
      * @return 玩家当前所在大厅；未加入大厅时返回 null
      */
-    suspend fun getCurrentLobby(playerId: SteamID64): Lobby? {
-        val playerLobbyOption = withContext(Dispatchers.IO) {
-            playerLobbyRepository.findById(playerId)
-        }
-        if (!playerLobbyOption.isPresent) {
-            return null
-        }
+    fun getCurrentLobby(playerId: SteamID64): Lobby {
+        val playerLobbyOption = playerLobbyRepository.findById(playerId).orElseThrow()
 
-        return withContext(Dispatchers.IO) {
-            lobbyRepository.findById(playerLobbyOption.get().lobbyId).orElse(null)
-        }
+        return lobbyRepository.findById(playerLobbyOption.lobbyId).orElseThrow()
     }
 
     /**
@@ -111,31 +108,36 @@ class LobbyLifecycleService @Autowired constructor(
     suspend fun joinLobby(playerId: SteamID64, targetLobbyId: LobbyId): Lobby {
         return withPlayerAndLobbyLock(redissonClient, playerId, targetLobbyId) {
             val playerLobbyOption = playerLobbyRepository.findById(playerId)
+            // check 玩家当前状态
             if (playerLobbyOption.isPresent && playerLobbyOption.get().lobbyId != targetLobbyId) {
-                throw PlayerAlreadyInLobbyException(playerId, playerLobbyOption.get().lobbyId)
+                removePlayerFromLobby(playerId, playerLobbyOption.get().lobbyId)
             }
 
-            val lobbyOption = lobbyRepository.findById(targetLobbyId)
-            if (!lobbyOption.isPresent) {
-                throw LobbyNotExist()
-            }
+            val lobby = lobbyRepository.findById(targetLobbyId).orElseThrow()
 
-            val lobby = lobbyOption.get()
+            // 只有等待状态的房间才能进
             if (lobby.status != LobbyStatus.WAITING) {
                 throw LobbyBusyException("Lobby ${lobby.id} is in status ${lobby.status}, cannot join")
             }
-            val players = lobby.players!!
-            val alreadyInLobby = players.contains(playerId)
-            if (alreadyInLobby) {
+
+            // 当已经在房间里了，做映射关系强制更新防止数据差错
+            if (lobby.players!!.contains(playerId)) {
                 playerLobbyRepository.save(PlayerLobby(playerId, targetLobbyId))
                 return@withPlayerAndLobbyLock lobby
             }
-            players.add(playerId)
-            lobbyRepository.save(lobby)
-            playerLobbyRepository.save(PlayerLobby(playerId, targetLobbyId))
-            lobby.sendMsg(LobbyMessage(LobbyMessageType.JOIN).apply {
-                data = playerId
+
+            // 写入
+            lobbyRepository.save(lobby.apply {
+                players!!.add(playerId)
             })
+            playerLobbyRepository.save(PlayerLobby(playerId, targetLobbyId))
+
+            // 广播
+            publishingScope.launch {
+                lobby.sendMsg(LobbyMessage(LobbyMessageType.JOIN).apply {
+                    data = playerId
+                })
+            }
             return@withPlayerAndLobbyLock lobby
         }
     }
@@ -150,29 +152,45 @@ class LobbyLifecycleService @Autowired constructor(
         val playerLobbyOption = withContext(Dispatchers.IO) {
             playerLobbyRepository.findById(playerId)
         }
+
         if (!playerLobbyOption.isPresent) {
             return
         }
+
         val targetLobbyId = playerLobbyOption.get().lobbyId
-        withPlayerAndLobbyLock(redissonClient, playerId, targetLobbyId) {
+
+        return removePlayerFromLobby(playerId, targetLobbyId)
+    }
+
+    /**
+     * 把玩家从某个Lobby里移除
+     *
+     * @param playerId 玩家 ID
+     * @param targetLobbyId 目标房间id
+     */
+    suspend fun removePlayerFromLobby(playerId: SteamID64, targetLobbyId: LobbyId) {
+        return withPlayerAndLobbyLock(redissonClient, playerId, targetLobbyId) {
+            // 先清理映射关系
             val playerLobbyOption = playerLobbyRepository.findById(playerId)
-            if (playerLobbyOption.isEmpty || targetLobbyId != playerLobbyOption.get().lobbyId) {
-                return@withPlayerAndLobbyLock
+            if (playerLobbyOption.isPresent) {
+                playerLobbyRepository.deleteById(playerId)
             }
+
+            // 查询 lobby
             val lobbyOption = lobbyRepository.findById(targetLobbyId)
             if (!lobbyOption.isPresent) {
-                playerLobbyRepository.deleteById(playerId)
                 return@withPlayerAndLobbyLock
             }
-
             val lobby = lobbyOption.get()
-            val removed = lobby.players!!.removeAll { it == playerId }
 
+            // 从列表移除
+            val removed = lobby.players!!.removeAll { it == playerId }
             if (!removed) {
                 playerLobbyRepository.deleteById(playerId)
                 return@withPlayerAndLobbyLock
             }
 
+            // 如果没人了，就销毁
             if (lobby.players!!.isEmpty()) {
                 lobby.sendMsg(LobbyMessage(LobbyMessageType.LOBBY_DESTROYED))
                 lobbyRepository.deleteById(targetLobbyId)
@@ -180,15 +198,20 @@ class LobbyLifecycleService @Autowired constructor(
                 return@withPlayerAndLobbyLock
             }
 
+            // 如果离开的是房主，则需要更新房主
             val nextHost = if (lobby.host == playerId) lobby.players!!.first() else null
             nextHost?.let { lobby.host = it }
 
+            // 写入
             lobbyRepository.save(lobby)
-            playerLobbyRepository.deleteById(playerId)
-            nextHost?.let { lobby.publishHostUpdate(it) }
-            lobby.sendMsg(LobbyMessage(LobbyMessageType.LEAVE).apply {
-                data = playerId
-            })
+
+            // 广播
+            publishingScope.launch {
+                nextHost?.let { lobby.publishHostUpdate(it) }
+                lobby.sendMsg(LobbyMessage(LobbyMessageType.LEAVE).apply {
+                    data = playerId
+                })
+            }
         }
     }
 
@@ -203,15 +226,12 @@ class LobbyLifecycleService @Autowired constructor(
      */
     suspend fun subscribeLobby(player: LobbyPlayer, targetLobbyId: LobbyId): Boolean {
         val subscribed = withLobbyLock(redissonClient, targetLobbyId) {
-            val lobbyOption = lobbyRepository.findById(targetLobbyId)
-            if (!lobbyOption.isPresent) {
-                throw LobbyNotExist()
-            }
-
-            val lobby = lobbyOption.get()
+            // pre check 玩家确实connect了
+            val lobby = lobbyRepository.findById(targetLobbyId).orElseThrow()
             if (!lobby.players!!.contains(player.steamID64)) {
                 return@withLobbyLock false
             }
+
             val topic = PatternTopic(lobby.id.toString())
             player.lobbyId = targetLobbyId
             container.addMessageListener(player.msgListener, topic)
