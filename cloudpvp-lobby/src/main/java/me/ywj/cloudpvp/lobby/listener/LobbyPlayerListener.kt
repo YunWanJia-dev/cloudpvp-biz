@@ -28,4 +28,4 @@ class LobbyPlayerListener (
 }
 
 private val LOBBY_MESSAGE_SERIALIZER =
-    Jackson2JsonRedisSerializer(JacksonUtils.INSTANCE, LobbyMessage::class.java)
+    Jackson2JsonRedisSerializer(LobbyMessage::class.java).also { it.setObjectMapper(JacksonUtils.INSTANCE) }
