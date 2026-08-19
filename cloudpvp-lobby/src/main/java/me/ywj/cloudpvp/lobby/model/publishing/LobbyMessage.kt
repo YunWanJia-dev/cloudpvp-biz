@@ -1,4 +1,4 @@
-package me.ywj.cloudpvp.core.model.lobby
+package me.ywj.cloudpvp.lobby.model.publishing
 
 import com.fasterxml.jackson.annotation.JsonCreator
 import com.fasterxml.jackson.annotation.JsonProperty
@@ -14,28 +14,13 @@ import me.ywj.cloudpvp.core.type.SteamID64
 @JsonTypeInfo(use = JsonTypeInfo.Id.CLASS, include = JsonTypeInfo.As.PROPERTY, property = "@class")
 data class LobbyMessage(
     val type: LobbyMessageType,
-) {
-    @JsonCreator
-    constructor(@JsonProperty("type") type: LobbyMessageType, @JsonProperty("data") data: Any) : this(type) {
-        this.data = data
-    }
-
-    var data: Any? = null
-}
+    val actionPlayerId: SteamID64?,
+    val data: String,
+)
 
 enum class LobbyMessageType {
     JOIN,
     LEAVE,
     TEXTING,
     UPDATE_HOST,
-    LOBBY_DESTROYED,
-    LOBBY_SNAPSHOT,
-    PLAYER_LIST,
-    MATCH_START,
-    MATCH_STOP,
-    MATCH_SUCCESS,
-    MATCH_CONFIRM,
-    GAME_CONFIRMED,
 }
-
-data class LobbyMessageDataTexting(val playerID64: SteamID64, val content: String)

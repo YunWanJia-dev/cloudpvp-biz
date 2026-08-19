@@ -3,8 +3,8 @@ package me.ywj.cloudpvp.lobby.service
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import me.ywj.cloudpvp.beans.property.PlayProperty
-import me.ywj.cloudpvp.core.model.lobby.LobbyMessage
-import me.ywj.cloudpvp.core.model.lobby.LobbyMessageType
+import me.ywj.cloudpvp.lobby.model.publishing.LobbyMessage
+import me.ywj.cloudpvp.lobby.model.publishing.LobbyMessageType
 import me.ywj.cloudpvp.core.model.lobby.LobbyStatus
 import me.ywj.cloudpvp.core.type.LobbyId
 import me.ywj.cloudpvp.core.type.SteamID64
@@ -69,13 +69,17 @@ class LobbyMatchService @Autowired constructor(
                     }
                 }
             }
+
             if (!modeExists) {
                 throw LobbyBusyException("Invalid mode: ${request.gameKey}/${request.typeKey}/${request.modeKey}")
             }
 
-            lobby.gameKey = request.gameKey
-            lobby.typeKey = request.typeKey
-            lobby.modeKey = request.modeKey
+            lobby.apply {
+                gameKey = request.gameKey
+                typeKey = request.typeKey
+                modeKey = request.modeKey
+            }
+
             lobbyRepository.save(lobby)
             lobby.sendMsg(LobbyMessage(LobbyMessageType.LOBBY_SNAPSHOT).apply {
                 data = lobby

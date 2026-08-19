@@ -1,31 +1,23 @@
 package me.ywj.cloudpvp.lobby.service
 
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import me.ywj.cloudpvp.core.model.lobby.LobbyMessage
-import me.ywj.cloudpvp.core.model.lobby.LobbyMessageDataTexting
-import me.ywj.cloudpvp.core.model.lobby.LobbyMessageType
+import kotlinx.coroutines.*
+import me.ywj.cloudpvp.lobby.model.publishing.LobbyMessage
+import me.ywj.cloudpvp.lobby.model.publishing.LobbyMessageType
 import me.ywj.cloudpvp.core.model.lobby.LobbyStatus
 import me.ywj.cloudpvp.core.type.LobbyId
 import me.ywj.cloudpvp.core.type.SteamID64
 import me.ywj.cloudpvp.core.utils.LobbyUtils
 import me.ywj.cloudpvp.lobby.entity.Lobby
-import me.ywj.cloudpvp.lobby.entity.LobbyPlayer
 import me.ywj.cloudpvp.lobby.entity.PlayerLobby
 import me.ywj.cloudpvp.lobby.exceptions.LobbyBusyException
 import me.ywj.cloudpvp.lobby.exceptions.LobbyNotExist
 import me.ywj.cloudpvp.lobby.exceptions.PlayerAlreadyInLobbyException
 import me.ywj.cloudpvp.lobby.repository.LobbyRepository
 import me.ywj.cloudpvp.lobby.repository.PlayerLobbyRepository
-import me.ywj.cloudpvp.lobby.utils.RedisLockUtils.withLobbyLock
 import me.ywj.cloudpvp.lobby.utils.RedisLockUtils.withPlayerAndLobbyLock
 import org.redisson.api.RedissonClient
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.data.redis.core.RedisTemplate
-import org.springframework.data.redis.listener.PatternTopic
 import org.springframework.data.redis.listener.RedisMessageListenerContainer
 import org.springframework.stereotype.Service
 
@@ -42,7 +34,6 @@ class LobbyService @Autowired constructor(
     val playerLobbyRepository: PlayerLobbyRepository,
     val redisTemplate: RedisTemplate<String, Any>,
     val redissonClient: RedissonClient,
-    val container: RedisMessageListenerContainer,
 ) {
     companion object {
         private const val CREATE_LOBBY_ATTEMPTS = 8
@@ -134,9 +125,7 @@ class LobbyService @Autowired constructor(
 
             // 广播
             publishingScope.launch {
-                lobby.sendMsg(LobbyMessage(LobbyMessageType.JOIN).apply {
-                    data = playerId
-                })
+                lobby.playerJoin(playerId)
             }
             return@withPlayerAndLobbyLock lobby
         }
@@ -192,7 +181,6 @@ class LobbyService @Autowired constructor(
 
             // 如果没人了，就销毁
             if (lobby.players!!.isEmpty()) {
-                lobby.sendMsg(LobbyMessage(LobbyMessageType.LOBBY_DESTROYED))
                 lobbyRepository.deleteById(targetLobbyId)
                 playerLobbyRepository.deleteById(playerId)
                 return@withPlayerAndLobbyLock
@@ -207,52 +195,12 @@ class LobbyService @Autowired constructor(
 
             // 广播
             publishingScope.launch {
-                nextHost?.let { lobby.publishHostUpdate(it) }
-                lobby.sendMsg(LobbyMessage(LobbyMessageType.LEAVE).apply {
-                    data = playerId
-                })
+                lobby.playerLeave(playerId)
+                nextHost?.let {
+                    lobby.publishHostUpdate(it)
+                }
             }
         }
-    }
-
-    /**
-     * 为当前 WebSocket 连接注册目标大厅的消息监听器，并发送一次大厅快照。
-     *
-     * @param player 当前 socket 绑定的玩家连接状态
-     * @param targetLobbyId 目标大厅 ID
-     * @return true 表示玩家已在大厅内、完成监听注册并已发送当前大厅快照
-     * @throws LobbyNotExist 当目标大厅不存在时抛出
-     * @throws LobbyBusyException 当目标大厅状态正被其他操作长期占用时抛出
-     */
-    suspend fun subscribeLobby(player: LobbyPlayer, targetLobbyId: LobbyId): Boolean {
-        val subscribed = withLobbyLock(redissonClient, targetLobbyId) {
-            // pre check 玩家确实connect了
-            val lobby = lobbyRepository.findById(targetLobbyId).orElseThrow()
-            if (!lobby.players!!.contains(player.steamID64)) {
-                return@withLobbyLock false
-            }
-
-            val topic = PatternTopic(lobby.id.toString())
-            player.lobbyId = targetLobbyId
-            container.addMessageListener(player.msgListener, topic)
-            player.sendMessage(LobbyMessage(LobbyMessageType.LOBBY_SNAPSHOT).apply {
-                data = lobby
-            })
-            true
-        }
-
-        return subscribed
-    }
-
-    /**
-     * 移除当前 WebSocket 连接注册的大厅消息监听器。
-     *
-     * @param player 当前 socket 绑定的玩家连接状态
-     */
-    fun unsubscribeLobby(player: LobbyPlayer) {
-        val targetLobbyId = player.lobbyId ?: return
-        container.removeMessageListener(player.msgListener, PatternTopic(targetLobbyId.toString()))
-        player.lobbyId = null
     }
 
     /**
@@ -282,20 +230,40 @@ class LobbyService @Autowired constructor(
         if (!lobby.players!!.contains(playerId)) {
             throw LobbyNotExist()
         }
-        lobby.sendMsg(LobbyMessage(LobbyMessageType.TEXTING).apply {
-            data = LobbyMessageDataTexting(playerId, content)
-        })
+        lobby.playerTexting(playerId, content)
     }
 
-    private suspend fun Lobby.sendMsg(msg: Any) {
-        withContext(Dispatchers.IO) {
-            redisTemplate.convertAndSend(id.toString(), msg)
-        }
+    private fun Lobby.playerTexting(playerId: SteamID64, text: String) {
+        redisTemplate.convertAndSend(id.toString(), LobbyMessage (
+            LobbyMessageType.TEXTING,
+            playerId,
+            text,
+        ))
     }
 
-    private suspend fun Lobby.publishHostUpdate(newHost: SteamID64) {
-        sendMsg(LobbyMessage(LobbyMessageType.UPDATE_HOST).apply {
-            data = newHost
-        })
+    private fun Lobby.publishHostUpdate(newHost: SteamID64) {
+        redisTemplate.convertAndSend(id.toString(), LobbyMessage (
+            LobbyMessageType.UPDATE_HOST,
+            newHost,
+            "",
+        ))
+    }
+
+    private fun Lobby.playerJoin(playerId: SteamID64) {
+        redisTemplate.convertAndSend(id.toString(), LobbyMessage(
+                LobbyMessageType.JOIN,
+                playerId,
+                "",
+            )
+        )
+    }
+
+    private fun Lobby.playerLeave(playerId: SteamID64) {
+        redisTemplate.convertAndSend(id.toString(), LobbyMessage(
+            LobbyMessageType.LEAVE,
+            playerId,
+            "",
+        )
+        )
     }
 }

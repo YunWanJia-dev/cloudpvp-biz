@@ -4,8 +4,8 @@ import jakarta.annotation.PreDestroy
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
-import me.ywj.cloudpvp.core.model.lobby.LobbyMessage
-import me.ywj.cloudpvp.core.model.lobby.LobbyMessageType
+import me.ywj.cloudpvp.lobby.model.publishing.LobbyMessage
+import me.ywj.cloudpvp.lobby.model.publishing.LobbyMessageType
 import me.ywj.cloudpvp.core.model.lobby.LobbyStatus
 import me.ywj.cloudpvp.lobby.entity.Lobby
 import me.ywj.cloudpvp.lobby.entity.Match

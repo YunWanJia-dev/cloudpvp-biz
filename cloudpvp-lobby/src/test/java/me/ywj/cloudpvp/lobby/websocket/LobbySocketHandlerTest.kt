@@ -8,11 +8,11 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import me.ywj.cloudpvp.core.constant.header.Attributes
 import me.ywj.cloudpvp.core.model.base.ErrorType
-import me.ywj.cloudpvp.core.model.lobby.LobbyMessage
-import me.ywj.cloudpvp.core.model.lobby.LobbyMessageType
+import me.ywj.cloudpvp.lobby.model.publishing.LobbyMessage
+import me.ywj.cloudpvp.lobby.model.publishing.LobbyMessageType
 import me.ywj.cloudpvp.core.type.SteamID64
 import me.ywj.cloudpvp.lobby.entity.Lobby
-import me.ywj.cloudpvp.lobby.entity.LobbyPlayer
+import me.ywj.cloudpvp.lobby.listener.LobbyPlayer
 import me.ywj.cloudpvp.lobby.exceptions.LobbyBusyException
 import me.ywj.cloudpvp.lobby.exceptions.LobbyNotExist
 import me.ywj.cloudpvp.lobby.service.LobbyService

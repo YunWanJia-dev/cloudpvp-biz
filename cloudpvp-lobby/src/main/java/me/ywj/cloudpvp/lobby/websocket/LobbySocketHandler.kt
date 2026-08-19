@@ -1,7 +1,5 @@
 package me.ywj.cloudpvp.lobby.websocket
 
-import jakarta.annotation.PreDestroy
-import kotlinx.coroutines.*
 import me.ywj.cloudpvp.core.constant.header.Attributes
 import me.ywj.cloudpvp.core.model.base.ErrorResponse
 import me.ywj.cloudpvp.core.model.base.ErrorType
@@ -9,9 +7,10 @@ import me.ywj.cloudpvp.core.type.SteamID64
 import me.ywj.cloudpvp.core.utils.JacksonUtils
 import me.ywj.cloudpvp.core.utils.LobbyUtils
 import me.ywj.cloudpvp.core.utils.PlayerUtils
-import me.ywj.cloudpvp.lobby.entity.LobbyPlayer
-import me.ywj.cloudpvp.lobby.exceptions.LobbySocketError
+import me.ywj.cloudpvp.lobby.model.publishing.LobbyMessage
+import me.ywj.cloudpvp.lobby.model.publishing.LobbyMessageType
 import me.ywj.cloudpvp.lobby.service.LobbyService
+import me.ywj.cloudpvp.lobby.service.LobbySessionService
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Controller
 import org.springframework.web.socket.CloseStatus
@@ -30,39 +29,23 @@ import org.springframework.web.util.UriTemplate
  * @since 2024/10/20 15:44
  */
 @Controller
-class LobbySocketHandler : AbstractWebSocketHandler,
-    WebSocketHandler {
-    private val lobbyService: LobbyService
-
-    /**
-     * 大厅订阅任务使用处理器自有协程作用域，避免在 WebSocket 容器线程中等待 Redis 锁和仓储 I/O。
-     */
-    private val subscriptionScope: CoroutineScope
-
-    @Autowired
-    constructor(lobbyService: LobbyService) : this(
-        lobbyService,
-        CoroutineScope(SupervisorJob() + Dispatchers.IO),
-    )
-
-    internal constructor(lobbyService: LobbyService, subscriptionScope: CoroutineScope) : super() {
-        this.lobbyService = lobbyService
-        this.subscriptionScope = subscriptionScope
-    }
-
+class LobbySocketHandler @Autowired constructor(
+    private val lobbyService: LobbyService,
+    private val lobbySessionService: LobbySessionService
+) : AbstractWebSocketHandler(), WebSocketHandler {
     companion object {
         const val PARAM_LOBBY_ID = "lobbyId"
         const val PATH = "/ws/{${PARAM_LOBBY_ID}}"
+        private val URI_TEMPLATE = UriTemplate(PATH)
         /**
          * 单次发送持有锁的最长时间，避免慢连接让同一会话的后续消息长期排队。
          */
         private const val SEND_TIME_LIMIT_MILLIS = 10_000
+
         /**
          * 装饰器排队发送消息的最大缓冲，防止异常连接持续堆积待发送数据。
          */
         private const val SEND_BUFFER_SIZE_LIMIT_BYTES = 64 * 1024
-        private val URI_TEMPLATE = UriTemplate(PATH)
-        private const val ATTR_LOBBY_PLAYER = "cloudpvp.lobby.player"
     }
 
     /**
@@ -111,57 +94,6 @@ class LobbySocketHandler : AbstractWebSocketHandler,
     }
 
     /**
-     * 清理当前连接的大厅订阅并关闭 WebSocket。
-     *
-     * @param session 当前 WebSocket 会话
-     * @param player 当前连接绑定的大厅玩家状态
-     */
-    private fun closeSubscribedSession(session: WebSocketSession, player: LobbyPlayer) {
-        cleanupSubscribedPlayer(session, player)
-        if (!session.isOpen) {
-            return
-        }
-        try {
-            session.close()
-        } catch (_: Exception) {
-            // 关闭失败不能影响订阅清理；连接关闭流程会在容器侧继续收敛。
-        }
-    }
-
-    /**
-     * 清理已建立或半建立的大厅订阅状态。
-     *
-     * @param session 当前 WebSocket 会话
-     * @param fallbackPlayer 订阅过程已记录大厅 ID 但尚未写入 session 属性时使用的兜底玩家
-     */
-    private fun cleanupSubscribedPlayer(session: WebSocketSession, fallbackPlayer: LobbyPlayer? = null) {
-        val storedPlayer = session.attributes.remove(ATTR_LOBBY_PLAYER) as? LobbyPlayer
-        val playerToCleanup = storedPlayer ?: fallbackPlayer?.takeIf { it.lobbyId != null } ?: return
-        lobbyService.unsubscribeLobby(playerToCleanup)
-    }
-
-    /**
-     * 向客户端返回订阅阶段错误并关闭连接。
-     *
-     * @param session 当前 WebSocket 会话
-     * @param error 订阅阶段捕获到的异常
-     */
-    private fun closeWithSubscriptionError(session: WebSocketSession, error: Throwable) {
-        // 订阅失败可能是大厅运行时状态，保留具体错误类型供客户端选择正确提示和重试策略。
-        val errorType = (error as? LobbySocketError)?.errorType ?: ErrorType.PARAM_INVALID
-        runCatching { session.sendMessage(ErrorResponse(errorType, error.message ?: "")) }
-        runCatching { session.close() }
-    }
-
-    /**
-     * 销毁处理器时取消尚未完成的订阅任务。
-     */
-    @PreDestroy
-    fun destroy() {
-        subscriptionScope.cancel()
-    }
-
-    /**
      * 建立 WebSocket 连接后监听目标大厅。
      *
      * @param session 新建立的 WebSocket 会话
@@ -182,34 +114,20 @@ class LobbySocketHandler : AbstractWebSocketHandler,
 
         val playerId = safeSession.getPlayerId()!!
         val targetLobbyId = safeSession.getRequestLobbyId()!!
-        val player = LobbyPlayer(
-            playerId,
-            { it: Any -> safeSession.sendMessage(it) },
-            { closeSubscribedSession(safeSession, it) },
-        )
 
-        subscriptionScope.launch {
-            try {
-                val subscribed = lobbyService.subscribeLobby(player, targetLobbyId)
-                if (!subscribed) {
-                    safeSession.sendMessage(ErrorResponse(ErrorType.PARAM_INVALID, ""))
-                    safeSession.close()
-                    return@launch
-                }
-                safeSession.attributes[ATTR_LOBBY_PLAYER] = player
-                if (!safeSession.isOpen) {
-                    // 订阅完成前连接可能已断开；这里补偿清理，避免 Redis 监听器泄漏。
-                    cleanupSubscribedPlayer(safeSession, player)
-                    return@launch
-                }
-            } catch (e: Throwable) {
-                if (e is CancellationException) {
-                    throw e
-                }
-                cleanupSubscribedPlayer(safeSession, player)
-                closeWithSubscriptionError(safeSession, e)
+
+        val closeSessionFn = fun () {
+            safeSession.close()
+        }
+
+        val sendMessageFn = fun (message: LobbyMessage) {
+            safeSession.sendMessage(message)
+            if (message.type == LobbyMessageType.LEAVE && message.actionPlayerId == playerId) {
+                closeSessionFn()
             }
         }
+
+        lobbySessionService.trySubscribe(playerId, targetLobbyId, sendMessageFn)
     }
 
     /**
@@ -219,9 +137,8 @@ class LobbySocketHandler : AbstractWebSocketHandler,
      * @param status 连接关闭状态
      */
     override fun afterConnectionClosed(session: WebSocketSession, status: CloseStatus) {
-        // 允许玩家短暂掉线后重连到大厅，因此这里只取消订阅，不调用 leaveLobby。
-        // 潜在的无效大厅由定时任务或其他清理流程处理。
-        cleanupSubscribedPlayer(session)
+        val playerId = session.getPlayerId()!!
+        lobbySessionService.unsubscribe(playerId)
     }
 }
 
