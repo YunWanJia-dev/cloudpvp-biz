@@ -23,4 +23,5 @@ enum class LobbyMessageType {
     LEAVE,
     TEXTING,
     UPDATE_HOST,
+    SHOULD_SYNC,
 }

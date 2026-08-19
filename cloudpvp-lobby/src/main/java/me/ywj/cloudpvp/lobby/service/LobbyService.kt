@@ -12,6 +12,7 @@ import me.ywj.cloudpvp.lobby.entity.PlayerLobby
 import me.ywj.cloudpvp.lobby.exceptions.LobbyBusyException
 import me.ywj.cloudpvp.lobby.exceptions.LobbyNotExist
 import me.ywj.cloudpvp.lobby.exceptions.PlayerAlreadyInLobbyException
+import me.ywj.cloudpvp.lobby.exceptions.PlayerStateIllegalException
 import me.ywj.cloudpvp.lobby.repository.LobbyRepository
 import me.ywj.cloudpvp.lobby.repository.PlayerLobbyRepository
 import me.ywj.cloudpvp.lobby.utils.RedisLockUtils.withPlayerAndLobbyLock
@@ -80,10 +81,12 @@ class LobbyService @Autowired constructor(
      * @param playerId 玩家 ID
      * @return 玩家当前所在大厅；未加入大厅时返回 null
      */
-    fun getCurrentLobby(playerId: SteamID64): Lobby {
-        val playerLobbyOption = playerLobbyRepository.findById(playerId).orElseThrow()
-
-        return lobbyRepository.findById(playerLobbyOption.lobbyId).orElseThrow()
+    fun getCurrentLobby(playerId: SteamID64): Lobby? {
+        val playerLobbyOption = playerLobbyRepository.findById(playerId)
+        if (playerLobbyOption.isPresent) {
+            return lobbyRepository.findById(playerLobbyOption.get().lobbyId).orElseThrow { PlayerStateIllegalException() }
+        }
+        return null
     }
 
     /**
@@ -104,7 +107,7 @@ class LobbyService @Autowired constructor(
                 removePlayerFromLobby(playerId, playerLobbyOption.get().lobbyId)
             }
 
-            val lobby = lobbyRepository.findById(targetLobbyId).orElseThrow()
+            val lobby = lobbyRepository.findById(targetLobbyId).orElseThrow { LobbyNotExist() }
 
             // 只有等待状态的房间才能进
             if (lobby.status != LobbyStatus.WAITING) {

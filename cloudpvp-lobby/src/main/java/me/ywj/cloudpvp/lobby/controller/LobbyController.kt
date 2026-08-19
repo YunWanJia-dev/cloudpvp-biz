@@ -46,7 +46,7 @@ class LobbyController @Autowired constructor(
      * 查询当前玩家所在的大厅。
      */
     @GetMapping
-    suspend fun getCurrentLobby(@RequestHeader(HttpHeaders.AUTHORIZATION) token: String): Lobby {
+    suspend fun getCurrentLobby(@RequestHeader(HttpHeaders.AUTHORIZATION) token: String): Lobby? {
         val playerId = tokenAuthUtils.getIDFromToken(token)
         return lobbyService.getCurrentLobby(playerId)
     }

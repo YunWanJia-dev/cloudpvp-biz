@@ -13,6 +13,8 @@ import me.ywj.cloudpvp.lobby.constant.routingkey.MatchmakingKey
 import me.ywj.cloudpvp.lobby.entity.Lobby
 import me.ywj.cloudpvp.lobby.exceptions.LobbyBusyException
 import me.ywj.cloudpvp.lobby.exceptions.LobbyNotExist
+import me.ywj.cloudpvp.lobby.exceptions.PlayerNotInLobbyException
+import me.ywj.cloudpvp.lobby.exceptions.PlayerStateIllegalException
 import me.ywj.cloudpvp.lobby.model.messaging.LobbyEnqueueMessage
 import me.ywj.cloudpvp.lobby.model.SelectModeDTO
 import me.ywj.cloudpvp.lobby.repository.LobbyRepository
@@ -52,9 +54,9 @@ class LobbyMatchService @Autowired constructor(
      * @throws LobbyBusyException 当玩家不是房主、大厅状态不正确或模式 key 无效时抛出
      */
     suspend fun selectMode(playerId: SteamID64, request: SelectModeDTO) {
-        val lobbyId = getCurrentLobbyIdOrThrow(playerId)
+        val lobbyId = playerLobbyRepository.findById(playerId).orElseThrow { PlayerNotInLobbyException() }.lobbyId
         withLobbyLock(redissonClient, lobbyId) {
-            val lobby = getLobbyOrThrow(lobbyId)
+            val lobby = lobbyRepository.findById(lobbyId).orElseThrow { PlayerStateIllegalException() }
             if (lobby.host != playerId) {
                 throw LobbyBusyException("Player $playerId is not the host of lobby $lobbyId")
             }
@@ -81,9 +83,7 @@ class LobbyMatchService @Autowired constructor(
             }
 
             lobbyRepository.save(lobby)
-            lobby.sendMsg(LobbyMessage(LobbyMessageType.LOBBY_SNAPSHOT).apply {
-                data = lobby
-            })
+
         }
     }
 
@@ -95,9 +95,9 @@ class LobbyMatchService @Autowired constructor(
      * @throws LobbyBusyException 当玩家不是房主或大厅状态不正确时抛出
      */
     suspend fun startMatching(playerId: SteamID64) {
-        val lobbyId = getCurrentLobbyIdOrThrow(playerId)
+        val lobbyId = playerLobbyRepository.findById(playerId).orElseThrow { PlayerNotInLobbyException() }.lobbyId
         withLobbyLock(redissonClient, lobbyId) {
-            val lobby = getLobbyOrThrow(lobbyId)
+            val lobby = lobbyRepository.findById(lobbyId).orElseThrow { PlayerStateIllegalException() }
             if (lobby.host != playerId) {
                 throw LobbyBusyException("Player $playerId is not the host of lobby $lobbyId")
             }
@@ -111,7 +111,7 @@ class LobbyMatchService @Autowired constructor(
             lobby.status = LobbyStatus.MATCHING
             lobby.matchId = null
             lobbyRepository.save(lobby)
-            lobby.sendMsg(LobbyMessage(LobbyMessageType.MATCH_START))
+
             val message = LobbyEnqueueMessage.from(lobby)
             logger.info(
                 "准备发送匹配请求: exchange={}, routingKey={}, lobbyId={}, gameMode={}, players={}",
@@ -140,9 +140,9 @@ class LobbyMatchService @Autowired constructor(
      * @throws LobbyBusyException 当玩家不是房主或大厅状态不正确时抛出
      */
     suspend fun stopMatching(playerId: SteamID64) {
-        val lobbyId = getCurrentLobbyIdOrThrow(playerId)
+        val lobbyId = playerLobbyRepository.findById(playerId).orElseThrow { PlayerNotInLobbyException() }.lobbyId
         withLobbyLock(redissonClient, lobbyId) {
-            val lobby = getLobbyOrThrow(lobbyId)
+            val lobby = lobbyRepository.findById(lobbyId).orElseThrow { PlayerStateIllegalException() }
             if (lobby.host != playerId) {
                 throw LobbyBusyException("Player $playerId is not the host of lobby $lobbyId")
             }
@@ -153,7 +153,7 @@ class LobbyMatchService @Autowired constructor(
             lobby.status = LobbyStatus.WAITING
             lobby.matchId = null
             lobbyRepository.save(lobby)
-            lobby.sendMsg(LobbyMessage(LobbyMessageType.MATCH_STOP))
+
             val message = LobbyEnqueueMessage.from(lobby)
             logger.info(
                 "准备发送取消匹配请求: exchange={}, routingKey={}, lobbyId={}",
@@ -180,9 +180,9 @@ class LobbyMatchService @Autowired constructor(
      * @throws LobbyBusyException 当大厅状态不正确或玩家不在大厅中时抛出
      */
     suspend fun confirmMatch(playerId: SteamID64) {
-        val lobbyId = getCurrentLobbyIdOrThrow(playerId)
+        val lobbyId = playerLobbyRepository.findById(playerId).orElseThrow { PlayerNotInLobbyException() }.lobbyId
         withLobbyLock(redissonClient, lobbyId) {
-            val lobby = getLobbyOrThrow(lobbyId)
+            val lobby = lobbyRepository.findById(lobbyId).orElseThrow { PlayerStateIllegalException() }
             if (lobby.status != LobbyStatus.MATCHING || lobby.matchId == null) {
                 throw LobbyBusyException("Lobby $lobbyId is in status ${lobby.status}, cannot confirm match")
             }
@@ -190,43 +190,8 @@ class LobbyMatchService @Autowired constructor(
                 throw LobbyBusyException("Player $playerId is not in lobby $lobbyId")
             }
 
-            lobby.sendMsg(LobbyMessage(LobbyMessageType.MATCH_CONFIRM).apply {
-                data = playerId
-            })
             // TODO: 通过 MQ 发送玩家确认消息给匹配模块，由匹配模块统计并下发确认结果
         }
     }
 
-    /**
-     * 从 Redis 玩家大厅索引中解析当前大厅 ID。
-     *
-     * @param playerId 玩家 ID
-     * @return 玩家当前所在大厅 ID
-     * @throws LobbyNotExist 当玩家没有大厅索引时抛出
-     */
-    private suspend fun getCurrentLobbyIdOrThrow(playerId: SteamID64): LobbyId {
-        val playerLobbyOption = withContext(Dispatchers.IO) {
-            playerLobbyRepository.findById(playerId)
-        }
-        if (!playerLobbyOption.isPresent) {
-            throw LobbyNotExist()
-        }
-        return playerLobbyOption.get().lobbyId
-    }
-
-    private suspend fun getLobbyOrThrow(lobbyId: LobbyId): Lobby {
-        val lobbyOption = withContext(Dispatchers.IO) {
-            lobbyRepository.findById(lobbyId)
-        }
-        if (!lobbyOption.isPresent) {
-            throw LobbyNotExist()
-        }
-        return lobbyOption.get()
-    }
-
-    private suspend fun Lobby.sendMsg(msg: Any) {
-        withContext(Dispatchers.IO) {
-            redisTemplate.convertAndSend(id.toString(), msg)
-        }
-    }
 }
