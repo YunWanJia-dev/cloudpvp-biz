@@ -150,60 +150,60 @@ class LobbyService @Autowired constructor(
 
         val targetLobbyId = playerLobbyOption.get().lobbyId
 
-        return removePlayerFromLobby(playerId, targetLobbyId)
+        return withPlayerAndLobbyLock(redissonClient, playerId, targetLobbyId) {
+            removePlayerFromLobby(playerId, targetLobbyId)
+        }
     }
 
     /**
-     * 把玩家从某个Lobby里移除
+     * 把玩家从某个Lobby里移除，提供给持有锁的时候使用，所以这边就不加锁
      *
      * @param playerId 玩家 ID
      * @param targetLobbyId 目标房间id
      */
-    suspend fun removePlayerFromLobby(playerId: SteamID64, targetLobbyId: LobbyId) {
-        return withPlayerAndLobbyLock(redissonClient, playerId, targetLobbyId) {
-            // 先清理映射关系
-            val playerLobbyOption = playerLobbyRepository.findById(playerId)
-            if (playerLobbyOption.isPresent) {
-                playerLobbyRepository.deleteById(playerId)
-            }
+    private fun removePlayerFromLobby(playerId: SteamID64, targetLobbyId: LobbyId) {
+        val playerLobbyOption = playerLobbyRepository.findById(playerId)
+        // 清理映射关系
+        if (playerLobbyOption.isPresent) { // 因为调用侧已经为playerId和lobbyId加锁了，理应不会产生索引不匹配的情况，所以直接删除即可
+            playerLobbyRepository.deleteById(playerId)
+        }
 
-            // 查询 lobby
-            val lobbyOption = lobbyRepository.findById(targetLobbyId)
-            if (!lobbyOption.isPresent) {
-                return@withPlayerAndLobbyLock
-            }
-            val lobby = lobbyOption.get()
+        // 查询 lobby
+        val lobbyOption = lobbyRepository.findById(targetLobbyId)
+        if (!lobbyOption.isPresent) {
+            return
+        }
+        val lobby = lobbyOption.get()
 
-            // 从列表移除
-            val removed = lobby.players!!.removeAll { it == playerId }
-            if (!removed) {
-                playerLobbyRepository.deleteById(playerId)
-                return@withPlayerAndLobbyLock
-            }
+        // 从列表移除
+        val removed = lobby.players!!.removeAll { it == playerId }
+        if (!removed) {
+            playerLobbyRepository.deleteById(playerId)
+            return
+        }
 
-            // 如果没人了，就销毁
-            if (lobby.players!!.isEmpty()) {
-                lobbyRepository.deleteById(targetLobbyId)
-                playerLobbyRepository.deleteById(playerId)
-                publishingScope.launch {
-                    lobby.playerLeave(playerId)
-                }
-                return@withPlayerAndLobbyLock
-            }
-
-            // 如果离开的是房主，则需要更新房主
-            val nextHost = if (lobby.host == playerId) lobby.players!!.first() else null
-            nextHost?.let { lobby.host = it }
-
-            // 写入
-            lobbyRepository.save(lobby)
-
-            // 广播
+        // 如果没人了，就销毁
+        if (lobby.players!!.isEmpty()) {
+            lobbyRepository.deleteById(targetLobbyId)
+            playerLobbyRepository.deleteById(playerId)
             publishingScope.launch {
                 lobby.playerLeave(playerId)
-                nextHost?.let {
-                    lobby.publishHostUpdate(it)
-                }
+            }
+            return
+        }
+
+        // 如果离开的是房主，则需要更新房主
+        val nextHost = if (lobby.host == playerId) lobby.players!!.first() else null
+        nextHost?.let { lobby.host = it }
+
+        // 写入
+        lobbyRepository.save(lobby)
+
+        // 广播
+        publishingScope.launch {
+            lobby.playerLeave(playerId)
+            nextHost?.let {
+                lobby.publishHostUpdate(it)
             }
         }
     }
