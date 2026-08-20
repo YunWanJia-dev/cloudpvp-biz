@@ -9,7 +9,7 @@ import org.springframework.data.redis.core.RedisTemplate
 import org.springframework.stereotype.Service
 
 /**
- * MatchListeningService
+ * LobbyListeningService
  * 管理大厅的 MQ 回传
  *
  * @author sheip9

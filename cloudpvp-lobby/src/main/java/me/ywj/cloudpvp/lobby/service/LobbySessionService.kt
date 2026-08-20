@@ -12,7 +12,7 @@ import java.util.concurrent.ConcurrentHashMap
 import kotlin.collections.set
 
 /**
- * MatchSessionService
+ * LobbySessionService
  * 管理比赛 WebSocket 会话与 Match Redis 频道监听器的绑定关系。
  *
  * @author sheip9
@@ -54,7 +54,7 @@ class LobbySessionService(
      */
     fun unsubscribe(playerId: SteamID64) {
         listenerList[playerId]?.let {
-            container.removeMessageListener(it);
+            container.removeMessageListener(it)
         }
         listenerList.remove(playerId)
     }

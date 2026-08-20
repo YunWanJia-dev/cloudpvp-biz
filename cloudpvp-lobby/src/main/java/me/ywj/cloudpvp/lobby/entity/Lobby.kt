@@ -27,7 +27,7 @@ data class Lobby(
     /**
      * 获取当前选择的完整游戏模式标识。
      *
-     * @return 格式为 `gameKey/typeKey/modeKey` 的标识；模式未完整选择时返回 null
+     * @return 格式为 `gameKey/typeKey/modeKey` 的标识
      */
     @get:Transient
     val gameMode: String
