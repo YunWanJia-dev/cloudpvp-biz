@@ -19,6 +19,7 @@ import org.springframework.web.socket.WebSocketSession
 import org.springframework.web.socket.handler.AbstractWebSocketHandler
 import org.springframework.web.socket.handler.ConcurrentWebSocketSessionDecorator
 import org.springframework.web.util.UriTemplate
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * LobbySocketHandler
@@ -45,6 +46,8 @@ class LobbySocketHandler @Autowired constructor(
          */
         private const val SEND_BUFFER_SIZE_LIMIT_BYTES = 64 * 1024
     }
+
+    private val sessionList = ConcurrentHashMap<SteamID64, MutableSet<WebSocketSession>>()
 
     /**
      * 从握手属性中读取当前玩家 ID。
@@ -113,21 +116,22 @@ class LobbySocketHandler @Autowired constructor(
         val playerId = safeSession.getPlayerId()!!
         val targetLobbyId = safeSession.getRequestLobbyId()!!
 
-
-        val closeSessionFn = fun () {
-            safeSession.close()
-        }
-
         val sendMessageFn = fun (message: LobbyMessage) {
-            safeSession.sendMessage(message)
-            if (message.type == LobbyMessageType.LEAVE && message.actionPlayerId == playerId) {
-                closeSessionFn()
+            sessionList[playerId]?.parallelStream()?.forEach {
+                it.sendMessage(message)
+                if (message.type == LobbyMessageType.LEAVE && message.actionPlayerId == playerId) {
+                    it.close()
+                }
             }
         }
 
         if (!lobbySessionService.trySubscribe(playerId, targetLobbyId, sendMessageFn)) {
-            closeSessionFn()
+            return safeSession.close()
         }
+
+        sessionList.computeIfAbsent(
+            playerId
+        ) { ConcurrentHashMap.newKeySet() }.add(safeSession)
     }
 
     /**
@@ -138,8 +142,11 @@ class LobbySocketHandler @Autowired constructor(
      */
     override fun afterConnectionClosed(session: WebSocketSession, status: CloseStatus) {
         session.getPlayerId()?.let {
-            lobbySessionService.unsubscribe(it)
+            sessionList[it]?.removeIf { safeSession -> safeSession.id == session.id }
+            if (sessionList[it]?.isEmpty() == true) {
+                lobbySessionService.unsubscribe(it)
+                sessionList.remove(it)
+            }
         }
     }
 }
-

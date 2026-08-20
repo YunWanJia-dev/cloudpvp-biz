@@ -17,6 +17,7 @@ import org.springframework.web.socket.WebSocketSession
 import org.springframework.web.socket.handler.AbstractWebSocketHandler
 import org.springframework.web.socket.handler.ConcurrentWebSocketSessionDecorator
 import org.springframework.web.util.UriTemplate
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * MatchSocketHandler
@@ -36,6 +37,8 @@ class MatchSocketHandler @Autowired constructor(
         private const val SEND_TIME_LIMIT_MILLIS = 10_000
         private const val SEND_BUFFER_SIZE_LIMIT_BYTES = 64 * 1024
     }
+
+    private val sessionList = ConcurrentHashMap<SteamID64, MutableSet<WebSocketSession>>()
 
     private fun WebSocketSession.getPlayerId(): SteamID64? {
         return attributes[Attributes.ID] as SteamID64?
@@ -81,12 +84,18 @@ class MatchSocketHandler @Autowired constructor(
         val playerId = safeSession.getPlayerId()!!
         val matchId = safeSession.getRequestMatchId()!!
         val sendMatchFn = fun(match: Match) {
-            safeSession.sendMessage(match)
+            sessionList[playerId]?.parallelStream()?.forEach{
+                it.sendMessage(match)
+            }
         }
 
         if (!matchSessionService.trySubscribe(playerId, matchId, sendMatchFn)) {
-            safeSession.close()
+            return safeSession.close()
         }
+
+        sessionList.computeIfAbsent(
+            playerId
+        ) { ConcurrentHashMap.newKeySet() }.add(safeSession)
     }
 
     /**
@@ -97,7 +106,11 @@ class MatchSocketHandler @Autowired constructor(
      */
     override fun afterConnectionClosed(session: WebSocketSession, status: CloseStatus) {
         session.getPlayerId()?.let {
-            matchSessionService.unsubscribe(it)
+            sessionList[it]?.removeIf { safeSession -> safeSession.id == session.id }
+            if (sessionList[it]?.isEmpty() == true) {
+                matchSessionService.unsubscribe(it)
+                sessionList.remove(it)
+            }
         }
     }
 }
