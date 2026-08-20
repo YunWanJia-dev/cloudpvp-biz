@@ -1,8 +1,6 @@
 package me.ywj.cloudpvp.lobby.service
 
 import kotlinx.coroutines.*
-import me.ywj.cloudpvp.lobby.model.publishing.LobbyMessage
-import me.ywj.cloudpvp.lobby.model.publishing.LobbyMessageType
 import me.ywj.cloudpvp.core.model.lobby.LobbyStatus
 import me.ywj.cloudpvp.core.type.LobbyId
 import me.ywj.cloudpvp.core.type.SteamID64
@@ -13,13 +11,14 @@ import me.ywj.cloudpvp.lobby.exceptions.LobbyBusyException
 import me.ywj.cloudpvp.lobby.exceptions.LobbyNotExist
 import me.ywj.cloudpvp.lobby.exceptions.PlayerAlreadyInLobbyException
 import me.ywj.cloudpvp.lobby.exceptions.PlayerStateIllegalException
+import me.ywj.cloudpvp.lobby.model.publishing.LobbyMessage
+import me.ywj.cloudpvp.lobby.model.publishing.LobbyMessageType
 import me.ywj.cloudpvp.lobby.repository.LobbyRepository
 import me.ywj.cloudpvp.lobby.repository.PlayerLobbyRepository
 import me.ywj.cloudpvp.lobby.utils.RedisLockUtils.withPlayerAndLobbyLock
 import org.redisson.api.RedissonClient
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.data.redis.core.RedisTemplate
-import org.springframework.data.redis.listener.RedisMessageListenerContainer
 import org.springframework.stereotype.Service
 
 /**
@@ -186,6 +185,9 @@ class LobbyService @Autowired constructor(
             if (lobby.players!!.isEmpty()) {
                 lobbyRepository.deleteById(targetLobbyId)
                 playerLobbyRepository.deleteById(playerId)
+                publishingScope.launch {
+                    lobby.playerLeave(playerId)
+                }
                 return@withPlayerAndLobbyLock
             }
 
