@@ -8,6 +8,13 @@ import org.springframework.amqp.rabbit.annotation.RabbitListener
 import org.springframework.data.redis.core.RedisTemplate
 import org.springframework.stereotype.Service
 
+/**
+ * MatchListeningService
+ * 管理大厅的 MQ 回传
+ *
+ * @author sheip9
+ * @since 2026/8/14 17:54
+ */
 @Service
 class LobbyListeningService(
     private val lobbyRepository: LobbyRepository,

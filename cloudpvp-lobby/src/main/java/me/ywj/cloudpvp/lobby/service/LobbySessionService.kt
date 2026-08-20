@@ -11,6 +11,13 @@ import org.springframework.stereotype.Service
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.collections.set
 
+/**
+ * MatchSessionService
+ * 管理比赛 WebSocket 会话与 Match Redis 频道监听器的绑定关系。
+ *
+ * @author sheip9
+ * @since 2026/8/19 17:15
+ */
 @Service
 class LobbySessionService(
     private val playerLobbyRepository: PlayerLobbyRepository,
@@ -18,17 +25,33 @@ class LobbySessionService(
 ) {
     private val listenerList = ConcurrentHashMap<SteamID64, LobbyPlayerListener>()
 
-    fun trySubscribe(playerId: SteamID64, lobbyId: LobbyId, sendMessageFn: (LobbyMessage) -> Unit) {
+    /**
+     * trySubscribe
+     * 尝试为玩家订阅lobby的消息
+     *
+     * @param playerId 玩家ID
+     * @param lobbyId 房间ID
+     * @param sendMessageFn 发送消息的方法
+     * @return 成功为true，失败false
+     */
+    fun trySubscribe(playerId: SteamID64, lobbyId: LobbyId, sendMessageFn: (LobbyMessage) -> Unit) : Boolean {
         val playerLobbyPair = playerLobbyRepository.findById(playerId).orElseThrow()
         if (playerLobbyPair.lobbyId != lobbyId) {
-            return
+            return false
         }
 
         val messageListener = LobbyPlayerListener(sendMessageFn)
         container.addMessageListener(messageListener, PatternTopic(lobbyId.toString()))
         listenerList[playerId] = messageListener
+        return true
     }
 
+    /**
+     * trySubscribe
+     * 尝试为玩家取消订阅lobby的消息
+     *
+     * @param playerId 玩家ID
+     */
     fun unsubscribe(playerId: SteamID64) {
         listenerList[playerId]?.let {
             container.removeMessageListener(it);

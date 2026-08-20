@@ -23,7 +23,7 @@ import org.springframework.data.redis.listener.RedisMessageListenerContainer
 import org.springframework.stereotype.Service
 
 /**
- * LobbyLifecycleService
+ * LobbyService
  * 大厅生命周期管理：创建、加入、退出、订阅、文本消息等基础操作。
  *
  * @author sheip9

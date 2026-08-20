@@ -125,7 +125,9 @@ class LobbySocketHandler @Autowired constructor(
             }
         }
 
-        lobbySessionService.trySubscribe(playerId, targetLobbyId, sendMessageFn)
+        if (!lobbySessionService.trySubscribe(playerId, targetLobbyId, sendMessageFn)) {
+            closeSessionFn()
+        }
     }
 
     /**
