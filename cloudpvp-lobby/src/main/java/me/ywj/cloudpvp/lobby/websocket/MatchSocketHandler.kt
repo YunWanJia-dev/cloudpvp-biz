@@ -89,8 +89,11 @@ class MatchSocketHandler @Autowired constructor(
             }
         }
 
-        if (!matchSessionService.trySubscribe(playerId, matchId, sendMatchFn)) {
-            return safeSession.close()
+        val sessions = sessionList[playerId]
+        if (sessions == null || sessions.isEmpty()) {
+            if (!matchSessionService.trySubscribe(playerId, matchId, sendMatchFn)) {
+                return safeSession.close()
+            }
         }
 
         sessionList.computeIfAbsent(

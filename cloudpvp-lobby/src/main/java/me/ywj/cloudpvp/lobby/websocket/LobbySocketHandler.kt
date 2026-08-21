@@ -125,8 +125,11 @@ class LobbySocketHandler @Autowired constructor(
             }
         }
 
-        if (!lobbySessionService.trySubscribe(playerId, targetLobbyId, sendMessageFn)) {
-            return safeSession.close()
+        val sessions = sessionList[playerId]
+        if (sessions.isNullOrEmpty()) {
+            if (!lobbySessionService.trySubscribe(playerId, targetLobbyId, sendMessageFn)) {
+                return safeSession.close()
+            }
         }
 
         sessionList.computeIfAbsent(
