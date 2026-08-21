@@ -152,6 +152,17 @@ class LobbyService @Autowired constructor(
         val targetLobbyId = playerLobbyOption.get().lobbyId
 
         return withPlayerAndLobbyLock(redissonClient, playerId, targetLobbyId) {
+            // 查询 lobby
+            val lobbyOption = lobbyRepository.findById(targetLobbyId)
+            if (!lobbyOption.isPresent) {
+                return@withPlayerAndLobbyLock
+            }
+            val lobby = lobbyOption.get()
+            // 只有等待状态的房间才能退出
+            // TODO: 考虑比赛中的房间可以先取消比赛
+            if (lobby.status != LobbyStatus.WAITING) {
+                throw LobbyBusyException("Lobby ${lobby.id} is in status ${lobby.status}, cannot join")
+            }
             removePlayerFromLobby(playerId, targetLobbyId)
         }
     }
