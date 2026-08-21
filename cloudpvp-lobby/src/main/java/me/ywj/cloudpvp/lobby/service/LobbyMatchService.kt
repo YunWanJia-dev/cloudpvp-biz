@@ -108,9 +108,10 @@ class LobbyMatchService @Autowired constructor(
                 throw LobbyBusyException("Lobby $lobbyId has no game mode selected, cannot start matching")
             }
 
-            lobby.status = LobbyStatus.MATCHING
-            lobby.matchId = null
-            lobbyRepository.save(lobby)
+            lobby.apply {
+                status = LobbyStatus.MATCHING
+                matchId = null
+            }
 
             val message = LobbyEnqueueMessage.from(lobby)
             logger.info(
@@ -122,11 +123,14 @@ class LobbyMatchService @Autowired constructor(
                 message.players,
             )
             withContext(Dispatchers.IO) {
+                // 先发布到MQ里，再更新存储里的Lobby
                 rabbitTemplate.convertAndSend(
                     RabbitMQConfiguration.MATCHMAKING_EXCHANGE_NAME,
                     MatchmakingKey.Enqueue.routingKey,
                     message,
                 )
+
+                lobbyRepository.save(lobby)
             }
             logger.info("匹配请求已发送: lobbyId={}", message.lobbyId)
         }
