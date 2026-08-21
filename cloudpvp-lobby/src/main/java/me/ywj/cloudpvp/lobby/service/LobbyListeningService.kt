@@ -22,7 +22,12 @@ class LobbyListeningService(
 ) {
     @RabbitListener(queues = ["#{T(me.ywj.cloudpvp.lobby.constant.queue.MatchmakingQueue).Lobby.queueName}"])
     fun consumeLobbyStatus(message: LobbyUpdateMessage) {
-        val lobby = lobbyRepository.findById(message.lobbyId.toInt()).orElseThrow()
+        val lobbyOption = lobbyRepository.findById(message.lobbyId.toInt())
+        if (!lobbyOption.isPresent) {
+            // TODO: 潜在可能的匹配的同时取消匹配了
+            return
+        }
+        val lobby = lobbyOption.get()
         lobby.apply {
             status = message.status
             matchId = message.matchId
