@@ -101,9 +101,10 @@ class LobbyService @Autowired constructor(
     suspend fun joinLobby(playerId: SteamID64, targetLobbyId: LobbyId): Lobby {
         return withPlayerAndLobbyLock(redissonClient, playerId, targetLobbyId) {
             val playerLobbyOption = playerLobbyRepository.findById(playerId)
-            // check 玩家当前状态
+            // check 玩家当前状态, 已有映射关系时不可加入房间
+            // 原本想着后端去处理退出和重新加入，但是这里的竞态关系不好处理，所以先这样
             if (playerLobbyOption.isPresent && playerLobbyOption.get().lobbyId != targetLobbyId) {
-                removePlayerFromLobby(playerId, playerLobbyOption.get().lobbyId)
+                throw PlayerAlreadyInLobbyException(playerId, playerLobbyOption.get().lobbyId)
             }
 
             val lobby = lobbyRepository.findById(targetLobbyId).orElseThrow { LobbyNotExist() }
