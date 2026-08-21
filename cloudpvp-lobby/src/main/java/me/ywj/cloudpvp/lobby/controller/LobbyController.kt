@@ -115,15 +115,15 @@ class LobbyController @Autowired constructor(
     /**
      * 确认比赛。
      */
-    @PostMapping("/match/confirm")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    suspend fun confirmMatch(
-        @RequestHeader(HttpHeaders.AUTHORIZATION) token: String,
-    ) {
-        val playerId = tokenAuthUtils.getIDFromToken(token)
-        lobbyMatchService.confirmMatch(playerId)
-    }
-
+//    @PostMapping("/match/confirm")
+//    @ResponseStatus(HttpStatus.NO_CONTENT)
+//    suspend fun confirmMatch(
+//        @RequestHeader(HttpHeaders.AUTHORIZATION) token: String,
+//    ) {
+//        val playerId = tokenAuthUtils.getIDFromToken(token)
+//        lobbyMatchService.confirmMatch(playerId)
+//    }
+    // 暂时还不做确认的流程，先注释掉
     /**
      * 通过 HTTP 向当前玩家所在大厅发送文本消息。
      */
