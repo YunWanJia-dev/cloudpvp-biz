@@ -24,10 +24,11 @@ class LobbyListeningServiceTest {
         `when`(lobbyRepository.findById(123)).thenReturn(Optional.of(lobby))
 
         LobbyListeningService(lobbyRepository, redisTemplate).consumeLobbyStatus(
-            LobbyUpdateMessage("123", LobbyStatus.WAITING),
+            LobbyUpdateMessage("123", LobbyStatus.WAITING, "match-1"),
         )
 
         assertThat(lobby.status).isEqualTo(LobbyStatus.WAITING)
+        assertThat(lobby.matchId).isEqualTo("match-1")
         verify(lobbyRepository).save(lobby)
         verify(redisTemplate).convertAndSend(
             "123",

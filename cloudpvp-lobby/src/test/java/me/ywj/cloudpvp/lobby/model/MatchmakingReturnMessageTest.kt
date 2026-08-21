@@ -29,13 +29,14 @@ class MatchmakingReturnMessageTest {
     @Test
     fun readsLobbyStatusMessage() {
         val message = objectMapper.readValue(
-            """{"lobby_id":"123","status":"WAITING","reason":"cancelled"}""",
+            """{"lobby_id":"123","status":"WAITING","match_id":"match-1","reason":""}""",
             LobbyUpdateMessage::class.java,
         )
 
         assertThat(message.lobbyId).isEqualTo("123")
         assertThat(message.status).isEqualTo(LobbyStatus.WAITING)
-        assertThat(message.reason).isEqualTo("cancelled")
+        assertThat(message.matchId).isEqualTo("match-1")
+        assertThat(message.reason).isEmpty()
     }
 
     /**

@@ -13,5 +13,7 @@ data class LobbyUpdateMessage(
     @field:JsonProperty("lobby_id")
     val lobbyId: String,
     val status: LobbyStatus,
+    @field:JsonProperty("match_id")
+    val matchId: String? = null,
     val reason: String? = null,
 )

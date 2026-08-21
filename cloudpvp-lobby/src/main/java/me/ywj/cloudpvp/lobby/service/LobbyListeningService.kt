@@ -23,7 +23,10 @@ class LobbyListeningService(
     @RabbitListener(queues = ["#{T(me.ywj.cloudpvp.lobby.constant.queue.MatchmakingQueue).Lobby.queueName}"])
     fun consumeLobbyStatus(message: LobbyUpdateMessage) {
         val lobby = lobbyRepository.findById(message.lobbyId.toInt()).orElseThrow()
-        lobby.status = message.status
+        lobby.apply {
+            status = message.status
+            matchId = message.matchId
+        }
         lobbyRepository.save(lobby)
         redisTemplate.convertAndSend(
             lobby.id.toString(),
