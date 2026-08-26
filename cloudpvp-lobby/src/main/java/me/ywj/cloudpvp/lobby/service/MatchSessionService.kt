@@ -47,6 +47,12 @@ class MatchSessionService(
         val messageListener = MatchPlayerListener(matchId, matchRepository, sendMatchFn)
         container.addMessageListener(messageListener, PatternTopic(matchId))
         listenerList[playerId] = messageListener
+
+        // 发布快照
+        matchRepository.findById(matchId).get().let {
+            sendMatchFn.invoke(it)
+        }
+
         return true
     }
 
