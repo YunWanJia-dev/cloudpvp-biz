@@ -1,9 +1,12 @@
 package me.ywj.cloudpvp.lobby.service
 
+import kotlinx.coroutines.runBlocking
 import me.ywj.cloudpvp.lobby.model.messaging.LobbyUpdateMessage
 import me.ywj.cloudpvp.lobby.model.publishing.LobbyMessage
 import me.ywj.cloudpvp.lobby.model.publishing.LobbyMessageType
 import me.ywj.cloudpvp.lobby.repository.LobbyRepository
+import me.ywj.cloudpvp.lobby.utils.RedisLockUtils.withLobbyLock
+import org.redisson.api.RedissonClient
 import org.springframework.amqp.rabbit.annotation.RabbitListener
 import org.springframework.data.redis.core.RedisTemplate
 import org.springframework.stereotype.Service
@@ -19,23 +22,29 @@ import org.springframework.stereotype.Service
 class LobbyListeningService(
     private val lobbyRepository: LobbyRepository,
     private val redisTemplate: RedisTemplate<String, Any>,
+    private val redissonClient: RedissonClient,
 ) {
     @RabbitListener(queues = ["#{T(me.ywj.cloudpvp.lobby.constant.queue.MatchmakingQueue).Lobby.queueName}"])
     fun consumeLobbyStatus(message: LobbyUpdateMessage) {
-        val lobbyOption = lobbyRepository.findById(message.lobbyId.toInt())
-        if (!lobbyOption.isPresent) {
-            // TODO: 潜在可能的匹配的同时取消匹配了
-            return
+        val lobbyId = message.lobbyId.toInt()
+        runBlocking {
+            withLobbyLock(redissonClient, lobbyId) {
+                val lobbyOption = lobbyRepository.findById(lobbyId)
+                if (!lobbyOption.isPresent) {
+                    // TODO: 潜在可能的匹配的同时取消匹配了
+                    return@withLobbyLock
+                }
+                val lobby = lobbyOption.get()
+                lobby.apply {
+                    status = message.status
+                    matchId = message.matchId
+                }
+                lobbyRepository.save(lobby)
+                redisTemplate.convertAndSend(
+                    lobby.id.toString(),
+                    LobbyMessage(LobbyMessageType.SHOULD_SYNC, null, ""),
+                )
+            }
         }
-        val lobby = lobbyOption.get()
-        lobby.apply {
-            status = message.status
-            matchId = message.matchId
-        }
-        lobbyRepository.save(lobby)
-        redisTemplate.convertAndSend(
-            lobby.id.toString(),
-            LobbyMessage(LobbyMessageType.SHOULD_SYNC, null, ""),
-        )
     }
 }
