@@ -83,6 +83,10 @@ class LobbyMatchService @Autowired constructor(
             }
 
             lobbyRepository.save(lobby)
+            redisTemplate.convertAndSend(
+                lobby.id.toString(),
+                LobbyMessage(LobbyMessageType.SHOULD_SYNC, null, ""),
+            )
 
         }
     }
