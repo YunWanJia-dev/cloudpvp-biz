@@ -3,6 +3,7 @@ package me.ywj.cloudpvp.lobby.websocket
 import me.ywj.cloudpvp.core.constant.header.Attributes
 import me.ywj.cloudpvp.core.model.base.ErrorResponse
 import me.ywj.cloudpvp.core.model.base.ErrorType
+import me.ywj.cloudpvp.core.type.LobbyId
 import me.ywj.cloudpvp.core.type.SteamID64
 import me.ywj.cloudpvp.core.utils.JacksonUtils
 import me.ywj.cloudpvp.core.utils.LobbyUtils
@@ -47,7 +48,7 @@ class LobbySocketHandler @Autowired constructor(
         private const val SEND_BUFFER_SIZE_LIMIT_BYTES = 64 * 1024
     }
 
-    private val sessionList = ConcurrentHashMap<SteamID64, MutableSet<WebSocketSession>>()
+    private val sessionList = ConcurrentHashMap<Pair<SteamID64, LobbyId>, MutableSet<WebSocketSession>>()
 
     /**
      * 从握手属性中读取当前玩家 ID。
@@ -115,9 +116,10 @@ class LobbySocketHandler @Autowired constructor(
 
         val playerId = safeSession.getPlayerId()!!
         val targetLobbyId = safeSession.getRequestLobbyId()!!
+        val playerLobby = playerId to targetLobbyId
 
         val sendMessageFn = fun (message: LobbyMessage) {
-            sessionList[playerId]?.parallelStream()?.forEach {
+            sessionList[playerLobby]?.parallelStream()?.forEach {
                 it.sendMessage(message)
                 if (message.type == LobbyMessageType.LEAVE && message.actionPlayerId == playerId) {
                     it.close()
@@ -125,7 +127,7 @@ class LobbySocketHandler @Autowired constructor(
             }
         }
 
-        val sessions = sessionList[playerId]
+        val sessions = sessionList[playerLobby]
         if (sessions.isNullOrEmpty()) {
             if (!lobbySessionService.trySubscribe(playerId, targetLobbyId, sendMessageFn)) {
                 return safeSession.close()
@@ -133,7 +135,7 @@ class LobbySocketHandler @Autowired constructor(
         }
 
         sessionList.computeIfAbsent(
-            playerId
+            playerLobby
         ) { ConcurrentHashMap.newKeySet() }.add(safeSession)
     }
 
@@ -144,12 +146,14 @@ class LobbySocketHandler @Autowired constructor(
      * @param status 连接关闭状态
      */
     override fun afterConnectionClosed(session: WebSocketSession, status: CloseStatus) {
-        session.getPlayerId()?.let {
-            sessionList[it]?.removeIf { safeSession -> safeSession.id == session.id }
-            if (sessionList[it]?.isEmpty() == true) {
-                lobbySessionService.unsubscribe(it)
-                sessionList.remove(it)
-            }
+        val playerId = session.getPlayerId() ?: return
+        val lobbyId = session.getRequestLobbyId() ?: return
+        val playerLobby = playerId to lobbyId
+
+        sessionList[playerLobby]?.removeIf { safeSession -> safeSession.id == session.id }
+        if (sessionList[playerLobby]?.isEmpty() == true) {
+            lobbySessionService.unsubscribe(playerId)
+            sessionList.remove(playerLobby)
         }
     }
 }
