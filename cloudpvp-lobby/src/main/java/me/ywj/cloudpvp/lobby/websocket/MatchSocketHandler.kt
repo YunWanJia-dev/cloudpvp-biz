@@ -38,7 +38,7 @@ class MatchSocketHandler @Autowired constructor(
         private const val SEND_BUFFER_SIZE_LIMIT_BYTES = 64 * 1024
     }
 
-    private val sessionList = ConcurrentHashMap<SteamID64, MutableSet<WebSocketSession>>()
+    private val sessionList = ConcurrentHashMap<Pair<SteamID64, String>, MutableSet<WebSocketSession>>()
 
     private fun WebSocketSession.getPlayerId(): SteamID64? {
         return attributes[Attributes.ID] as SteamID64?
@@ -83,21 +83,22 @@ class MatchSocketHandler @Autowired constructor(
 
         val playerId = safeSession.getPlayerId()!!
         val matchId = safeSession.getRequestMatchId()!!
+        val playerMatch = playerId to matchId
         val sendMatchFn = fun(match: Match) {
-            sessionList[playerId]?.parallelStream()?.forEach{
+            sessionList[playerMatch]?.parallelStream()?.forEach {
                 it.sendMessage(match)
             }
         }
 
-        val sessions = sessionList[playerId]
-        if (sessions == null || sessions.isEmpty()) {
+        val sessions = sessionList[playerMatch]
+        if (sessions.isNullOrEmpty()) {
             if (!matchSessionService.trySubscribe(playerId, matchId, sendMatchFn)) {
                 return safeSession.close()
             }
         }
 
         sessionList.computeIfAbsent(
-            playerId
+            playerMatch
         ) { ConcurrentHashMap.newKeySet() }.add(safeSession)
     }
 
@@ -108,12 +109,14 @@ class MatchSocketHandler @Autowired constructor(
      * @param status 连接关闭状态
      */
     override fun afterConnectionClosed(session: WebSocketSession, status: CloseStatus) {
-        session.getPlayerId()?.let {
-            sessionList[it]?.removeIf { safeSession -> safeSession.id == session.id }
-            if (sessionList[it]?.isEmpty() == true) {
-                matchSessionService.unsubscribe(it)
-                sessionList.remove(it)
-            }
+        val playerId = session.getPlayerId() ?: return
+        val matchId = session.getRequestMatchId() ?: return
+        val playerMatch = playerId to matchId
+
+        sessionList[playerMatch]?.removeIf { safeSession -> safeSession.id == session.id }
+        if (sessionList[playerMatch]?.isEmpty() == true) {
+            matchSessionService.unsubscribe(playerId)
+            sessionList.remove(playerMatch)
         }
     }
 }
